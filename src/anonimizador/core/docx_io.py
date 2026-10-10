@@ -1,0 +1,231 @@
+"""Lectura y anonimización de documentos Word (.docx) conservando el formato.
+
+Se trabaja directamente sobre el XML para cubrir todo lo que puede contener datos:
+cuerpo, tablas, cuadros de texto, cabeceras, pies, notas, comentarios, control de
+cambios (texto borrado y autores), códigos de campo, hipervínculos y metadatos.
+"""
+
+from collections.abc import Iterator
+from dataclasses import dataclass
+from pathlib import Path
+
+from docx import Document
+from docx.document import Document as DocxDocument
+from docx.opc.part import Part, XmlPart
+from lxml import etree
+
+from anonimizador.core.matcher import Match, Matcher
+
+W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+P, R = f"{{{W}}}p", f"{{{W}}}r"
+T, DEL_T, INSTR_T = f"{{{W}}}t", f"{{{W}}}delText", f"{{{W}}}instrText"
+TAB, BR, CR = f"{{{W}}}tab", f"{{{W}}}br", f"{{{W}}}cr"
+XML_SPACE = "{http://www.w3.org/XML/1998/namespace}space"
+
+_WP = "application/vnd.openxmlformats-officedocument.wordprocessingml."
+TEXT_CONTENT_TYPES = {
+    _WP + "document.main+xml",
+    _WP + "template.main+xml",
+    "application/vnd.ms-word.document.macroEnabled.main+xml",
+    _WP + "header+xml",
+    _WP + "footer+xml",
+    _WP + "footnotes+xml",
+    _WP + "endnotes+xml",
+    _WP + "comments+xml",
+}
+PEOPLE_CONTENT_TYPE = _WP + "people+xml"
+CORE_TEXT_FIELDS = ("title", "subject", "keywords", "comments", "category", "content_status")
+
+
+@dataclass
+class _Segment:
+    node: etree._Element | None  # None = separador virtual (tabulador, salto de línea)
+    start: int
+    end: int
+
+
+class _XmlRoot:
+    """Raíz XML de una parte del paquete; guarda los cambios al cerrar."""
+
+    def __init__(self, part: Part):
+        self.part = part
+        self.is_xml_part = isinstance(part, XmlPart)
+        self.root = part._element if self.is_xml_part else etree.fromstring(part.blob)
+
+    def commit(self) -> None:
+        if not self.is_xml_part:
+            self.part._blob = etree.tostring(
+                self.root, xml_declaration=True, encoding="UTF-8", standalone=True
+            )
+
+
+def _xml_roots(doc: DocxDocument, content_types: set[str]) -> Iterator[_XmlRoot]:
+    for part in doc.part.package.iter_parts():
+        if part.content_type in content_types:
+            yield _XmlRoot(part)
+
+
+def _owner_paragraph(el: etree._Element) -> etree._Element | None:
+    parent = el.getparent()
+    while parent is not None and parent.tag != P:
+        parent = parent.getparent()
+    return parent
+
+
+def _paragraph_segments(p: etree._Element) -> tuple[str, list[_Segment]]:
+    """Texto de un párrafo y de qué nodo XML sale cada tramo.
+
+    Un nombre puede estar partido en varios runs ("Pé" + "rez" con formatos distintos);
+    al concatenar los nodos lo encontramos igual.
+    """
+    pieces: list[str] = []
+    segments: list[_Segment] = []
+    pos = 0
+    for el in p.iter(T, DEL_T, TAB, BR, CR):
+        if _owner_paragraph(el) is not p:
+            continue  # pertenece a un cuadro de texto anidado; se procesa aparte
+        if el.tag in (T, DEL_T):
+            text, node = el.text or "", el
+        elif el.getparent().tag == R:
+            text, node = " ", None
+        else:
+            continue  # definición de tabulaciones en las propiedades del párrafo
+        segments.append(_Segment(node, pos, pos + len(text)))
+        pieces.append(text)
+        pos += len(text)
+    return "".join(pieces), segments
+
+
+def _apply_matches(segments: list[_Segment], matches: list[Match]) -> None:
+    # De atrás hacia delante para que los offsets anteriores sigan siendo válidos.
+    for m in reversed(matches):
+        first = True
+        for seg in segments:
+            if seg.node is None or seg.end <= m.start or seg.start >= m.end:
+                continue
+            current = seg.node.text or ""
+            if first:
+                tail = current[m.end - seg.start :] if m.end <= seg.end else ""
+                new = current[: m.start - seg.start] + m.replacement + tail
+                first = False
+            else:
+                new = current[m.end - seg.start :] if m.end < seg.end else ""
+            seg.node.text = new
+            seg.node.set(XML_SPACE, "preserve")
+
+
+def _anonymize_authors(root: etree._Element) -> None:
+    """Autores del control de cambios y comentarios (suelen ser abogados del bufete)."""
+    for el in root.iter(tag=etree.Element):
+        for attr in list(el.attrib):
+            name = etree.QName(attr).localname
+            if name == "author":
+                el.set(attr, "Autor")
+            elif name == "initials":
+                el.set(attr, "A")
+            elif name in ("userId", "providerId"):
+                el.set(attr, "")
+
+
+def _anonymize_metadata(doc: DocxDocument, matcher: Matcher) -> None:
+    props = doc.core_properties
+    props.author = ""
+    props.last_modified_by = ""
+    for field in CORE_TEXT_FIELDS:
+        value = getattr(props, field)
+        if value:
+            setattr(props, field, matcher.replace(value))
+    for part in doc.part.package.iter_parts():
+        if str(part.partname) == "/docProps/app.xml":
+            handle = _XmlRoot(part)
+            for el in handle.root.iter(tag=etree.Element):
+                if etree.QName(el).localname in ("Company", "Manager", "HyperlinkBase"):
+                    el.text = ""
+            handle.commit()
+
+
+def _anonymize_links(doc: DocxDocument, matcher: Matcher) -> None:
+    for part in doc.part.package.iter_parts():
+        for rel in part.rels.values():
+            if rel.is_external:
+                new_target = matcher.replace(rel.target_ref)
+                if new_target != rel.target_ref:
+                    rel._target = new_target
+
+
+@dataclass
+class DocxResult:
+    matches: list[Match]
+    images: int
+
+
+def anonymize_docx(src: Path, dst: Path, matcher: Matcher) -> DocxResult:
+    doc = Document(str(src))
+    all_matches: list[Match] = []
+
+    for handle in _xml_roots(doc, TEXT_CONTENT_TYPES):
+        for p in handle.root.iter(P):
+            text, segments = _paragraph_segments(p)
+            matches = matcher.find(text)
+            if matches:
+                _apply_matches(segments, matches)
+                all_matches.extend(matches)
+        for instr in handle.root.iter(INSTR_T):
+            if instr.text:
+                instr.text = matcher.replace(instr.text)
+        _anonymize_authors(handle.root)
+        handle.commit()
+
+    for handle in _xml_roots(doc, {PEOPLE_CONTENT_TYPE}):
+        _anonymize_authors(handle.root)
+        handle.commit()
+
+    _anonymize_metadata(doc, matcher)
+    _anonymize_links(doc, matcher)
+    doc.save(str(dst))
+    return DocxResult(all_matches, count_images(doc))
+
+
+def count_images(doc: DocxDocument) -> int:
+    return sum(
+        1
+        for part in doc.part.package.iter_parts()
+        if str(part.partname).startswith(("/word/media/", "/word/embeddings/"))
+    )
+
+
+def extract_text(path: Path) -> str:
+    """Todo el texto susceptible de contener datos, un párrafo por línea."""
+    doc = Document(str(path))
+    lines: list[str] = []
+    for handle in _xml_roots(doc, TEXT_CONTENT_TYPES):
+        for p in handle.root.iter(P):
+            text, _ = _paragraph_segments(p)
+            if text.strip():
+                lines.append(text)
+        lines.extend(i.text for i in handle.root.iter(INSTR_T) if i.text and i.text.strip())
+    props = doc.core_properties
+    lines.extend(
+        v for f in ("author", "last_modified_by", *CORE_TEXT_FIELDS) if (v := getattr(props, f))
+    )
+    for part in doc.part.package.iter_parts():
+        lines.extend(r.target_ref for r in part.rels.values() if r.is_external)
+    return "\n".join(lines)
+
+
+def body_text(path: Path) -> str:
+    """Texto visible del cuerpo del documento (para exportar a .txt).
+
+    Excluye el texto borrado del control de cambios, comentarios, cabeceras y pies.
+    """
+    doc = Document(str(path))
+    lines = []
+    for p in doc.part.element.iter(P):
+        lines.append(
+            "".join(
+                (el.text or "") if el.tag == T else "\t"
+                for el in p.iter(T, TAB)
+                if _owner_paragraph(el) is p and (el.tag == T or el.getparent().tag == R)
+            )
+        )
+    return "\n".join(lines).strip() + "\n"

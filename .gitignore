@@ -28,3 +28,7 @@ Thumbs.db
 
 # Claude Code: carpeta y permisos locales (no se publican)
 .claude/
+
+# Documentos generados para pruebas manuales (se recrean con generar_corpus.py)
+tests/corpus/*.docx
+tests/corpus/*.pdf

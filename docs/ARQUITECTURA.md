@@ -27,19 +27,17 @@ src/anonimizador/
   app.py              # arranque
   ui/main_window.py   # ventana única
   ui/suggestions.py   # diálogo de sugerencias
+  __main__.py         # CLI de pruebas                                  [hecho]
   core/
-    document.py       # modelo común: segmentos de texto con posición
-    readers/docx.py   # docx -> segmentos (incl. cabeceras, tablas, metadatos)
-    readers/pdf.py    # texto nativo u OCR según la página
-    writers/docx.py   # aplica sustituciones conservando el formato
-    writers/pdf.py    # redacción real + reinserción del alias
-    detectors/user_terms.py
-    detectors/regex_es.py
-    detectors/ner.py
-    detectors/llm_review.py
-    merge.py          # fusiona detecciones solapadas, asigna alias consistentes
+    text.py           # normalización sin tildes que conserva offsets   [hecho]
+    matcher.py        # términos del usuario + variantes + ambigüedad    [hecho]
+    regex_es.py       # DNI, NIE, CIF, IBAN, tel., email, matrícula...   [hecho]
+    docx_io.py        # leer/anonimizar Word a nivel XML (todas las partes) [hecho]
+    pipeline.py       # analyze() -> sugerencias; anonymize() -> informe  [hecho]
+    pdf_io.py         # texto nativo u OCR + redacción real
+    ner.py            # GLiNER
+    llm_review.py     # LLM local
     mapping.py        # mapa original<->alias, cifrado
-    report.py
 tests/
   corpus/             # documentos SINTÉTICOS de prueba
 .github/workflows/    # build Mac + Windows
@@ -48,6 +46,21 @@ tests/
 ## Principio clave
 La detección trabaja sobre texto plano con offsets; los writers traducen los offsets a
 runs (docx) o rectángulos (pdf). Así los detectores son independientes del formato.
+
+## Flujo implementado
+1. `analyze(doc, términos_usuario)` → extrae todo el texto (incl. metadatos y enlaces),
+   ejecuta las reglas y devuelve `Suggestion`s de lo NO cubierto por la lista del usuario,
+   con alias numerado por tipo (`[DNI_1]`, `[IBAN_1]`...) y agrupando formatos del mismo valor.
+2. El usuario acepta/edita sugerencias → se convierten en `Term(expand=False)`.
+3. `anonymize(src, dst, términos)` → sustituye en todas las partes del docx y después
+   **verifica** releyendo la salida: si queda alguna aparición, lo avisa en el informe.
+
+## Word: detalles que importan
+- Un nombre puede estar partido en varios `w:r` con formatos distintos: se concatena el
+  texto del párrafo, se busca, y el alias se escribe en el primer run (hereda su formato).
+- Tabuladores y saltos entre runs cuentan como espacio para no unir palabras.
+- Se procesan también `w:delText` (texto borrado del control de cambios), `w:instrText`
+  (códigos de campo), atributos `author`/`initials`, `docProps` y destinos de hipervínculos.
 
 ## Formatos de salida
 - Por defecto, el mismo que el de entrada.
