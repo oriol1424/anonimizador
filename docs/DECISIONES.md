@@ -23,4 +23,7 @@
 | 2026-10-10 | Interfaz en catalán; cambia a castellano junto con el idioma del documento | Petición del cliente; un solo selector, más sencillo |
 | 2026-10-10 | El núcleo devuelve `Notice`/`AnonymizerError` con código, la UI los traduce | Separar lógica y textos; mensajes siempre en el idioma de la interfaz |
 | 2026-10-10 | Listas de términos por caso en .json elegido por el usuario; QSettings solo guarda la última carpeta | Reutilizar listas sin que la app guarde datos personales por su cuenta |
+| 2026-10-10 | PyMuPDF para PDF (redacción real). **Licencia AGPL-3.0 / comercial: PENDIENTE de validar** | Es la única librería madura que elimina texto del contenido del PDF; aislada en `pdf_io.py` por si hay que cambiarla |
+| 2026-10-10 | Las páginas escaneadas no se procesan hasta tener OCR y se avisa con un mensaje destacado | Mejor un aviso claro que una falsa sensación de seguridad |
+| 2026-10-10 | PDF solo se guarda como PDF o .txt (no .docx) | Convertir PDF→Word pierde formato y no aporta para la IA |
 | 2026-10-10 | "i"/"y" entre apellidos opcional; `·` forma parte de la palabra; `’` = `'` | Particularidades de los nombres catalanes y del autocorrector de Word |

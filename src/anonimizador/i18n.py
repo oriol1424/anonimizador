@@ -29,6 +29,7 @@ STRINGS: dict[str, dict[str, str]] = {
     "file_name": {"ca": "Nom:", "es": "Nombre:"},
     "format": {"ca": "Format:", "es": "Formato:"},
     "format_docx": {"ca": "Word (.docx)", "es": "Word (.docx)"},
+    "format_pdf": {"ca": "PDF (.pdf)", "es": "PDF (.pdf)"},
     "format_txt": {
         "ca": "Text (.txt) — per enganxar a la IA",
         "es": "Texto (.txt) — para pegar en la IA",
@@ -36,7 +37,10 @@ STRINGS: dict[str, dict[str, str]] = {
     "anonymize": {"ca": "Anonimitza", "es": "Anonimizar"},
     "working": {"ca": "Treballant…", "es": "Trabajando…"},
     "anonymized_suffix": {"ca": "_anonimitzat", "es": "_anonimizado"},
-    "word_filter": {"ca": "Documents Word (*.docx)", "es": "Documentos Word (*.docx)"},
+    "input_filter": {
+        "ca": "Documents Word o PDF (*.docx *.pdf)",
+        "es": "Documentos Word o PDF (*.docx *.pdf)",
+    },
     "list_filter": {"ca": "Llista de termes (*.json)", "es": "Lista de términos (*.json)"},
     # Validaciones
     "err_title": {"ca": "Falta informació", "es": "Falta información"},
@@ -70,6 +74,12 @@ STRINGS: dict[str, dict[str, str]] = {
         "ca": "Format de sortida no admès: {suffix}",
         "es": "Formato de salida no soportado: {suffix}",
     },
+    "error_encrypted": {
+        "ca": "El PDF està protegit amb contrasenya. Desa'n una còpia sense protecció i "
+        "torna-ho a provar.",
+        "es": "El PDF está protegido con contraseña. Guarda una copia sin protección y "
+        "vuelve a intentarlo.",
+    },
     "error_same_file": {
         "ca": "El fitxer de sortida no pot ser el mateix que l'original.",
         "es": "El fichero de salida no puede ser el mismo que el original.",
@@ -92,6 +102,14 @@ STRINGS: dict[str, dict[str, str]] = {
         "s'anonimitza: revisa'ls manualment.",
         "es": "El documento contiene {count} imágenes u objetos incrustados. Su contenido no "
         "se anonimiza: revísalos manualmente.",
+    },
+    "notice_scanned": {
+        "ca": "ATENCIÓ: {count} pàgines són escanejades (només imatge) i NO s'han "
+        "anonimitzat. Encara no es pot llegir text de les imatges (OCR): no comparteixis "
+        "aquestes pàgines.",
+        "es": "ATENCIÓN: {count} páginas son escaneadas (solo imagen) y NO se han "
+        "anonimizado. Todavía no se puede leer texto de las imágenes (OCR): no compartas "
+        "estas páginas.",
     },
     # Diálogo de sugerencias
     "sugg_title": {"ca": "Revisa les suggerències", "es": "Revisa las sugerencias"},

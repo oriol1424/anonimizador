@@ -2,16 +2,27 @@
 
 import re
 from collections import Counter
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
+from types import ModuleType
 
-from anonimizador.core import docx_io, regex_es
+from anonimizador.core import docx_io, pdf_io, regex_es
 from anonimizador.core.lang import DEFAULT_LANGUAGE, Language
 from anonimizador.core.matcher import Matcher, Term
 from anonimizador.i18n import tr
 
-SUPPORTED_INPUTS = {".docx"}
-SUPPORTED_OUTPUTS = {".docx", ".txt"}
+# Formato de entrada -> (módulo que lo procesa, formatos de salida posibles).
+FORMATS: dict[str, tuple[ModuleType, tuple[str, ...]]] = {
+    ".docx": (docx_io, (".docx", ".txt")),
+    ".pdf": (pdf_io, (".pdf", ".txt")),
+}
+SUPPORTED_INPUTS = set(FORMATS)
+
+
+def output_formats(path: Path) -> tuple[str, ...]:
+    """Formatos en los que se puede guardar un documento de entrada."""
+    return FORMATS.get(path.suffix.lower(), (None, ()))[1]
 
 
 @dataclass(frozen=True)
@@ -46,7 +57,7 @@ class AnonymizerError(ValueError):
 
 @dataclass(frozen=True)
 class Notice:
-    """Aviso para el usuario: "ambiguous", "leftovers" o "images"."""
+    """Aviso para el usuario: "ambiguous", "leftovers", "images" o "scanned"."""
 
     kind: str
     detail: str = ""
@@ -73,9 +84,19 @@ class Report:
         return sum(self.replaced.values())
 
 
-def _check_input(path: Path) -> None:
-    if path.suffix.lower() not in SUPPORTED_INPUTS:
+def _backend(path: Path) -> ModuleType:
+    if path.suffix.lower() not in FORMATS:
         raise AnonymizerError("unsupported_input", suffix=path.suffix)
+    return FORMATS[path.suffix.lower()][0]
+
+
+@contextmanager
+def _friendly_errors():
+    """Traduce errores conocidos de los formatos a mensajes para el usuario."""
+    try:
+        yield
+    except pdf_io.EncryptedPdfError:
+        raise AnonymizerError("encrypted") from None
 
 
 def _normalize_value(text: str) -> str:
@@ -97,8 +118,10 @@ def analyze(path: Path, user_terms: list[Term], language: Language = DEFAULT_LAN
     El idioma decide el nombre de los alias sugeridos ([TELEFON_1] / [TELEFONO_1]) y, más
     adelante, el modelo de detección de nombres.
     """
-    _check_input(path)
-    text = docx_io.extract_text(path)
+    backend = _backend(path)
+    with _friendly_errors():
+        text = backend.extract_text(path)
+        scanned = pdf_io.scanned_pages(path) if backend is pdf_io else 0
     matcher = Matcher(user_terms)
     covered = matcher.find(text)
 
@@ -119,31 +142,44 @@ def analyze(path: Path, user_terms: list[Term], language: Language = DEFAULT_LAN
         for (label, _), forms in groups.items()
     ]
     notices = [Notice("ambiguous", detail=v) for v in sorted(matcher.ambiguous)]
+    if scanned:
+        notices.insert(0, Notice("scanned", count=scanned))
     return Analysis(suggestions, notices)
 
 
 def anonymize(src: Path, dst: Path, terms: list[Term]) -> Report:
-    _check_input(src)
-    if dst.suffix.lower() not in SUPPORTED_OUTPUTS:
+    backend = _backend(src)
+    native = src.suffix.lower()
+    if dst.suffix.lower() not in output_formats(src):
         raise AnonymizerError("unsupported_output", suffix=dst.suffix)
     if dst.resolve() == src.resolve():
         raise AnonymizerError("same_file")
 
     matcher = Matcher(terms)
-    docx_dst = dst if dst.suffix.lower() == ".docx" else dst.with_suffix(".tmp.docx")
-    result = docx_io.anonymize_docx(src, docx_dst, matcher)
+    work = dst if dst.suffix.lower() == native else dst.with_suffix(".tmp" + native)
+    try:
+        with _friendly_errors():
+            result = backend.anonymize(src, work, matcher)
+            leftovers = matcher.find(backend.extract_text(work))
+            if work != dst:
+                text = (
+                    pdf_io.anonymized_text(src, matcher)
+                    if backend is pdf_io
+                    else docx_io.body_text(work)
+                )
+                dst.write_text(text, encoding="utf-8")
+    finally:
+        if work != dst:
+            work.unlink(missing_ok=True)
 
     notices: list[Notice] = []
-    leftovers = matcher.find(docx_io.extract_text(docx_dst))
+    if result.scanned_pages:
+        notices.append(Notice("scanned", count=result.scanned_pages))
     if leftovers:
         detail = ", ".join(sorted({m.text for m in leftovers}))
         notices.append(Notice("leftovers", detail=detail, count=len(leftovers)))
     if result.images:
         notices.append(Notice("images", count=result.images))
-
-    if docx_dst != dst:
-        dst.write_text(docx_io.body_text(docx_dst), encoding="utf-8")
-        docx_dst.unlink()
 
     replaced = Counter(m.replacement for m in result.matches)
     return Report(dst, dict(replaced), notices)

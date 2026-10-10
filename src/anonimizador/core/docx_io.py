@@ -15,6 +15,7 @@ from docx.opc.part import Part, XmlPart
 from lxml import etree
 
 from anonimizador.core.matcher import Match, Matcher
+from anonimizador.core.result import ProcessResult
 
 W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 P, R = f"{{{W}}}p", f"{{{W}}}r"
@@ -153,13 +154,7 @@ def _anonymize_links(doc: DocxDocument, matcher: Matcher) -> None:
                     rel._target = new_target
 
 
-@dataclass
-class DocxResult:
-    matches: list[Match]
-    images: int
-
-
-def anonymize_docx(src: Path, dst: Path, matcher: Matcher) -> DocxResult:
+def anonymize(src: Path, dst: Path, matcher: Matcher) -> ProcessResult:
     doc = Document(str(src))
     all_matches: list[Match] = []
 
@@ -183,7 +178,7 @@ def anonymize_docx(src: Path, dst: Path, matcher: Matcher) -> DocxResult:
     _anonymize_metadata(doc, matcher)
     _anonymize_links(doc, matcher)
     doc.save(str(dst))
-    return DocxResult(all_matches, count_images(doc))
+    return ProcessResult(all_matches, count_images(doc))
 
 
 def count_images(doc: DocxDocument) -> int:

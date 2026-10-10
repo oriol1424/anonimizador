@@ -60,6 +60,16 @@ def test_input_sets_default_output(window, demanda_ca: Path):
     assert window.output_path() == demanda_ca.parent / "demanda_ca_anonimitzat.txt"
 
 
+def test_pdf_input_offers_pdf_and_txt(window, demanda_pdf: Path, demanda_ca: Path):
+    window.set_input(demanda_pdf)
+    formats = [window.format_combo.itemData(i) for i in range(window.format_combo.count())]
+    assert formats == [".pdf", ".txt"]
+    assert window.output_path().suffix == ".pdf"
+    window.format_combo.setCurrentIndex(1)
+    window.set_input(demanda_ca)  # se conserva .txt al cambiar a un Word
+    assert window.output_path().suffix == ".txt"
+
+
 def test_save_and_load_list(window, tmp_path):
     window.table.item(0, 0).setText("Joan Puig i Ferrer")
     window.table.combo(0).setEditText("[CLIENT_1]")

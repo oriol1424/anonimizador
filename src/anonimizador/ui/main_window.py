@@ -33,13 +33,14 @@ from anonimizador.core.pipeline import (
     Report,
     analyze,
     anonymize,
+    output_formats,
 )
 from anonimizador.i18n import tr
 from anonimizador.ui.suggestions import SuggestionsDialog
 from anonimizador.ui.widgets import ReplacementCombo
 from anonimizador.ui.worker import run_in_background
 
-OUTPUT_FORMATS = (".docx", ".txt")
+FORMAT_LABELS = {".docx": "format_docx", ".pdf": "format_pdf", ".txt": "format_txt"}
 
 
 class TermsTable(QTableWidget):
@@ -212,12 +213,18 @@ class MainWindow(QMainWindow):
         self.choose_folder_button.setText(tr(lang, "choose_folder"))
         self.name_label.setText(tr(lang, "file_name"))
         self.format_label.setText(tr(lang, "format"))
-        index = max(self.format_combo.currentIndex(), 0)
-        self.format_combo.clear()
-        self.format_combo.addItem(tr(lang, "format_docx"), ".docx")
-        self.format_combo.addItem(tr(lang, "format_txt"), ".txt")
-        self.format_combo.setCurrentIndex(index)
+        self._refresh_formats()
         self.run_button.setText(tr(lang, "anonymize"))
+
+    def _refresh_formats(self) -> None:
+        """Formatos según el documento de entrada: Word -> Word/Text, PDF -> PDF/Text."""
+        current = self.format_combo.currentData()
+        formats = output_formats(self.input_path) if self.input_path else (".docx", ".txt")
+        self.format_combo.clear()
+        for suffix in formats:
+            self.format_combo.addItem(tr(self.language.code, FORMAT_LABELS[suffix]), suffix)
+        index = self.format_combo.findData(current)
+        self.format_combo.setCurrentIndex(max(index, 0))
 
     def _on_language_changed(self) -> None:
         self.language = LANGUAGES[self.language_combo.currentData()]
@@ -232,13 +239,14 @@ class MainWindow(QMainWindow):
         if not self.folder_edit.text():
             self.folder_edit.setText(str(path.parent))
         self.name_edit.setText(path.stem + tr(self.language.code, "anonymized_suffix"))
+        self._refresh_formats()
         self.settings.setValue("last_dir", str(path.parent))
 
     def choose_file(self) -> None:
         start = self.settings.value("last_dir", str(Path.home()))
         path, _ = QFileDialog.getOpenFileName(
             self, tr(self.language.code, "choose_file"), start,
-            tr(self.language.code, "word_filter"),
+            tr(self.language.code, "input_filter"),
         )  # fmt: skip
         if path:
             self.set_input(Path(path))
@@ -311,7 +319,7 @@ class MainWindow(QMainWindow):
     def output_path(self) -> Path:
         name = self.name_edit.text().strip()
         suffix = self.format_combo.currentData()
-        if Path(name).suffix.lower() in OUTPUT_FORMATS:
+        if Path(name).suffix.lower() in FORMAT_LABELS:
             name = Path(name).stem
         return Path(self.folder_edit.text().strip()) / f"{name}{suffix}"
 

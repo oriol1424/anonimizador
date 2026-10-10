@@ -1,7 +1,7 @@
 # Progreso
 
 ## Estado actual
-Fase 1 — **Word completo con interfaz en catalán** (81 tests). Ya se puede usar la app:
+Fase 1 — **Word y PDF con texto, con interfaz en catalán** (109 tests). Ya se puede usar la app:
 
 ```
 .venv/Scripts/python -m anonimizador.app
@@ -25,6 +25,8 @@ python -m venv .venv
 
 ## Pendiente de confirmar con el bufete
 - [ ] Modelos concretos de Mac (¿Apple Silicon M1+ o Intel?) y RAM; ídem PCs Windows.
+- [ ] **Licencia PyMuPDF (AGPL-3.0)**: ¿el código será público/abierto o la app se venderá
+      cerrada? Si es cerrada → licencia comercial de Artifex o cambiar de librería.
 - [ ] ¿Firmar la app? (Apple Developer 99 €/año; certificado Windows ~200–400 €/año).
 - [ ] Tipos de documento habituales para ampliar el corpus sintético (en catalán).
 
@@ -35,8 +37,8 @@ python -m venv .venv
 4. [x] Detector regex español + sugerencias + verificación final.
 5. [x] Ventana única PySide6 en catalán (fichero + arrastrar, idioma, tabla con desplegable
        editable, cargar/guardar lista, guardar como, diálogo de sugerencias, resultado).
-6. [ ] **PDF de texto con redacción real.** ← SIGUIENTE
-7. [ ] PDF escaneado con OCR.
+6. [x] PDF de texto con redacción real (+ aviso de páginas escaneadas y PDF protegidos).
+7. [ ] **PDF escaneado con OCR.** ← SIGUIENTE
 8. [ ] NER para personas, empresas y direcciones no indicadas — evaluar en catalán
        (GLiNER multilingüe vs. modelos AINA/BSC vs. spaCy ca).
 9. [ ] LLM local de revisión (desactivable por RAM) — evaluar Salamandra (BSC) vs. Qwen en catalán.
@@ -45,7 +47,10 @@ python -m venv .venv
 
 ## Limitaciones conocidas
 - Direcciones y nombres que el usuario no indica no se detectan aún (llegará con NER, paso 8).
-- Imágenes incrustadas en Word no se anonimizan: se avisa al usuario.
+- Imágenes incrustadas (Word y PDF) no se anonimizan: se avisa al usuario.
+- PDF escaneados: de momento solo se detectan y se avisa en rojo; no se anonimizan (paso 7).
+- PDF: si el alias es más largo que el nombre, se estrecha o se reduce el tamaño para que
+  quepa (puede quedar pequeño). Para pasar a la IA, la salida .txt es la más limpia.
 - Si dos términos comparten apellido ("Joan Puig" / "Pere Puig"), "Sr. Puig" no se
   sustituye automáticamente y se avisa.
 - La CLI de pruebas muestra sus etiquetas en castellano (los avisos sí salen en el idioma elegido).
@@ -66,3 +71,8 @@ python -m venv .venv
   desplegable editable con numeración automática ([CLIENT_1], [CLIENT_2]...), arrastrar
   fichero, listas de términos por caso (.json), diálogo de sugerencias con casillas,
   proceso en segundo plano; textos en i18n.py; avisos/errores del núcleo como códigos.
+- 2026-10-10: PDF con texto: borrado real con PyMuPDF (redacción del contenido + píxeles
+  debajo), alias en el mismo sitio, nombres partidos entre líneas, tablas intactas,
+  notas, enlaces, campos, marcadores y metadatos; páginas escaneadas detectadas y avisadas;
+  PDF protegido con mensaje claro; exportación .txt en orden de lectura; el desplegable
+  de formato depende de la entrada (Word -> Word/Text, PDF -> PDF/Text).

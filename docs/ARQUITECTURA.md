@@ -42,7 +42,9 @@ src/anonimizador/
     regex_es.py       # DNI, NIE, CIF, IBAN, tel., email, matrícula...   [hecho]
     docx_io.py        # leer/anonimizar Word a nivel XML (todas las partes) [hecho]
     pipeline.py       # analyze() -> sugerencias; anonymize() -> informe  [hecho]
-    pdf_io.py         # texto nativo u OCR + redacción real
+    result.py         # ProcessResult común a Word y PDF                 [hecho]
+    pdf_io.py         # PDF con texto: redacción real (PyMuPDF)          [hecho]
+    ocr.py            # PDF escaneado: OCR + borrado de píxeles
     ner.py            # GLiNER
     llm_review.py     # LLM local
     mapping.py        # mapa original<->alias, cifrado
@@ -62,6 +64,16 @@ runs (docx) o rectángulos (pdf). Así los detectores son independientes del for
 2. El usuario acepta/edita sugerencias → se convierten en `Term(expand=False)`.
 3. `anonymize(src, dst, términos)` → sustituye en todas las partes del docx y después
    **verifica** releyendo la salida: si queda alguna aparición, lo avisa en el informe.
+
+## PDF: detalles que importan
+- Texto por carácter con su caja (`rawdict`); un nombre partido entre líneas genera una
+  caja por línea. Las cajas se recortan un poco para no tocar letras vecinas.
+- `apply_redactions` con `images=PIXELS` (borra también imágenes debajo, p. ej. PDF
+  escaneados con capa de texto) y `graphics=NONE` (no borra líneas de tablas).
+- El alias se escribe en la posición del primer carácter, estrechado (`morph`) si no cabe.
+- Se guarda con `garbage=4, clean=True` para no dejar copias del contenido antiguo.
+- Página escaneada = menos de 20 caracteres de texto y una imagen que cubre ≥50% → aviso.
+- El .txt se genera del original + sustituciones (el texto añadido saldría desordenado).
 
 ## Word: detalles que importan
 - Un nombre puede estar partido en varios `w:r` con formatos distintos: se concatena el
