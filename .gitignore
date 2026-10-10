@@ -12,10 +12,25 @@ build/
 dist/
 *.spec.bak
 
-# Modelos (demasiado grandes para git)
+# Código, binarios y modelos de TERCEROS: nunca al repo (licencias). Ver docs/LICENCIAS.md
 models/
 *.gguf
 *.onnx
+*.safetensors
+*.bin
+*.pt
+*.traineddata
+tessdata/
+vendor/
+third_party/
+*.whl
+*.exe
+*.dll
+*.so
+*.dylib
+*.app/
+*.dmg
+*.zip
 
 # Datos reales de clientes: NUNCA al repo
 datos_reales/

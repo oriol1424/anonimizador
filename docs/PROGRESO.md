@@ -25,9 +25,8 @@ python -m venv .venv
 
 ## Pendiente de confirmar con el bufete
 - [ ] Modelos concretos de Mac (¿Apple Silicon M1+ o Intel?) y RAM; ídem PCs Windows.
-- [ ] **Licencia PyMuPDF (AGPL-3.0)**: ¿el código será público/abierto o la app se venderá
-      cerrada? Si es cerrada → licencia comercial de Artifex o cambiar de librería.
-- [ ] ¿Firmar la app? (Apple Developer 99 €/año; certificado Windows ~200–400 €/año).
+- [x] Presupuesto: **coste cero** → sin firma de código (en Mac: clic derecho → Abrir la
+      primera vez; en Windows: "Más información → Ejecutar igualmente"). PyMuPDF bajo AGPL.
 - [ ] Tipos de documento habituales para ampliar el corpus sintético (en catalán).
 
 ## Siguientes pasos
@@ -42,7 +41,8 @@ python -m venv .venv
 8. [ ] NER para personas, empresas y direcciones no indicadas — evaluar en catalán
        (GLiNER multilingüe vs. modelos AINA/BSC vs. spaCy ca).
 9. [ ] LLM local de revisión (desactivable por RAM) — evaluar Salamandra (BSC) vs. Qwen en catalán.
-10. [ ] GitHub Actions: build Mac + Windows; prueba desde USB en equipos limpios.
+10. [ ] GitHub Actions: build Mac + Windows; prueba desde USB en equipos limpios. Incluir en
+       el paquete `codigo_fuente/` + textos de licencias (AGPL/LGPL), ver `docs/LICENCIAS.md`.
 11. [ ] Mapa cifrado y des-anonimización de respuestas (fase 2).
 
 ## Limitaciones conocidas

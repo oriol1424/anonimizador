@@ -15,6 +15,7 @@ Plataformas: **macOS y Windows**. Repo: https://github.com/oriol1424/anonimizado
 | Requisitos y flujo del usuario      | `docs/REQUISITOS.md`     |
 | Arquitectura, módulos, tecnologías  | `docs/ARQUITECTURA.md`   |
 | Por qué se decidió algo             | `docs/DECISIONES.md`     |
+| Licencias de dependencias y modelos | `docs/LICENCIAS.md`      |
 
 ## Reglas innegociables
 1. **Nada sale del equipo**: sin llamadas de red en ejecución, sin telemetría, sin
@@ -24,7 +25,11 @@ Plataformas: **macOS y Windows**. Repo: https://github.com/oriol1424/anonimizado
 3. Los logs **nunca** contienen texto del documento ni nombres detectados.
 4. El fichero de correspondencias (original ↔ sustituto) es un dato personal:
    siempre cifrado y local.
-5. En caso de duda, el sistema **sugiere de más**: un falso positivo cuesta un clic;
+5. **Coste cero en licencias**: solo dependencias y modelos gratuitos para uso
+   profesional (nada "no comercial", nada de pago). Comprobar la licencia antes de
+   añadir algo y anotarla en `docs/LICENCIAS.md`.
+6. **Nunca subir a git código, binarios ni modelos de terceros** (solo código propio).
+7. En caso de duda, el sistema **sugiere de más**: un falso positivo cuesta un clic;
    un falso negativo es una filtración.
 
 ## Flujo de trabajo de Claude
