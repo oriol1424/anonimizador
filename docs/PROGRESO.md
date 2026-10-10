@@ -1,5 +1,51 @@
 # Progreso
 
+## ▶ DÓNDE NOS QUEDAMOS (2026-10-10) — empezar por aquí
+Estábamos haciendo **robustez con documentos largos (80+ páginas)**. Todo lo anterior está
+hecho, probado (140 tests) y publicado. No hay código a medias: lo de abajo es lo medido
+y el plan, aún SIN implementar.
+
+### Medición (`scripts/bench_documents_grans.py <carpeta> <págs_escaneadas>`)
+| Documento | Análisis | Anonimizar + verificar | Problema |
+|---|---|---|---|
+| Word 80 págs | 39 s | 6,5 s | detector de nombres lento |
+| PDF texto 80 págs | 43 s | 34 s | ídem |
+| PDF escaneado 10 págs | 74 s | 178 s | ~35 min a 80 págs **y quedó un nombre sin borrar** |
+
+### Causas encontradas
+1. **Fuga en escaneados (GRAVE):** el OCR leyó mal una línea entera ("2 a 02s") porque el
+   clasificador de orientación (`use_cls`) la giró 180°. Esa línea no se borró (nombre + DNI).
+   La verificación final SÍ lo detectó (aviso "leftovers"). Con `Global.use_cls: False`
+   las 3 líneas mal leídas pasan a leerse bien y no es más lento.
+2. **Detector de nombres:** ~0,6 ms/token en esta CPU (no depende del tamaño del trozo).
+   8 s extra en `ner._clean` por recalcular conjuntos `fold(...)` en cada llamada.
+   Ejecutar trozos en paralelo (4–8 hilos × 1 thread de onnxruntime) → ~1,4× más rápido.
+3. **Escaneados lentos:** OCR ~5–7 s/pág en páginas densas; la verificación hace un 2º OCR
+   de cada página; además `_anonymize_image_page` tarda ~3 s/pág sin contar OCR
+   (pendiente de perfilar: sospechosos `pix.set_rect`, capa invisible `insert_text`, JPEG).
+
+### Plan para la próxima sesión (en este orden)
+1. `ocr.py`: `Global.use_cls: False` + test con una línea que antes fallaba.
+2. **Verificación que se autocorrige** en escaneados: si el OCR de la página resultante
+   encuentra datos, borrar esas cajas en la imagen de salida y volver a verificar
+   (máx. 2 vueltas). Si aún quedan → aviso destacado con nº de página.
+3. Verificar solo las páginas escaneadas que han cambiado (las que no tenían datos quedan
+   idénticas: un 2º OCR no aporta) → casi la mitad de tiempo.
+4. Aviso de **líneas con baja confianza del OCR** (score bajo / texto raro) con nº de página.
+5. `ner.py`: precalcular conjuntos, trozos en paralelo, no repetir líneas idénticas
+   (cabeceras/pies de cada página).
+6. Perfilar y acelerar `_anonymize_image_page`.
+7. Si una página falla, no abortar todo: sustituirla por una página "[Pàgina N no
+   processada]" + aviso (nunca dejarla sin anonimizar).
+8. Interfaz: **botón Cancel·la**, progreso por fases ("Analitzant… / Anonimitzant… /
+   Verificant… pàgina 12 de 80") con tiempo estimado.
+9. Evitar que el ordenador se duerma durante procesos largos (macOS: `caffeinate -i -w
+   <pid>`; Windows: `SetThreadExecutionState`).
+10. Ventana de sugerencias con buscador (con 80 págs salen ~500 sugerencias).
+11. Repetir la medición y añadir un test "documento largo" (marcado lento).
+
+Después: paso 9 (LLM local; falta saber la RAM del Mac M2) o paso 10 (empaquetado USB).
+
 ## Estado actual
 Fase 1 — **Word, PDF, OCR, detector de nombres/empresas/direcciones y guía de
 correspondencias, con interfaz en catalán** (140 tests). Ya se puede usar la app:
@@ -27,7 +73,8 @@ python -m venv .venv
 ```
 
 ## Pendiente de confirmar con el bufete
-- [ ] Modelos concretos de Mac (¿Apple Silicon M1+ o Intel?) y RAM; ídem PCs Windows.
+- [~] Mac del bufete: **Apple M2** (arm64, Metal). Falta saber la RAM (8/16/24 GB) y los
+      PCs Windows. Build de Mac: runner `macos-14` (Apple Silicon) en GitHub Actions.
 - [x] Presupuesto: **coste cero** → sin firma de código (en Mac: clic derecho → Abrir la
       primera vez; en Windows: "Más información → Ejecutar igualmente"). PyMuPDF bajo AGPL.
 - [ ] Tipos de documento habituales para ampliar el corpus sintético (en catalán).
