@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Builds
+build/
+dist/
+*.spec.bak
+
+# Modelos (demasiado grandes para git)
+models/
+*.gguf
+*.onnx
+
+# Datos reales de clientes: NUNCA al repo
+datos_reales/
+*.mapa.enc
+salida/
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Claude Code: carpeta y permisos locales (no se publican)
+.claude/
