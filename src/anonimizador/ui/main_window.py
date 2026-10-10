@@ -370,10 +370,21 @@ class MainWindow(QMainWindow):
                 self._set_busy(False)
                 return
             run_in_background(
-                lambda: anonymize(src, dst, terms + extra), self._finished, self._failed
+                lambda progress: anonymize(src, dst, terms + extra, progress),
+                self._finished,
+                self._failed,
+                self._show_progress,
             )
 
-        run_in_background(lambda: analyze(src, terms, language), after_analysis, self._failed)
+        run_in_background(
+            lambda progress: analyze(src, terms, language, progress),
+            after_analysis,
+            self._failed,
+            self._show_progress,
+        )
+
+    def _show_progress(self, done: int, total: int) -> None:
+        self.run_button.setText(tr(self.language.code, "ocr_progress", done=done, total=total))
 
     def ask_suggestions(self, analysis: Analysis, terms: list[Term]) -> list[Term] | None:
         """Términos extra aceptados por el usuario, o None si cancela."""

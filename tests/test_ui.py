@@ -89,8 +89,15 @@ def test_background_callback_runs_in_ui_thread(qtbot):
     def finished(value):
         seen["value"], seen["thread"] = value, threading.get_ident()
 
-    run_in_background(lambda: threading.get_ident(), finished, lambda e: None)
+    steps = []
+
+    def work(progress):
+        progress(1, 2)
+        return threading.get_ident()
+
+    run_in_background(work, finished, lambda e: None, lambda d, t: steps.append((d, t)))
     qtbot.waitUntil(lambda: "value" in seen, timeout=5000)
+    assert steps == [(1, 2)]
     assert seen["value"] != main  # la tarea corrió en otro hilo
     assert seen["thread"] == main  # el resultado llegó al hilo de la interfaz
 

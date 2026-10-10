@@ -10,6 +10,7 @@ from types import ModuleType
 from anonimizador.core import docx_io, pdf_io, regex_es
 from anonimizador.core.lang import DEFAULT_LANGUAGE, Language
 from anonimizador.core.matcher import Matcher, Term
+from anonimizador.core.pdf_io import Progress
 from anonimizador.i18n import tr
 
 # Formato de entrada -> (módulo que lo procesa, formatos de salida posibles).
@@ -57,7 +58,7 @@ class AnonymizerError(ValueError):
 
 @dataclass(frozen=True)
 class Notice:
-    """Aviso para el usuario: "ambiguous", "leftovers", "images" o "scanned"."""
+    """Aviso para el usuario: "ambiguous", "leftovers", "images" u "ocr"."""
 
     kind: str
     detail: str = ""
@@ -112,7 +113,12 @@ def _next_alias(label: str, used: set[str]) -> str:
     return alias
 
 
-def analyze(path: Path, user_terms: list[Term], language: Language = DEFAULT_LANGUAGE) -> Analysis:
+def analyze(
+    path: Path,
+    user_terms: list[Term],
+    language: Language = DEFAULT_LANGUAGE,
+    progress: Progress | None = None,
+) -> Analysis:
     """Busca datos identificativos que el usuario no ha incluido en su lista.
 
     El idioma decide el nombre de los alias sugeridos ([TELEFON_1] / [TELEFONO_1]) y, más
@@ -120,8 +126,7 @@ def analyze(path: Path, user_terms: list[Term], language: Language = DEFAULT_LAN
     """
     backend = _backend(path)
     with _friendly_errors():
-        text = backend.extract_text(path)
-        scanned = pdf_io.scanned_pages(path) if backend is pdf_io else 0
+        text = backend.extract_text(path, progress)
     matcher = Matcher(user_terms)
     covered = matcher.find(text)
 
@@ -142,12 +147,11 @@ def analyze(path: Path, user_terms: list[Term], language: Language = DEFAULT_LAN
         for (label, _), forms in groups.items()
     ]
     notices = [Notice("ambiguous", detail=v) for v in sorted(matcher.ambiguous)]
-    if scanned:
-        notices.insert(0, Notice("scanned", count=scanned))
     return Analysis(suggestions, notices)
 
 
-def anonymize(src: Path, dst: Path, terms: list[Term]) -> Report:
+def anonymize(src: Path, dst: Path, terms: list[Term], progress: Progress | None = None) -> Report:
+    """Anonimiza y verifica releyendo la salida (en páginas escaneadas, con un nuevo OCR)."""
     backend = _backend(src)
     native = src.suffix.lower()
     if dst.suffix.lower() not in output_formats(src):
@@ -159,11 +163,11 @@ def anonymize(src: Path, dst: Path, terms: list[Term]) -> Report:
     work = dst if dst.suffix.lower() == native else dst.with_suffix(".tmp" + native)
     try:
         with _friendly_errors():
-            result = backend.anonymize(src, work, matcher)
-            leftovers = matcher.find(backend.extract_text(work))
+            result = backend.anonymize(src, work, matcher, progress)
+            leftovers = matcher.find(backend.extract_text(work, progress))
             if work != dst:
                 text = (
-                    pdf_io.anonymized_text(src, matcher)
+                    pdf_io.anonymized_text(src, matcher, progress)
                     if backend is pdf_io
                     else docx_io.body_text(work)
                 )
@@ -174,7 +178,7 @@ def anonymize(src: Path, dst: Path, terms: list[Term]) -> Report:
 
     notices: list[Notice] = []
     if result.scanned_pages:
-        notices.append(Notice("scanned", count=result.scanned_pages))
+        notices.append(Notice("ocr", count=result.scanned_pages))
     if leftovers:
         detail = ", ".join(sorted({m.text for m in leftovers}))
         notices.append(Notice("leftovers", detail=detail, count=len(leftovers)))

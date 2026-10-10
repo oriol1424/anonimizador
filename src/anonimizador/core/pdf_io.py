@@ -1,26 +1,35 @@
-"""Lectura y anonimización de PDF con texto, con BORRADO REAL.
+"""Lectura y anonimización de PDF, con BORRADO REAL.
 
-No se dibuja un recuadro encima del nombre (el texto seguiría ahí y se podría copiar):
-se eliminan los caracteres del contenido de la página con las redacciones de PyMuPDF,
-se borran los píxeles de las imágenes que queden debajo y después se escribe el alias.
+Dos tipos de página:
 
-Las páginas escaneadas (solo imagen) se detectan y se informan: necesitan OCR.
+- **Con texto** (PDF generado desde Word, etc.): se eliminan los caracteres del contenido
+  de la página con las redacciones de PyMuPDF (no se tapan: desaparecen), se borran los
+  píxeles de imágenes que queden debajo y se escribe el alias en su sitio.
+- **Imagen** (escaneada, o con una imagen que cubre la mayor parte): se rasteriza, se lee
+  con OCR, se pintan de blanco los píxeles de cada dato y se rehace la página con la
+  imagen limpia, el alias visible y una capa de texto invisible ya anonimizada (para poder
+  copiar el texto o pasarlo a la IA). Del contenido original de la página no queda nada.
 
-Licencia: PyMuPDF es AGPL-3.0 o comercial (Artifex). Ver docs/DECISIONES.md.
+Licencia: PyMuPDF bajo AGPL-3.0 (gratis). Ver docs/LICENCIAS.md.
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
 import pymupdf
 
+from anonimizador.core import ocr
 from anonimizador.core.matcher import Match, Matcher
 from anonimizador.core.result import ProcessResult
 
-MIN_TEXT_CHARS = 20  # menos texto que esto + imagen grande = página escaneada
-MIN_IMAGE_COVERAGE = 0.5
+MIN_IMAGE_COVERAGE = 0.5  # imagen que cubre ≥50% de la página -> se trata con OCR
 MIN_HORIZONTAL_SCALE = 0.55  # por debajo, además de estrechar se reduce el tamaño de letra
 MIN_FONT_SIZE = 5.0
+PIXEL_PADDING = 3  # margen al borrar píxeles alrededor de cada dato
+JPEG_QUALITY = 80
+
+Progress = Callable[[int, int], None]  # (páginas leídas con OCR, total)
 
 
 class EncryptedPdfError(Exception):
@@ -35,12 +44,48 @@ class _Char:
     line: int
 
 
+@dataclass
+class _Replacement:
+    rects: list[pymupdf.Rect]  # una por línea que ocupa el dato
+    origin: tuple[float, float]
+    size: float
+    width: float
+    text: str
+
+
 def _open(path: Path) -> pymupdf.Document:
     doc = pymupdf.open(str(path))
     if doc.needs_pass:
         doc.close()
         raise EncryptedPdfError(str(path))
     return doc
+
+
+def is_image_page(page: pymupdf.Page) -> bool:
+    page_area = abs(page.rect)
+    if page_area == 0:
+        return False
+    covered = sum(abs(pymupdf.Rect(i["bbox"]) & page.rect) for i in page.get_image_info())
+    return covered / page_area >= MIN_IMAGE_COVERAGE
+
+
+class _OcrCounter:
+    """Avisa del progreso del OCR (lo único lento) a la interfaz."""
+
+    def __init__(self, doc: pymupdf.Document, progress: Progress | None):
+        self.total = sum(1 for page in doc if is_image_page(page))
+        self.done = 0
+        self.progress = progress
+        if progress and self.total:
+            progress(0, self.total)
+
+    def tick(self) -> None:
+        self.done += 1
+        if self.progress:
+            self.progress(self.done, self.total)
+
+
+# --- Páginas con texto ----------------------------------------------------------------
 
 
 def _page_chars(page: pymupdf.Page) -> tuple[str, list[_Char | None]]:
@@ -64,14 +109,6 @@ def _page_chars(page: pymupdf.Page) -> tuple[str, list[_Char | None]]:
     return "".join(pieces), chars
 
 
-def _is_scanned(page: pymupdf.Page, text: str) -> bool:
-    if len(text.strip()) >= MIN_TEXT_CHARS:
-        return False
-    page_area = abs(page.rect)
-    covered = sum(abs(pymupdf.Rect(i["bbox"]) & page.rect) for i in page.get_image_info())
-    return page_area > 0 and covered / page_area >= MIN_IMAGE_COVERAGE
-
-
 def _shrink(rect: pymupdf.Rect) -> pymupdf.Rect:
     """Recorta un poco la caja para no tocar las letras vecinas ni las líneas de arriba/abajo."""
     dy = rect.height * 0.2
@@ -79,42 +116,153 @@ def _shrink(rect: pymupdf.Rect) -> pymupdf.Rect:
     return pymupdf.Rect(rect.x0 + dx, rect.y0 + dy, rect.x1 - dx, rect.y1 - dy)
 
 
-@dataclass
-class _Replacement:
-    rects: list[pymupdf.Rect]  # una por línea que ocupa el nombre
-    origin: tuple[float, float]
-    size: float
-    width: float
-    text: str
+def _rects_by_line(boxes: list[tuple[pymupdf.Rect, int] | None]) -> list[pymupdf.Rect]:
+    by_line: dict[int, pymupdf.Rect] = {}
+    for box in boxes:
+        if box is None or box[0].is_empty:
+            continue
+        rect, line = box
+        by_line[line] = by_line[line] | rect if line in by_line else +rect
+    return list(by_line.values())
 
 
 def _plan(match: Match, chars: list[_Char | None]) -> _Replacement | None:
-    by_line: dict[int, pymupdf.Rect] = {}
-    first: _Char | None = None
-    for ch in chars[match.start : match.end]:
-        if ch is None or ch.rect.is_empty:
-            continue
-        first = first or ch
-        by_line[ch.line] = by_line[ch.line] | ch.rect if ch.line in by_line else +ch.rect
-    if first is None:
+    span = [c for c in chars[match.start : match.end] if c is not None and not c.rect.is_empty]
+    if not span:
         return None
-    rects = list(by_line.values())
-    return _Replacement(rects, first.origin, first.size, rects[0].width, match.replacement)
+    rects = _rects_by_line([(c.rect, c.line) for c in span])
+    return _Replacement(rects, span[0].origin, span[0].size, rects[0].width, match.replacement)
 
 
-def _write_alias(page: pymupdf.Page, r: _Replacement) -> None:
-    """Escribe el alias donde estaba el nombre, estrechándolo si no cabe."""
-    size = r.size
-    natural = pymupdf.get_text_length(r.text, fontname="helv", fontsize=size)
-    scale = 1.0 if natural <= r.width or natural == 0 else r.width / natural
-    if scale < MIN_HORIZONTAL_SCALE:
+def _write_text(
+    page: pymupdf.Page, text: str, origin, size: float, width: float, invisible: bool = False
+) -> None:
+    """Escribe `text` desde `origin`, estrechándolo si no cabe en `width`."""
+    natural = pymupdf.get_text_length(text, fontname="helv", fontsize=size)
+    scale = 1.0 if natural <= width or natural == 0 else width / natural
+    if scale < MIN_HORIZONTAL_SCALE and not invisible:
         size = max(MIN_FONT_SIZE, size * scale / MIN_HORIZONTAL_SCALE)
         scale = MIN_HORIZONTAL_SCALE
-    origin = pymupdf.Point(r.origin)
+    origin = pymupdf.Point(origin)
     page.insert_text(
-        origin, r.text, fontsize=size, fontname="helv",
+        origin, text, fontsize=size, fontname="helv", render_mode=3 if invisible else 0,
         morph=(origin, pymupdf.Matrix(scale, 1)),
     )  # fmt: skip
+
+
+def _anonymize_text_page(page: pymupdf.Page, matcher: Matcher) -> list[Match]:
+    text, chars = _page_chars(page)
+    plans, matches = [], []
+    for match in matcher.find(text):
+        plan = _plan(match, chars)
+        if plan:
+            plans.append(plan)
+            matches.append(match)
+    if not plans:
+        return []
+    for plan in plans:
+        for rect in plan.rects:
+            page.add_redact_annot(_shrink(rect), fill=False)
+    page.apply_redactions(
+        images=pymupdf.PDF_REDACT_IMAGE_PIXELS,  # borra también lo que haya debajo
+        graphics=pymupdf.PDF_REDACT_LINE_ART_NONE,  # conserva líneas de tablas
+        text=pymupdf.PDF_REDACT_TEXT_REMOVE,
+    )
+    for plan in plans:
+        _write_text(page, plan.text, plan.origin, plan.size, plan.width)
+    return matches
+
+
+# --- Páginas imagen (OCR) -------------------------------------------------------------
+
+
+def _lines_with_replacements(text: str, matches: list[Match]) -> list[str]:
+    """Texto por líneas con los alias aplicados, conservando el número de líneas.
+
+    Si un dato ocupa dos líneas, el alias va en la primera y la segunda queda sin él.
+    """
+    lines, current = [], []
+    i, pending = 0, iter(matches)
+    nxt = next(pending, None)
+    while i < len(text):
+        if nxt is not None and i == nxt.start:
+            current.append(nxt.replacement)
+            for char in text[nxt.start : nxt.end]:
+                if char == "\n":
+                    lines.append("".join(current))
+                    current = []
+            i = nxt.end
+            nxt = next(pending, None)
+            continue
+        if text[i] == "\n":
+            lines.append("".join(current))
+            current = []
+        else:
+            current.append(text[i])
+        i += 1
+    if current:
+        lines.append("".join(current))
+    return lines
+
+
+def _anonymize_image_page(page: pymupdf.Page, matcher: Matcher) -> list[Match]:
+    if page.rotation:
+        page.remove_rotation()
+    pix = ocr.render(page)
+    result = ocr.recognize(pix)
+    text, boxes = result.text_and_boxes()
+    matches = matcher.find(text)
+    to_points = pymupdf.Matrix(72 / ocr.OCR_DPI, 72 / ocr.OCR_DPI)
+
+    aliases: list[_Replacement] = []
+    for match in matches:
+        rects = _rects_by_line(boxes[match.start : match.end])
+        if not rects:
+            continue
+        for rect in rects:
+            pad = pymupdf.Rect(rect.x0 - PIXEL_PADDING, rect.y0 - PIXEL_PADDING,
+                               rect.x1 + PIXEL_PADDING, rect.y1 + PIXEL_PADDING)  # fmt: skip
+            pix.set_rect((pad & pymupdf.Rect(pix.irect)).irect, (255, 255, 255))
+        first = rects[0] * to_points
+        origin = (first.x0, first.y1 - first.height * 0.2)
+        aliases.append(
+            _Replacement([first], origin, first.height * 0.75, first.width, match.replacement)
+        )
+
+    # Se vacía la página por completo (texto, imágenes y dibujos originales)...
+    page.add_redact_annot(page.rect)
+    page.apply_redactions(
+        images=pymupdf.PDF_REDACT_IMAGE_REMOVE,
+        graphics=pymupdf.PDF_REDACT_LINE_ART_REMOVE_IF_TOUCHED,
+        text=pymupdf.PDF_REDACT_TEXT_REMOVE,
+    )
+    # ...y se rehace con la imagen limpia, los alias y el texto invisible anonimizado.
+    page.insert_image(page.rect, stream=pix.tobytes("jpeg", jpg_quality=JPEG_QUALITY))
+    for alias in aliases:
+        _write_text(page, alias.text, alias.origin, alias.size, alias.width)
+    for words, line_text in zip(
+        result.lines, _lines_with_replacements(text, matches), strict=False
+    ):
+        if not line_text.strip():
+            continue
+        rect = pymupdf.Rect(words[0].rect)
+        for word in words[1:]:
+            rect |= word.rect
+        rect = rect * to_points
+        origin = (rect.x0, rect.y1 - rect.height * 0.2)
+        _write_text(page, line_text, origin, rect.height * 0.75, rect.width, invisible=True)
+    return matches
+
+
+def _page_text(page: pymupdf.Page, counter: _OcrCounter) -> str:
+    if is_image_page(page):
+        text, _ = ocr.recognize(ocr.render(page)).text_and_boxes()
+        counter.tick()
+        return text
+    return _page_chars(page)[0]
+
+
+# --- Partes del documento fuera de las páginas ----------------------------------------
 
 
 def _anonymize_page_extras(page: pymupdf.Page, matcher: Matcher) -> None:
@@ -154,51 +302,44 @@ def _anonymize_document_extras(doc: pymupdf.Document, matcher: Matcher) -> None:
         doc.set_toc([[lvl, matcher.replace(title), page, *rest] for lvl, title, page, *rest in toc])
 
 
-def anonymize(src: Path, dst: Path, matcher: Matcher) -> ProcessResult:
+# --- API ------------------------------------------------------------------------------
+
+
+def anonymize(
+    src: Path, dst: Path, matcher: Matcher, progress: Progress | None = None
+) -> ProcessResult:
     doc = _open(src)
     all_matches: list[Match] = []
-    scanned = 0
     images = doc.embfile_count()
     try:
+        counter = _OcrCounter(doc, progress)
         for page in doc:
-            text, chars = _page_chars(page)
-            images += len(page.get_images(full=True))
-            if _is_scanned(page, text):
-                scanned += 1
-                continue
             _anonymize_page_extras(page, matcher)
-            plans = []
-            for match in matcher.find(text):
-                plan = _plan(match, chars)
-                if plan:
-                    plans.append(plan)
-                    all_matches.append(match)
-            for plan in plans:
-                for rect in plan.rects:
-                    page.add_redact_annot(_shrink(rect), fill=False)
-            if plans:
-                page.apply_redactions(
-                    images=pymupdf.PDF_REDACT_IMAGE_PIXELS,  # borra también lo que haya debajo
-                    graphics=pymupdf.PDF_REDACT_LINE_ART_NONE,  # conserva líneas de tablas
-                    text=pymupdf.PDF_REDACT_TEXT_REMOVE,
-                )
-                for plan in plans:
-                    _write_alias(page, plan)
+            if is_image_page(page):
+                all_matches.extend(_anonymize_image_page(page, matcher))
+                counter.tick()
+            else:
+                images += len(page.get_images(full=True))
+                all_matches.extend(_anonymize_text_page(page, matcher))
         _anonymize_document_extras(doc, matcher)
         # garbage=4 + clean: no deja copias del contenido antiguo dentro del fichero.
         doc.save(str(dst), garbage=4, deflate=True, clean=True)
     finally:
         doc.close()
-    return ProcessResult(all_matches, images, scanned)
+    return ProcessResult(all_matches, images, counter.total)
 
 
-def extract_text(path: Path) -> str:
-    """Todo el texto susceptible de contener datos (páginas, metadatos, notas, enlaces...)."""
+def extract_text(path: Path, progress: Progress | None = None) -> str:
+    """Todo el texto susceptible de contener datos (páginas, metadatos, notas, enlaces...).
+
+    Las páginas imagen se leen con OCR: así también se verifica el resultado final.
+    """
     doc = _open(path)
     lines: list[str] = []
     try:
+        counter = _OcrCounter(doc, progress)
         for page in doc:
-            lines.append(_page_chars(page)[0])
+            lines.append(_page_text(page, counter))
             for annot in page.annots():
                 lines.extend(v for v in (annot.info.get("content"), annot.info.get("title")) if v)
             lines.extend(w.field_value for w in page.widgets() if isinstance(w.field_value, str))
@@ -211,28 +352,24 @@ def extract_text(path: Path) -> str:
     return "\n".join(line for line in lines if line)
 
 
-def anonymized_text(src: Path, matcher: Matcher) -> str:
+def anonymized_text(src: Path, matcher: Matcher, progress: Progress | None = None) -> str:
     """Texto del PDF ORIGINAL con las sustituciones aplicadas (para exportar a .txt).
 
     Se parte del original y no del PDF anonimizado porque los alias insertados quedan al
     final del contenido de la página y al extraerlos saldrían fuera de orden.
-    Las páginas escaneadas se omiten (no tienen texto que anonimizar).
     """
     doc = _open(src)
     try:
-        pages = []
-        for page in doc:
-            text, _ = _page_chars(page)
-            if not _is_scanned(page, text):
-                pages.append(matcher.replace(text).strip())
-        return "\n\n".join(pages).strip() + "\n"
+        counter = _OcrCounter(doc, progress)
+        pages = [matcher.replace(_page_text(page, counter)).strip() for page in doc]
+        return "\n\n".join(p for p in pages if p).strip() + "\n"
     finally:
         doc.close()
 
 
-def scanned_pages(path: Path) -> int:
+def image_pages(path: Path) -> int:
     doc = _open(path)
     try:
-        return sum(1 for page in doc if _is_scanned(page, page.get_text()))
+        return sum(1 for page in doc if is_image_page(page))
     finally:
         doc.close()

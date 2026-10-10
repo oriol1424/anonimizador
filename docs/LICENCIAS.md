@@ -18,6 +18,8 @@ Objetivo: **coste cero** y uso profesional en el bufete sin pagar licencias.
 | lxml | BSD-3 | Sí | Conservar aviso de copyright |
 | PySide6 (Qt) | LGPL-3.0 | Sí | Enlace dinámico (PyInstaller `--onedir` lo cumple) + incluir texto LGPL |
 | PyMuPDF | AGPL-3.0 (o comercial) | **Sí, eligiendo AGPL** | Si se entrega la app a otra persona, darle también el código fuente (ver abajo) |
+| rapidocr (OCR) | Apache-2.0 | Sí | Conservar aviso; modelos PP-OCRv6 (PaddleOCR, Apache-2.0) incluidos en el paquete |
+| onnxruntime | MIT | Sí | Conservar aviso de copyright |
 
 ## PyMuPDF y la AGPL, en claro
 - Usarla **no cuesta nada**. La licencia comercial solo hace falta para vender software
@@ -31,8 +33,6 @@ Objetivo: **coste cero** y uso profesional en el bufete sin pagar licencias.
 ## Candidatos para próximas fases (verificar al incorporarlos)
 | Componente | Licencia | Notas |
 |---|---|---|
-| RapidOCR (OCR) | Apache-2.0 | Modelos ONNX incluidos, también Apache-2.0 |
-| Tesseract (alternativa OCR) | Apache-2.0 | Binario por plataforma |
 | GLiNER multi PII | Apache-2.0 (comprobar el modelo concreto) | NER |
 | Modelos AINA / BSC (catalán) | Apache-2.0 en su mayoría (comprobar cada uno) | NER catalán |
 | Salamandra (BSC) | Apache-2.0 | LLM con buen catalán |

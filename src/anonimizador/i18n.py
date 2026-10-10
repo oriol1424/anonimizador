@@ -36,6 +36,10 @@ STRINGS: dict[str, dict[str, str]] = {
     },
     "anonymize": {"ca": "Anonimitza", "es": "Anonimizar"},
     "working": {"ca": "Treballant…", "es": "Trabajando…"},
+    "ocr_progress": {
+        "ca": "Llegint pàgines escanejades… {done}/{total}",
+        "es": "Leyendo páginas escaneadas… {done}/{total}",
+    },
     "anonymized_suffix": {"ca": "_anonimitzat", "es": "_anonimizado"},
     "input_filter": {
         "ca": "Documents Word o PDF (*.docx *.pdf)",
@@ -103,13 +107,11 @@ STRINGS: dict[str, dict[str, str]] = {
         "es": "El documento contiene {count} imágenes u objetos incrustados. Su contenido no "
         "se anonimiza: revísalos manualmente.",
     },
-    "notice_scanned": {
-        "ca": "ATENCIÓ: {count} pàgines són escanejades (només imatge) i NO s'han "
-        "anonimitzat. Encara no es pot llegir text de les imatges (OCR): no comparteixis "
-        "aquestes pàgines.",
-        "es": "ATENCIÓN: {count} páginas son escaneadas (solo imagen) y NO se han "
-        "anonimizado. Todavía no se puede leer texto de las imágenes (OCR): no compartas "
-        "estas páginas.",
+    "notice_ocr": {
+        "ca": "{count} pàgines escanejades s'han llegit amb reconeixement de text (OCR). "
+        "Revisa-les: amb lletra manuscrita, segells o mala qualitat d'imatge pot fallar.",
+        "es": "{count} páginas escaneadas se han leído con reconocimiento de texto (OCR). "
+        "Revísalas: con letra manuscrita, sellos o mala calidad de imagen puede fallar.",
     },
     # Diálogo de sugerencias
     "sugg_title": {"ca": "Revisa les suggerències", "es": "Revisa las sugerencias"},

@@ -170,6 +170,15 @@ PDF_LINES = [
 ]
 
 
+SCANNED_LINES = [
+    "ANNEX 1 - REBUT",
+    "Jo, Joan Puig i Ferrer, amb DNI 12345678Z, he rebut de Martí d'Orriols",
+    "la quantitat de 1.500 euros en concepte de bestreta.",
+    "Girona, 3 de març de 2025.",
+    "Signat: J. Puig Ferrer",
+]
+
+
 def build_demanda_pdf_ca(path: Path) -> Path:
     """PDF en catalán: página con texto + página escaneada (solo imagen)."""
     doc = pymupdf.open()
@@ -207,8 +216,9 @@ def build_demanda_pdf_ca(path: Path) -> Path:
     # Página "escaneada": una imagen con texto, sin capa de texto.
     scan_src = pymupdf.open()
     scan_page = scan_src.new_page()
-    scan_page.insert_text((56, 72), "Annex: rebut signat per Joan Puig i Ferrer", fontsize=12)
-    pix = scan_page.get_pixmap(dpi=100)
+    for i, line in enumerate(SCANNED_LINES):
+        scan_page.insert_text((56, 90 + i * 22), line, fontsize=12, fontname="tiro")
+    pix = scan_page.get_pixmap(dpi=150, colorspace=pymupdf.csGRAY)
     scanned = doc.new_page()
     scanned.insert_image(scanned.rect, pixmap=pix)
 

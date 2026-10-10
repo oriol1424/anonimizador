@@ -24,7 +24,9 @@
 | 2026-10-10 | El núcleo devuelve `Notice`/`AnonymizerError` con código, la UI los traduce | Separar lógica y textos; mensajes siempre en el idioma de la interfaz |
 | 2026-10-10 | Listas de términos por caso en .json elegido por el usuario; QSettings solo guarda la última carpeta | Reutilizar listas sin que la app guarde datos personales por su cuenta |
 | 2026-10-10 | PyMuPDF para PDF (redacción real) bajo **AGPL-3.0, gratis** (sin licencia comercial) | Es la única librería madura que elimina texto del contenido del PDF; aislada en `pdf_io.py` por si hay que cambiarla |
-| 2026-10-10 | Las páginas escaneadas no se procesan hasta tener OCR y se avisa con un mensaje destacado | Mejor un aviso claro que una falsa sensación de seguridad |
+| 2026-10-10 | OCR con RapidOCR (PP-OCRv6), no Tesseract | Lee bien el catalán (·, à, ç), los modelos van dentro del paquete pip (sin binarios por plataforma ni descargas), Apache-2.0 |
+| 2026-10-10 | Toda página cuya imagen cubra ≥50% se rehace desde OCR, ignorando su capa de texto | Una capa de texto ajena puede no coincidir con lo que se ve; más lento pero seguro |
+| 2026-10-10 | Verificación de páginas escaneadas con un segundo OCR del resultado | Única forma de comprobar que los píxeles ya no muestran el dato |
 | 2026-10-10 | PDF solo se guarda como PDF o .txt (no .docx) | Convertir PDF→Word pierde formato y no aporta para la IA |
 | 2026-10-10 | Coste cero: solo licencias libres válidas para uso profesional; nada de terceros en git | Petición del usuario; el bufete lo usa en su trabajo (uso comercial) |
 | 2026-10-10 | "i"/"y" entre apellidos opcional; `·` forma parte de la palabra; `’` = `'` | Particularidades de los nombres catalanes y del autocorrector de Word |

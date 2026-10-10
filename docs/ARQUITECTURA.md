@@ -4,10 +4,7 @@
 - **Python 3.11** + **PySide6** (Qt: mismo código en macOS y Windows).
 - **python-docx** (+ manipulación XML directa para runs partidos) → Word.
 - **PyMuPDF (fitz)** → lectura y redacción real de PDF.
-- **OCR**: RapidOCR (ONNX, se instala con pip y se empaqueta fácil en Mac y Windows).
-  Alternativa: Tesseract (habría que incluir el binario por plataforma).
-  - PDF escaneado: OCR → localizar cajas de las palabras a anonimizar → tapar píxeles
-    en la imagen → (opcional) escribir el alias encima + capa de texto.
+- **OCR**: RapidOCR (ONNX, modelos incluidos en el paquete pip, Mac y Windows, catalán).
 - **Detección en capas**:
   1. Lista del usuario + generador de variantes (rapidfuzz para coincidencias aproximadas).
   2. Reglas/regex españolas: DNI, NIE, CIF, IBAN, teléfonos, emails, matrículas,
@@ -44,7 +41,7 @@ src/anonimizador/
     pipeline.py       # analyze() -> sugerencias; anonymize() -> informe  [hecho]
     result.py         # ProcessResult común a Word y PDF                 [hecho]
     pdf_io.py         # PDF con texto: redacción real (PyMuPDF)          [hecho]
-    ocr.py            # PDF escaneado: OCR + borrado de píxeles
+    ocr.py            # OCR local (RapidOCR, catalán) con caché en memoria [hecho]
     ner.py            # GLiNER
     llm_review.py     # LLM local
     mapping.py        # mapa original<->alias, cifrado
@@ -72,7 +69,18 @@ runs (docx) o rectángulos (pdf). Así los detectores son independientes del for
   escaneados con capa de texto) y `graphics=NONE` (no borra líneas de tablas).
 - El alias se escribe en la posición del primer carácter, estrechado (`morph`) si no cabe.
 - Se guarda con `garbage=4, clean=True` para no dejar copias del contenido antiguo.
-- Página escaneada = menos de 20 caracteres de texto y una imagen que cubre ≥50% → aviso.
+- Página imagen = una imagen cubre ≥50% de la página (escaneada, o escaneada con capa
+  de texto de otro OCR, o con fondo de imagen) → se trata con OCR, sin fiarse de la capa
+  de texto que traiga:
+  1. Se rasteriza a 200 dpi y se lee con RapidOCR (PP-OCRv6 multilingüe, incluye catalán;
+     ~3 s/página en CPU). Da una caja por palabra; la de cada letra se reparte a partes iguales.
+  2. Se pintan de blanco los píxeles de cada dato (+3 px de margen).
+  3. Se vacía la página entera (texto, imágenes, dibujos) y se rehace con la imagen limpia
+     (JPEG), el alias visible y una capa de texto invisible ya anonimizada.
+  4. La verificación final vuelve a pasar OCR sobre la imagen resultante.
+- El OCR se cachea en memoria (hash de la imagen) para no repetirlo entre análisis y
+  anonimización; nunca se guarda en disco.
+- La ventana muestra el progreso del OCR ("Llegint pàgines escanejades… 3/10").
 - El .txt se genera del original + sustituciones (el texto añadido saldría desordenado).
 
 ## Word: detalles que importan

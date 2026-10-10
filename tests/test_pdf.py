@@ -1,11 +1,16 @@
-"""PDF con texto: borrado real, conservación del resto y detección de páginas escaneadas."""
+"""PDF: borrado real en páginas con texto y en páginas escaneadas (OCR).
 
+El OCR tarda unos segundos por página: el PDF se anonimiza una sola vez por módulo.
+"""
+
+from dataclasses import dataclass
 from pathlib import Path
 
 import pymupdf
 import pytest
+from generar_corpus import build_demanda_pdf_ca
 
-from anonimizador.core import pdf_io
+from anonimizador.core import ocr, pdf_io
 from anonimizador.core.lang import CATALAN
 from anonimizador.core.matcher import Term
 from anonimizador.core.pipeline import AnonymizerError, analyze, anonymize
@@ -35,31 +40,42 @@ def _everything(path: Path) -> str:
     return "\n".join(parts)
 
 
-@pytest.fixture
-def anonymized_pdf(demanda_pdf: Path, tmp_path: Path):
+@dataclass
+class Run:
+    src: Path
+    out: Path
+    report: object
+    analysis: object
+    src_text: str
+    out_text: str
+
+
+@pytest.fixture(scope="module")
+def run(tmp_path_factory) -> Run:
+    folder = tmp_path_factory.mktemp("pdf")
+    src = build_demanda_pdf_ca(folder / "demanda_ca.pdf")
     terms = list(USER_TERMS)
-    analysis = analyze(demanda_pdf, terms, CATALAN)
+    analysis = analyze(src, terms, CATALAN)
     for s in analysis.suggestions:
         terms.extend(s.to_terms())
-    out = tmp_path / "sortida.pdf"
-    return out, anonymize(demanda_pdf, out, terms), analysis
+    out = folder / "sortida.pdf"
+    report = anonymize(src, out, terms)
+    return Run(src, out, report, analysis, _everything(src), _everything(out))
 
 
-def test_secrets_are_readable_in_the_original(demanda_pdf: Path):
+def test_secrets_are_readable_in_the_original(run):
     """Control: si el original no los contuviera, el test siguiente no probaría nada."""
-    text = _everything(demanda_pdf)
-    assert all(secret in text for secret in SECRETS)
+    assert all(secret in run.src_text for secret in SECRETS)
 
 
 @pytest.mark.parametrize("secret", SECRETS)
-def test_secret_is_really_removed(anonymized_pdf, secret):
-    out, _, _ = anonymized_pdf
-    assert secret not in _everything(out)
+def test_secret_is_really_removed(run, secret):
+    """Incluye la página escaneada: `_everything` la vuelve a leer con OCR."""
+    assert secret not in run.out_text
 
 
-def test_rest_of_text_is_kept(anonymized_pdf):
-    out, _, _ = anonymized_pdf
-    text = pymupdf.open(str(out))[0].get_text()
+def test_rest_of_text_is_kept(run):
+    text = pymupdf.open(str(run.out))[0].get_text()
     for kept in [
         "AL JUTJAT DE PRIMERA INST",
         "va subscriure un contracte amb",
@@ -72,10 +88,9 @@ def test_rest_of_text_is_kept(anonymized_pdf):
         assert alias in text
 
 
-def test_name_split_across_lines_is_removed(anonymized_pdf):
+def test_name_split_across_lines_is_removed(run):
     """ "J. Puig" al final de una línea y "Ferrer" al principio de la siguiente."""
-    out, _, _ = anonymized_pdf
-    page = pymupdf.open(str(out))[0]
+    page = pymupdf.open(str(run.out))[0]
     fer = page.search_for("El pagament el va fer")[0]
     compte = page.search_for("al compte")[0]
     aliases = page.search_for("[CLIENT_1]")
@@ -88,33 +103,46 @@ def test_name_split_across_lines_is_removed(anonymized_pdf):
     assert words_before == []
 
 
-def test_txt_from_pdf_keeps_reading_order(demanda_pdf, tmp_path):
+def test_table_lines_are_kept(run):
+    before = len(pymupdf.open(str(run.src))[0].get_drawings())
+    after = len(pymupdf.open(str(run.out))[0].get_drawings())
+    assert after == before
+
+
+def test_scanned_page_is_read_and_anonymized(run):
+    """Página escaneada: el OCR sobre la imagen resultante ya no ve los datos."""
+    ocr_text, _ = ocr.recognize(ocr.render(pymupdf.open(str(run.out))[1])).text_and_boxes()
+    for kept in ["ANNEX 1", "he rebut de", "1.500 euros", "bestreta", "Girona, 3 de març"]:
+        assert kept in ocr_text
+    for gone in ["Puig", "Ferrer", "12345678Z", "Orriols"]:
+        assert gone not in ocr_text
+    assert "[CLIENT_1]" in ocr_text
+
+
+def test_scanned_page_has_anonymized_text_layer(run):
+    layer = pymupdf.open(str(run.out))[1].get_text()
+    assert "[CLIENT_1]" in layer and "he rebut de" in layer
+    assert "Puig" not in layer
+
+
+def test_scanned_page_dni_is_suggested(run):
+    dni = next(s for s in run.analysis.suggestions if s.label == "DNI")
+    assert dni.count == 2  # una en la página de texto y otra en la escaneada
+
+
+def test_ocr_notice_and_no_leftovers(run):
+    assert [n.count for n in run.report.notices if n.kind == "ocr"] == [1]
+    assert not [n for n in run.report.notices if n.kind == "leftovers"]
+
+
+def test_pdf_to_txt_in_reading_order(demanda_pdf, tmp_path):
     out = tmp_path / "sortida.txt"
     anonymize(demanda_pdf, out, USER_TERMS)
     text = out.read_text(encoding="utf-8")
     assert "El pagament el va fer [CLIENT_1] al compte" in " ".join(text.split())
     assert "En [CLIENT_1], major d'edat" in text
-
-
-def test_table_lines_are_kept(demanda_pdf, anonymized_pdf):
-    out, _, _ = anonymized_pdf
-    before = len(pymupdf.open(str(demanda_pdf))[0].get_drawings())
-    after = len(pymupdf.open(str(out))[0].get_drawings())
-    assert after == before
-
-
-def test_scanned_page_is_reported(anonymized_pdf):
-    _, report, analysis = anonymized_pdf
-    assert [n.count for n in analysis.notices if n.kind == "scanned"] == [1]
-    assert [n.count for n in report.notices if n.kind == "scanned"] == [1]
-    assert not [n for n in report.notices if n.kind == "leftovers"]
-
-
-def test_pdf_to_txt(demanda_pdf, tmp_path):
-    out = tmp_path / "sortida.txt"
-    anonymize(demanda_pdf, out, USER_TERMS)
-    text = out.read_text(encoding="utf-8")
-    assert "[CLIENT_1]" in text and "Puig" not in text
+    assert "Jo, [CLIENT_1], amb DNI" in text  # página escaneada, vía OCR
+    assert "Puig" not in text
     assert not list(tmp_path.glob("*.tmp.pdf"))
 
 

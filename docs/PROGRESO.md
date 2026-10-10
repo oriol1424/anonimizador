@@ -1,7 +1,7 @@
 # Progreso
 
 ## Estado actual
-Fase 1 — **Word y PDF con texto, con interfaz en catalán** (109 tests). Ya se puede usar la app:
+Fase 1 — **Word, PDF y PDF escaneado (OCR), con interfaz en catalán** (111 tests). Ya se puede usar la app:
 
 ```
 .venv/Scripts/python -m anonimizador.app
@@ -37,8 +37,8 @@ python -m venv .venv
 5. [x] Ventana única PySide6 en catalán (fichero + arrastrar, idioma, tabla con desplegable
        editable, cargar/guardar lista, guardar como, diálogo de sugerencias, resultado).
 6. [x] PDF de texto con redacción real (+ aviso de páginas escaneadas y PDF protegidos).
-7. [ ] **PDF escaneado con OCR.** ← SIGUIENTE
-8. [ ] NER para personas, empresas y direcciones no indicadas — evaluar en catalán
+7. [x] PDF escaneado con OCR (RapidOCR, catalán) + borrado de píxeles + verificación.
+8. [ ] **NER** ← SIGUIENTE para personas, empresas y direcciones no indicadas — evaluar en catalán
        (GLiNER multilingüe vs. modelos AINA/BSC vs. spaCy ca).
 9. [ ] LLM local de revisión (desactivable por RAM) — evaluar Salamandra (BSC) vs. Qwen en catalán.
 10. [ ] GitHub Actions: build Mac + Windows; prueba desde USB en equipos limpios. Incluir en
@@ -48,7 +48,9 @@ python -m venv .venv
 ## Limitaciones conocidas
 - Direcciones y nombres que el usuario no indica no se detectan aún (llegará con NER, paso 8).
 - Imágenes incrustadas (Word y PDF) no se anonimizan: se avisa al usuario.
-- PDF escaneados: de momento solo se detectan y se avisa en rojo; no se anonimizan (paso 7).
+- OCR: puede fallar con letra manuscrita, sellos o imágenes de mala calidad (se avisa).
+  Páginas giradas 90° dentro de la imagen (no mediante /Rotate) no se leen bien.
+- Imágenes pequeñas dentro de páginas con texto (p. ej. foto de un DNI) no pasan por OCR.
 - PDF: si el alias es más largo que el nombre, se estrecha o se reduce el tamaño para que
   quepa (puede quedar pequeño). Para pasar a la IA, la salida .txt es la más limpia.
 - Si dos términos comparten apellido ("Joan Puig" / "Pere Puig"), "Sr. Puig" no se
@@ -76,3 +78,6 @@ python -m venv .venv
   notas, enlaces, campos, marcadores y metadatos; páginas escaneadas detectadas y avisadas;
   PDF protegido con mensaje claro; exportación .txt en orden de lectura; el desplegable
   de formato depende de la entrada (Word -> Word/Text, PDF -> PDF/Text).
+- 2026-10-10: PDF escaneado: OCR local con RapidOCR (catalán), borrado de píxeles, página
+  rehecha con imagen limpia + alias + capa de texto invisible anonimizada, verificación
+  con segundo OCR, progreso en la ventana, caché de OCR en memoria.
