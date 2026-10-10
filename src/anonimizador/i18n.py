@@ -113,6 +113,12 @@ STRINGS: dict[str, dict[str, str]] = {
         "es": "{count} páginas escaneadas se han leído con reconocimiento de texto (OCR). "
         "Revísalas: con letra manuscrita, sellos o mala calidad de imagen puede fallar.",
     },
+    "notice_ner_unavailable": {
+        "ca": "El detector de noms i empreses no està instal·lat: només s'han buscat dades "
+        "com DNI, telèfons o adreces. Revisa els noms manualment.",
+        "es": "El detector de nombres y empresas no está instalado: solo se han buscado datos "
+        "como DNI, teléfonos o direcciones. Revisa los nombres manualmente.",
+    },
     # Diálogo de sugerencias
     "sugg_title": {"ca": "Revisa les suggerències", "es": "Revisa las sugerencias"},
     "sugg_intro": {
@@ -139,6 +145,40 @@ STRINGS: dict[str, dict[str, str]] = {
     "label_EMAIL": {"ca": "Correu electrònic", "es": "Correo electrónico"},
     "label_MATRICULA": {"ca": "Matrícula", "es": "Matrícula"},
     "label_PROCEDIMIENTO": {"ca": "Núm. procediment", "es": "Nº procedimiento"},
+    "label_DIRECCION": {"ca": "Adreça", "es": "Dirección"},
+    "label_PERSONA": {"ca": "Persona", "es": "Persona"},
+    "label_EMPRESA": {"ca": "Empresa / entitat", "es": "Empresa / entidad"},
+    # Guía de correspondencias
+    "save_guide": {
+        "ca": "Desa també la guia de correspondències (confidencial: conté els noms reals)",
+        "es": "Guardar también la guía de correspondencias (confidencial: contiene los nombres "
+        "reales)",
+    },
+    "guide_suffix": {"ca": "_GUIA_CONFIDENCIAL", "es": "_GUIA_CONFIDENCIAL"},
+    "guide_title": {"ca": "Guia de correspondències", "es": "Guía de correspondencias"},
+    "guide_warning": {
+        "ca": "CONFIDENCIAL: aquest fitxer conté les dades reals. No el comparteixis ni el "
+        "pugis a cap IA. Guarda'l només al despatx.",
+        "es": "CONFIDENCIAL: este fichero contiene los datos reales. No lo compartas ni lo "
+        "subas a ninguna IA. Guárdalo solo en el despacho.",
+    },
+    "guide_source": {"ca": "Document original", "es": "Documento original"},
+    "guide_output": {"ca": "Document anonimitzat", "es": "Documento anonimizado"},
+    "guide_date": {"ca": "Data", "es": "Fecha"},
+    "guide_col_alias": {"ca": "Substitut", "es": "Sustituto"},
+    "guide_col_original": {"ca": "Text original", "es": "Texto original"},
+    "guide_col_found": {"ca": "Formes trobades (vegades)", "es": "Formas encontradas (veces)"},
+    "guide_col_type": {"ca": "Origen", "es": "Origen"},
+    "guide_col_count": {"ca": "Total", "es": "Total"},
+    "guide_type_user": {"ca": "La teva llista", "es": "Tu lista"},
+    "guide_not_found": {
+        "ca": "No trobat al document (revisa com està escrit)",
+        "es": "No encontrado en el documento (revisa cómo está escrito)",
+    },
+    "guide_saved": {
+        "ca": "Guia de correspondències (confidencial):\n{path}",
+        "es": "Guía de correspondencias (confidencial):\n{path}",
+    },
     # Resultado
     "done_title": {"ca": "Fet", "es": "Hecho"},
     "done": {

@@ -41,6 +41,8 @@ Nada más: sin menús complejos ni configuración visible.
 - Cubrir cuerpo, tablas, cabeceras, pies, notas al pie, comentarios y **metadatos**.
 - PDF: borrado real del texto/píxeles (no un recuadro encima de un texto que sigue ahí).
 - Informe final de lo sustituido.
+- **Guía de correspondencias** (registro confidencial alias → texto original) junto al
+  documento anonimizado, activada por defecto.
 - Fase 2: guardar mapa cifrado y "des-anonimizar" la respuesta de la IA.
 
 ## No funcionales

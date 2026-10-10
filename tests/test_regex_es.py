@@ -24,6 +24,39 @@ def test_detects(text, label, value):
     assert (label, value) in found
 
 
+@pytest.mark.parametrize(
+    ("text", "address"),
+    [
+        ("domicili al carrer de la Indústria, 45, 3r 2a, 08025 Barcelona, compareix",
+         "carrer de la Indústria, 45, 3r 2a, 08025 Barcelona"),
+        ("resideix a l'avinguda Diagonal, 640, de Barcelona.",
+         "avinguda Diagonal, 640, de Barcelona"),
+        ("a la plaça Major, 3, de Vic.", "plaça Major, 3, de Vic"),
+        ("al passeig de Gràcia, 92, principal, està", "passeig de Gràcia, 92, principal"),
+        ("a la carretera de Sant Sadurní, km 3, de Vilafranca del Penedès.",
+         "carretera de Sant Sadurní, km 3, de Vilafranca del Penedès"),
+        ("C/ Major, s/n, de Tremp.", "C/ Major, s/n, de Tremp"),
+        ("Av. Diagonal 640", "Av. Diagonal 640"),
+        ("carrer del Dr. Trueta, 12", "carrer del Dr. Trueta, 12"),
+        ("en la calle Mayor 5, 2º B, 28013 Madrid.", "calle Mayor 5, 2º B, 28013 Madrid"),
+    ],
+)  # fmt: skip
+def test_detects_addresses(text, address):
+    assert ("DIRECCION", address) in [(d.label, d.text) for d in detect(text)]
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "La part és major d'edat i viu al carrer major del poble. El 2025 va marxar.",
+        "Per via 3 de recurs.",
+        "Vistos els articles 248 i següents de la Llei d'Enjudiciament Civil.",
+    ],
+)
+def test_no_address_false_positives(text):
+    assert not [d for d in detect(text) if d.label == "DIRECCION"]
+
+
 def test_invalid_iban_is_ignored():
     assert not [d for d in detect("ES00 2100 0418 4502 0005 1332") if d.label == "IBAN"]
 

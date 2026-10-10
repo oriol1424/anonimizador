@@ -42,7 +42,8 @@ src/anonimizador/
     result.py         # ProcessResult común a Word y PDF                 [hecho]
     pdf_io.py         # PDF con texto: redacción real (PyMuPDF)          [hecho]
     ocr.py            # OCR local (RapidOCR, catalán) con caché en memoria [hecho]
-    ner.py            # GLiNER
+    ner.py            # personas/empresas: AINA RoBERTa-ca en ONNX int8   [hecho]
+    guide.py          # guía de correspondencias (.docx confidencial)    [hecho]
     llm_review.py     # LLM local
     mapping.py        # mapa original<->alias, cifrado
 tests/
@@ -82,6 +83,34 @@ runs (docx) o rectángulos (pdf). Así los detectores son independientes del for
   anonimización; nunca se guarda en disco.
 - La ventana muestra el progreso del OCR ("Llegint pàgines escanejades… 3/10").
 - El .txt se genera del original + sustituciones (el texto añadido saldría desordenado).
+
+## Detección de personas, empresas y direcciones
+- **Direcciones**: reglas (`regex_es.ADDRESS`): tipo de vía + nombre + número/km/s/n +
+  piso/puerta + CP + población. 7/7 en la evaluación, sin falsos positivos.
+- **Personas y empresas**: `projecte-aina/roberta-base-ca-v2-cased-ner` convertido a ONNX
+  int8 (125 MB, `models/ner-ca/`, fuera de git; se genera con `scripts/preparar_models.py`).
+  Se ejecuta con onnxruntime + tokenizers (sin PyTorch). Texto en trozos de ~1500
+  caracteres; etiqueta por palabra = primer sub-token; esquema BIO.
+- Post-proceso: apóstrofo ’ → ' antes del modelo (mismo largo), unir "d'" + apellido,
+  quitar tratamientos (Sr., Sra., Don...), descartar organismos públicos (Jutjat,
+  Agència Tributària, Ayuntamiento...), papeles procesales (Demandat, Actora...) y
+  textos sin mayúsculas.
+- No se sugiere lo ya cubierto por la lista del usuario, ni partes de esos nombres.
+- `merge_variants` une "Jordi Casals i Pons" / "Sr. Casals" / "J. Casals Pons" en una
+  sola sugerencia (sin IA: usa las mismas variantes que la sustitución).
+- Orden en la ventana: personas, empresas, direcciones, DNI...
+- Evaluación: `tests/corpus/ner_eval_ca.py` (25 frases jurídicas inventadas). Comparativa
+  2026-10-10 (personas+empresas, 32): AINA 32/32 (2,7 s con PyTorch, 0,5 s en ONNX),
+  GLiNER multi/PII 32/32 pero más falsos positivos y 3× más lento, spaCy 29/32,
+  GLiNER knowledgator 26/32. También acierta en castellano en las pruebas.
+- Sin el modelo la app funciona igual (solo reglas) y avisa.
+
+## Guía de correspondencias
+- Opción (marcada por defecto) en la ventana: `<nombre>_GUIA_CONFIDENCIAL.docx` junto al
+  documento anonimizado. Tabla: alias, texto original, formas encontradas (veces), origen
+  (tu lista / tipo detectado) y total. Los términos de la lista que no aparecen se marcan
+  "No trobat" (ayuda a detectar errores de escritura).
+- Aviso de confidencialidad destacado; autor vacío en sus metadatos.
 
 ## Word: detalles que importan
 - Un nombre puede estar partido en varios `w:r` con formatos distintos: se concatena el

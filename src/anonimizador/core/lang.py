@@ -26,6 +26,9 @@ CATALAN = Language(
         "EMAIL": "CORREU",
         "MATRICULA": "MATRICULA",
         "PROCEDIMIENTO": "PROCEDIMENT",
+        "DIRECCION": "ADRECA",
+        "PERSONA": "PERSONA",
+        "EMPRESA": "EMPRESA",
     },
     presets=(
         "[PERSONA_{n}]",
@@ -50,6 +53,9 @@ SPANISH = Language(
         "EMAIL": "EMAIL",
         "MATRICULA": "MATRICULA",
         "PROCEDIMIENTO": "PROCEDIMIENTO",
+        "DIRECCION": "DIRECCION",
+        "PERSONA": "PERSONA",
+        "EMPRESA": "EMPRESA",
     },
     presets=(
         "[PERSONA_{n}]",

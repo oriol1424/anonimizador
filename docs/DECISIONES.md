@@ -29,4 +29,9 @@
 | 2026-10-10 | Verificación de páginas escaneadas con un segundo OCR del resultado | Única forma de comprobar que los píxeles ya no muestran el dato |
 | 2026-10-10 | PDF solo se guarda como PDF o .txt (no .docx) | Convertir PDF→Word pierde formato y no aporta para la IA |
 | 2026-10-10 | Coste cero: solo licencias libres válidas para uso profesional; nada de terceros en git | Petición del usuario; el bufete lo usa en su trabajo (uso comercial) |
+| 2026-10-10 | NER: modelo AINA (RoBERTa catalán) en ONNX int8, no GLiNER ni spaCy | Mejor resultado en la evaluación (32/32 sin falsos positivos tras filtros), el más rápido, sin PyTorch, Apache-2.0 |
+| 2026-10-10 | Direcciones por reglas, no por el modelo | Ningún modelo cubría la dirección completa (piso, CP, población) |
+| 2026-10-10 | El mismo modelo AINA para castellano | Los modelos oficiales en castellano (PlanTL) se retiraron; AINA acierta en las pruebas en castellano |
+| 2026-10-10 | Unir variantes de un nombre sin IA (`merge_variants`) | Las variantes ya se conocen por el matcher; determinista y explicable |
+| 2026-10-10 | Guía de correspondencias en .docx junto a la salida, activada por defecto | Registro pedido por el usuario; legible para el bufete; nombre y aviso dejan claro que es confidencial |
 | 2026-10-10 | "i"/"y" entre apellidos opcional; `·` forma parte de la palabra; `’` = `'` | Particularidades de los nombres catalanes y del autocorrector de Word |

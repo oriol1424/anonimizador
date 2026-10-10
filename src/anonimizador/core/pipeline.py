@@ -7,10 +7,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from types import ModuleType
 
-from anonimizador.core import docx_io, pdf_io, regex_es
+from anonimizador.core import docx_io, ner, pdf_io, regex_es
+from anonimizador.core.guide import GuideEntry, build_entries, write_guide
 from anonimizador.core.lang import DEFAULT_LANGUAGE, Language
 from anonimizador.core.matcher import Matcher, Term
 from anonimizador.core.pdf_io import Progress
+from anonimizador.core.text import fold
 from anonimizador.i18n import tr
 
 # Formato de entrada -> (módulo que lo procesa, formatos de salida posibles).
@@ -34,6 +36,7 @@ class Suggestion:
     replacement: str
     forms: tuple[str, ...]  # cómo aparece en el texto ("12345678Z", "12.345.678-Z")
     count: int
+    expand: bool = False  # nombres: sustituir también variantes ("Sr. Casals")
 
     @property
     def text(self) -> str:
@@ -41,7 +44,7 @@ class Suggestion:
 
     def to_terms(self, replacement: str | None = None) -> list[Term]:
         alias = replacement or self.replacement
-        return [Term(f, alias, expand=False, source=self.label) for f in self.forms]
+        return [Term(f, alias, expand=self.expand, source=self.label) for f in self.forms]
 
 
 class AnonymizerError(ValueError):
@@ -79,6 +82,8 @@ class Report:
     output: Path
     replaced: dict[str, int]  # sustituto -> nº de sustituciones
     notices: list[Notice] = field(default_factory=list)
+    entries: list[GuideEntry] = field(default_factory=list)
+    guide: Path | None = None
 
     @property
     def total(self) -> int:
@@ -113,6 +118,24 @@ def _next_alias(label: str, used: set[str]) -> str:
     return alias
 
 
+# Orden de las sugerencias en la ventana: primero lo más identificativo.
+LABEL_ORDER = [
+    "PERSONA", "EMPRESA", "DIRECCION", "DNI", "NIE", "CIF", "TELEFONO", "EMAIL", "IBAN",
+    "MATRICULA", "PROCEDIMIENTO",
+]  # fmt: skip
+NAMED_LABELS = {"PERSONA", "EMPRESA"}
+
+
+def _overlaps(start: int, end: int, spans) -> bool:
+    return any(start < s.end and end > s.start for s in spans)
+
+
+def _part_of_user_term(text: str, user_terms: list[Term]) -> bool:
+    """ "Joan" cuando el usuario ya puso "Joan Puig i Ferrer": es la misma persona."""
+    words = set(fold(text).split())
+    return any(words <= set(fold(t.original).split()) for t in user_terms)
+
+
 def analyze(
     path: Path,
     user_terms: list[Term],
@@ -121,8 +144,8 @@ def analyze(
 ) -> Analysis:
     """Busca datos identificativos que el usuario no ha incluido en su lista.
 
-    El idioma decide el nombre de los alias sugeridos ([TELEFON_1] / [TELEFONO_1]) y, más
-    adelante, el modelo de detección de nombres.
+    Combina reglas (DNI, IBAN, direcciones...) y el detector de personas y empresas.
+    El idioma decide el nombre de los alias sugeridos ([TELEFON_1] / [TELEFONO_1]).
     """
     backend = _backend(path)
     with _friendly_errors():
@@ -130,28 +153,91 @@ def analyze(
     matcher = Matcher(user_terms)
     covered = matcher.find(text)
 
-    groups: dict[tuple[str, str], list[str]] = {}
-    for det in regex_es.detect(text):
-        if any(det.start < c.end and det.end > c.start for c in covered):
-            continue
-        groups.setdefault((det.label, _normalize_value(det.text)), []).append(det.text)
+    rules = [d for d in regex_es.detect(text) if not _overlaps(d.start, d.end, covered)]
+    entities = [
+        e
+        for e in ner.detect(text)
+        if not _overlaps(e.start, e.end, covered)
+        and not _overlaps(e.start, e.end, rules)
+        and not _part_of_user_term(e.text, user_terms)
+    ]
 
+    groups: dict[tuple[str, str], list[str]] = {}
+    first_seen: dict[tuple[str, str], int] = {}
+    for label, key, form, start in [
+        *((d.label, _normalize_value(d.text), d.text, d.start) for d in rules),
+        *((e.label, fold(e.text), e.text, e.start) for e in entities),
+    ]:
+        groups.setdefault((label, key), []).append(form)
+        first_seen[(label, key)] = min(first_seen.get((label, key), start), start)
+
+    ordered = sorted(groups, key=lambda k: (LABEL_ORDER.index(k[0]), first_seen[k]))
+    raw = [
+        Suggestion(
+            label, "", tuple(dict.fromkeys(groups[(label, key)])), len(groups[(label, key)]),
+            expand=label in NAMED_LABELS,
+        )
+        for label, key in ordered
+    ]  # fmt: skip
+    merged = merge_variants(raw)
+    merged.sort(key=lambda s: LABEL_ORDER.index(s.label))
     used = {t.replacement for t in user_terms}
     suggestions = [
-        Suggestion(
-            label,
-            _next_alias(language.labels[label], used),
-            tuple(dict.fromkeys(forms)),
-            len(forms),
-        )
-        for (label, _), forms in groups.items()
-    ]
+        Suggestion(s.label, _next_alias(language.labels[s.label], used), s.forms, s.count,
+                   s.expand)
+        for s in merged
+    ]  # fmt: skip
+
     notices = [Notice("ambiguous", detail=v) for v in sorted(matcher.ambiguous)]
+    if not ner.is_available():
+        notices.append(Notice("ner_unavailable"))
     return Analysis(suggestions, notices)
 
 
-def anonymize(src: Path, dst: Path, terms: list[Term], progress: Progress | None = None) -> Report:
-    """Anonimiza y verifica releyendo la salida (en páginas escaneadas, con un nuevo OCR)."""
+def merge_variants(suggestions: list[Suggestion]) -> list[Suggestion]:
+    """Junta en una sola sugerencia las formas de un mismo nombre.
+
+    "Jordi Casals i Pons", "Sr. Casals" y "J. Casals Pons" -> una sugerencia con las tres
+    formas. Sin IA: se usan las mismas variantes con las que se sustituye.
+    """
+    named = sorted((s for s in suggestions if s.expand), key=lambda s: len(s.text), reverse=True)
+    merged: dict[int, Suggestion] = {}
+    _origin: dict[Suggestion, Suggestion] = {}
+    absorbed: set[int] = set()
+    for i, longer in enumerate(named):
+        if i in absorbed:
+            continue
+        matcher = Matcher([Term(longer.text, "x")])
+        forms, count = list(longer.forms), longer.count
+        for j in range(i + 1, len(named)):
+            shorter = named[j]
+            if j in absorbed:
+                continue
+            found = matcher.find(shorter.text)
+            if found and found[0].start == 0 and found[0].end == len(shorter.text):
+                forms += [f for f in shorter.forms if f not in forms]
+                count += shorter.count
+                absorbed.add(j)
+        result = Suggestion(longer.label, longer.replacement, tuple(forms), count, True)
+        merged[i] = result
+        _origin[result] = longer
+    position = {id(s): n for n, s in enumerate(suggestions)}
+    kept = sorted(merged.values(), key=lambda s: position.get(id(_origin[s]), 0))
+    return [s for s in suggestions if not s.expand] + kept
+
+
+def anonymize(
+    src: Path,
+    dst: Path,
+    terms: list[Term],
+    progress: Progress | None = None,
+    guide: Path | None = None,
+    language: Language = DEFAULT_LANGUAGE,
+) -> Report:
+    """Anonimiza y verifica releyendo la salida (en páginas escaneadas, con un nuevo OCR).
+
+    Si se indica `guide`, guarda ahí la guía de correspondencias (alias -> texto original).
+    """
     backend = _backend(src)
     native = src.suffix.lower()
     if dst.suffix.lower() not in output_formats(src):
@@ -186,4 +272,7 @@ def anonymize(src: Path, dst: Path, terms: list[Term], progress: Progress | None
         notices.append(Notice("images", count=result.images))
 
     replaced = Counter(m.replacement for m in result.matches)
-    return Report(dst, dict(replaced), notices)
+    entries = build_entries(terms, result.matches)
+    if guide is not None:
+        write_guide(guide, entries, src, dst, language)
+    return Report(dst, dict(replaced), notices, entries, guide)

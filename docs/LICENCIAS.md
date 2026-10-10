@@ -20,6 +20,8 @@ Objetivo: **coste cero** y uso profesional en el bufete sin pagar licencias.
 | PyMuPDF | AGPL-3.0 (o comercial) | **Sí, eligiendo AGPL** | Si se entrega la app a otra persona, darle también el código fuente (ver abajo) |
 | rapidocr (OCR) | Apache-2.0 | Sí | Conservar aviso; modelos PP-OCRv6 (PaddleOCR, Apache-2.0) incluidos en el paquete |
 | onnxruntime | MIT | Sí | Conservar aviso de copyright |
+| tokenizers (Hugging Face) | Apache-2.0 | Sí | Conservar aviso |
+| Modelo NER `projecte-aina/roberta-base-ca-v2-cased-ner` (Projecte AINA / BSC) | Apache-2.0 | Sí | Atribución + indicar que se ha convertido a ONNX int8 (`models/ner-ca/LICENSE-MODEL.txt`) |
 
 ## PyMuPDF y la AGPL, en claro
 - Usarla **no cuesta nada**. La licencia comercial solo hace falta para vender software
@@ -33,8 +35,7 @@ Objetivo: **coste cero** y uso profesional en el bufete sin pagar licencias.
 ## Candidatos para próximas fases (verificar al incorporarlos)
 | Componente | Licencia | Notas |
 |---|---|---|
-| GLiNER multi PII | Apache-2.0 (comprobar el modelo concreto) | NER |
-| Modelos AINA / BSC (catalán) | Apache-2.0 en su mayoría (comprobar cada uno) | NER catalán |
 | Salamandra (BSC) | Apache-2.0 | LLM con buen catalán |
+| ~~PlanTL-GOB-ES/roberta-base-bne-capitel-ner~~ | — | Retirado de Hugging Face; las copias de terceros tienen origen incierto: **no usar** |
 | Qwen3 (4B) | Apache-2.0 | ⚠️ Qwen2.5-**3B** es "Qwen Research" (no comercial): **no usar** |
 | llama-cpp-python / llama.cpp | MIT | Motor del LLM local |

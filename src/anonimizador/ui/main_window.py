@@ -7,6 +7,7 @@ from PySide6.QtCore import QSettings, Qt, QUrl
 from PySide6.QtGui import QDesktopServices, QDragEnterEvent, QDropEvent
 from PySide6.QtWidgets import (
     QAbstractItemView,
+    QCheckBox,
     QComboBox,
     QFileDialog,
     QFormLayout,
@@ -24,6 +25,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from anonimizador.core.guide import default_path as default_guide_path
 from anonimizador.core.lang import DEFAULT_LANGUAGE, LANGUAGES, Language
 from anonimizador.core.matcher import Term
 from anonimizador.core.pipeline import (
@@ -181,6 +183,9 @@ class MainWindow(QMainWindow):
         form.addRow(self.folder_label, folder_row)
         form.addRow(self.name_label, self.name_edit)
         form.addRow(self.format_label, self.format_combo)
+        self.guide_check = QCheckBox()
+        self.guide_check.setChecked(True)
+        form.addRow("", self.guide_check)
         layout.addWidget(self.output_box)
 
         self.run_button = QPushButton()
@@ -213,6 +218,7 @@ class MainWindow(QMainWindow):
         self.choose_folder_button.setText(tr(lang, "choose_folder"))
         self.name_label.setText(tr(lang, "file_name"))
         self.format_label.setText(tr(lang, "format"))
+        self.guide_check.setText(tr(lang, "save_guide"))
         self._refresh_formats()
         self.run_button.setText(tr(lang, "anonymize"))
 
@@ -362,6 +368,7 @@ class MainWindow(QMainWindow):
         if terms is None:
             return
         src, dst, language = self.input_path, self.output_path(), self.language
+        guide = default_guide_path(dst, language) if self.guide_check.isChecked() else None
         self._set_busy(True)
 
         def after_analysis(analysis: Analysis) -> None:
@@ -370,7 +377,7 @@ class MainWindow(QMainWindow):
                 self._set_busy(False)
                 return
             run_in_background(
-                lambda progress: anonymize(src, dst, terms + extra, progress),
+                lambda progress: anonymize(src, dst, terms + extra, progress, guide, language),
                 self._finished,
                 self._failed,
                 self._show_progress,
@@ -413,6 +420,8 @@ class MainWindow(QMainWindow):
         box = QMessageBox(self)
         box.setWindowTitle(tr(lang, "done_title"))
         text = tr(lang, "done", path=report.output, total=report.total)
+        if report.guide:
+            text += "\n\n" + tr(lang, "guide_saved", path=report.guide)
         if report.notices:
             box.setIcon(QMessageBox.Icon.Warning)
             text += f"\n\n{tr(lang, 'warnings')}:\n" + "\n".join(

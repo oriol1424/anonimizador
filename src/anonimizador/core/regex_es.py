@@ -19,6 +19,32 @@ def _iban_valid(raw: str) -> bool:
     return int(digits) % 97 == 1
 
 
+# --- Direcciones postales (catalán y castellano) ----------------------------------------
+# "carrer de la Indústria, 45, 3r 2a, 08025 Barcelona", "Av. Diagonal 640", "C/ Major, s/n",
+# "carretera de Sant Sadurní, km 3, de Vilafranca del Penedès", "calle Mayor 5, 2º B".
+_STREET = (
+    r"carrer|c/|avinguda|avgda\.|avda\.|av\.|passeig|pg\.|passatge|ptge\.|plaça|pça\.|pl\.|"
+    r"carretera|ctra\.|ronda|travessera|travessia|rambla|camí|via|baixada|pujada|"
+    r"urbanització|urb\.|polígon|pol\.|calle|c\.|avenida|paseo|pº|plaza|pza\.|camino|travesía"
+)
+_UPPER = "A-ZÀ-ÖØ-ÞÇÑ"
+_PARTICLES = r"(?:(?:de\s+la|de\s+les|de\s+los|de|del|dels|d'|d’|l'|l’|la|les|el|els|en|na|sa)\s*)*"
+# Nombre de la vía: sin cifras ni final de frase (". Que..."), salvo abreviaturas habituales.
+_ABBR = r"(?:Dr|Dra|St|Sta|Mn|Gral|Pare|Sr|Sra)\.\s"
+_NAME_CHAR = rf"(?:{_ABBR}|(?!\.\s)[^\d\n;:()])"
+_NUMBER = r"(?:,?\s*(?:(?:n[úu]m\.?|nº|n\.º)\s*)?\d{1,4}(?:-\d{1,4})?(?:\s?bis)?|,?\s*s/n)"
+_FLOOR = (
+    r"(?:,?\s*(?:\d{1,2}\s?[ºª]\s?[A-Z]\b"
+    r"|\d{1,2}\s?(?:r|n|t|è|º|ª|o|a)\.?(?:\s*\d{1,2}\s?(?:a|ª|º|o)\.?)?|baixos|bxs\.?|principal|pral\.?|àtic|entresòl|entl\.?"
+    r"|bajo|ático|entresuelo|(?:escala|esc\.)\s*\w|(?:porta|pta\.)\s*\d+))*"
+)
+_CITY = rf"[{_UPPER}][\w'’·-]+(?:\s+(?:(?:de|del|la|les|i|d'|d’)\s*)?[{_UPPER}][\w'’·-]+){{0,3}}"
+ADDRESS = re.compile(
+    rf"(?<!\w)(?i:{_STREET})(?:(?<=[./])|\b)\s*{_PARTICLES}(?:{_ABBR}|[{_UPPER}]){_NAME_CHAR}{{0,60}}?"
+    rf"{_NUMBER}{_FLOOR}(?:,?\s*\d{{5}})?(?:,?\s*(?:de\s+|d'|d’)?{_CITY})?"
+)
+
+
 # El orden importa: ante solapes gana la detección más larga y, a igualdad, la primera.
 RULES: list[tuple[str, re.Pattern[str], object]] = [
     ("EMAIL", re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+"), None),
@@ -33,6 +59,7 @@ RULES: list[tuple[str, re.Pattern[str], object]] = [
     ("TELEFONO", re.compile(r"(?<![\w+])(?:(?:\+|00)34[ .-]?)?[6789](?:[ .-]?\d){8}(?!\d)"), None),
     ("MATRICULA", re.compile(r"\b\d{4}[- ]?[BCDFGHJKLMNPRSTVWXYZ]{3}\b"), None),
     ("PROCEDIMIENTO", re.compile(r"\b\d{1,6}/(?:19|20)\d{2}\b"), None),
+    ("DIRECCION", ADDRESS, None),
 ]
 
 
