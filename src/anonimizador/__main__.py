@@ -1,13 +1,14 @@
 """Línea de comandos (para pruebas, hasta que exista la interfaz gráfica).
 
 Ejemplo:
-    python -m anonimizador demanda.docx salida.docx -t "Juan Pérez García=[CLIENTE_1]" -s
+    python -m anonimizador demanda.docx salida.docx -t "Joan Puig i Ferrer=[CLIENT_1]" -s
 """
 
 import argparse
 import sys
 from pathlib import Path
 
+from anonimizador.core.lang import DEFAULT_LANGUAGE, LANGUAGES
 from anonimizador.core.matcher import Term
 from anonimizador.core.pipeline import analyze, anonymize
 
@@ -30,12 +31,19 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="aplicar también los datos detectados automáticamente",
     )
+    parser.add_argument(
+        "-i",
+        "--idioma",
+        choices=sorted(LANGUAGES),
+        default=DEFAULT_LANGUAGE.code,
+        help=f"idioma del documento (por defecto: {DEFAULT_LANGUAGE.code})",
+    )
     args = parser.parse_args(argv)
     if sys.stdout.encoding.lower() != "utf-8":
         sys.stdout.reconfigure(encoding="utf-8")
 
     terms: list[Term] = list(args.termino)
-    analysis = analyze(args.entrada, terms)
+    analysis = analyze(args.entrada, terms, LANGUAGES[args.idioma])
     if analysis.suggestions:
         print("Sugerencias (datos que no estaban en tu lista):")
         for s in analysis.suggestions:

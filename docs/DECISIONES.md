@@ -17,3 +17,7 @@
 | 2026-10-10 | Variantes compartidas entre dos personas no se aplican y se avisa | Sustituir "Sr. Pérez" con el alias equivocado sería un error grave |
 | 2026-10-10 | Verificación final releyendo el documento de salida | Red de seguridad ante cualquier caso no previsto |
 | 2026-10-10 | Las reglas (DNI, IBAN...) generan sugerencias, no sustituciones automáticas | El usuario decide; criterio único para todas las capas automáticas |
+| 2026-10-10 | Catalán como idioma por defecto; castellano seleccionable | ~99,99% de los documentos del bufete están en catalán |
+| 2026-10-10 | El matcher acepta partículas de ambos idiomas siempre; el idioma solo cambia alias/presets (y luego NER/LLM) | Hay documentos que mezclan idiomas; no conviene que una opción mal puesta deje pasar un nombre |
+| 2026-10-10 | Alias sin tildes ni caracteres especiales (`[ADRECA_1]`, `[TELEFON_1]`) | Que sobrevivan intactos a la IA y se puedan revertir después |
+| 2026-10-10 | "i"/"y" entre apellidos opcional; `·` forma parte de la palabra; `’` = `'` | Particularidades de los nombres catalanes y del autocorrector de Word |

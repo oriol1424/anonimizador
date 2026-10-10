@@ -1,33 +1,30 @@
-"""Búsqueda de los términos a anonimizar (y sus variantes) dentro de un texto."""
+"""Búsqueda de los términos a anonimizar (y sus variantes) dentro de un texto.
+
+Pensado para nombres catalanes y castellanos: "Joan Puig i Ferrer", "Martí d'Orriols",
+"Marcel·lí Soler", "Juan Pérez García".
+"""
 
 import re
 from dataclasses import dataclass
 
 from anonimizador.core.text import fold
 
-CONNECTORS = {"de", "del", "la", "las", "los", "y", "e", "i", "da", "van", "von"}
+# Partículas que no identifican a nadie por sí solas (catalán + castellano).
+CONNECTORS = {
+    "de", "del", "dels", "la", "las", "les", "los", "el", "y", "e", "i", "da", "van", "von",
+}  # fmt: skip
+# Conjunción entre apellidos: "Puig i Ferrer" == "Puig Ferrer".
+CONJUNCTIONS = {"i", "y"}
+ELISIONS = ("d'", "l'")
 LEGAL_FORMS = {
-    "sl",
-    "s.l.",
-    "slu",
-    "s.l.u.",
-    "sa",
-    "s.a.",
-    "sau",
-    "s.a.u.",
-    "sll",
-    "s.l.l.",
-    "scp",
-    "s.c.p.",
-    "cb",
-    "c.b.",
-    "sc",
-    "s.c.",
-    "coop.",
-    "sociedad",
-    "limitada",
-    "anonima",
-}
+    "sl", "s.l.", "slu", "s.l.u.", "sa", "s.a.", "sau", "s.a.u.", "sll", "s.l.l.",
+    "scp", "s.c.p.", "cb", "c.b.", "sc", "s.c.", "coop.", "sccl", "s.c.c.l.",
+    "sociedad", "societat", "limitada", "anonima", "anònima", "cooperativa",
+}  # fmt: skip
+
+# Límites de palabra: el punto volado forma parte de la palabra (Marcel·lí), el apóstrofo no
+# (d'Orriols -> "Orriols" es una palabra).
+_WORD = r"[\w·]"
 
 
 @dataclass(frozen=True)
@@ -36,7 +33,7 @@ class Term:
 
     original: str
     replacement: str
-    expand: bool = True  # generar variantes ("Sr. Pérez", "J. Pérez"...)
+    expand: bool = True  # generar variantes ("Sr. Puig", "J. Puig"...)
     source: str = "usuario"
 
 
@@ -49,59 +46,79 @@ class Match:
     source: str
 
 
+def _strip_elision(token: str) -> str:
+    folded = fold(token)
+    for prefix in ELISIONS:
+        if folded.startswith(prefix) and len(token) > len(prefix):
+            return token[len(prefix) :]
+    return token
+
+
+def _starts_upper(text: str) -> bool:
+    stripped = _strip_elision(text)
+    return bool(stripped) and stripped[0].isupper()
+
+
 def variants(name: str) -> list[str]:
     """Formas parciales con las que suele aparecer un nombre en un escrito.
 
-    "Juan Pérez García" -> "Juan Pérez", "Pérez García", "J. Pérez García", "Pérez", "García".
+    "Joan Puig i Ferrer" -> "Joan Puig", "Puig i Ferrer", "J. Puig i Ferrer", "Puig", "Ferrer".
+    "Martí d'Orriols"    -> "M. d'Orriols", "d'Orriols", "Orriols".
     """
     tokens = name.split()
     if len(tokens) < 2 or not any(c.isalpha() for c in name):
         return []
 
+    def is_connector(token: str) -> bool:
+        return fold(token) in CONNECTORS
+
     def usable(token: str) -> bool:
-        return token.lower() not in CONNECTORS and token.lower() not in LEGAL_FORMS
+        return not is_connector(token) and fold(token) not in LEGAL_FORMS
 
     found: set[str] = set()
     n = len(tokens)
     for i in range(n):
         for j in range(i + 2, n + 1):
             seq = tokens[i:j]
-            if j - i == n:
+            if j - i == n or is_connector(seq[0]) or is_connector(seq[-1]):
                 continue
-            if seq[0].lower() in CONNECTORS or seq[-1].lower() in CONNECTORS:
-                continue
-            if not any(usable(t) for t in seq):
-                continue
-            found.add(" ".join(seq))
+            if any(usable(t) for t in seq):
+                found.add(" ".join(seq))
     if tokens[0][0].isalpha():
         found.add(f"{tokens[0][0]}. {' '.join(tokens[1:])}")
     for token in tokens[1:]:
-        if len(token) >= 4 and usable(token) and token[0].isupper():
-            found.add(token)
+        for form in {token, _strip_elision(token)}:
+            if len(_strip_elision(form)) >= 4 and usable(form) and _starts_upper(form):
+                found.add(form)
     return sorted(found)
 
 
 def _key(text: str) -> str:
-    return re.sub(r"\s+", "", fold(text))
+    folded = re.sub(r"\s+(?:i|y)(?=\s)", " ", fold(text))
+    return re.sub(r"\s+", "", folded)
 
 
 def _pattern(text: str) -> str:
     parts: list[str] = []
     for token in text.split():
+        folded = fold(token)
+        if parts and folded in CONJUNCTIONS:
+            continue  # cubierta por el separador opcional
         if parts:
-            parts.append(r"\s*" if parts[-1].endswith(r"\.") else r"\s+")
-        parts.append(re.escape(fold(token)))
-    return r"(?<!\w)" + "".join(parts) + r"(?!\w)"
+            parts.append(r"\s*" if parts[-1].endswith(r"\.") else r"\s+(?:[iy]\s+)?")
+        parts.append(re.escape(folded))
+    return rf"(?<!{_WORD})" + "".join(parts) + rf"(?!{_WORD})"
 
 
 class Matcher:
     """Encuentra todas las apariciones de una lista de términos.
 
-    - Ignora mayúsculas y tildes ("PEREZ" encuentra "Pérez").
+    - Ignora mayúsculas, tildes y el tipo de apóstrofo ("PUIG" encuentra "Puig").
+    - "Puig i Ferrer" y "Puig Ferrer" se consideran el mismo nombre.
     - Las variantes derivadas solo se aceptan si empiezan en mayúscula, para que
-      "Mayor" (de "Calle Mayor") no sustituya "mayor de edad".
+      "Major" (de "Carrer Major") no sustituya "major d'edat".
     - Si una variante es común a dos términos con sustitutos distintos (dos
-      personas apellidadas Pérez), no se aplica y se informa en `ambiguous`.
+      personas apellidadas Puig), no se aplica y se informa en `ambiguous`.
     """
 
     def __init__(self, terms: list[Term]):
@@ -142,11 +159,10 @@ class Matcher:
             if entry is None:
                 continue
             term, strict_case, _ = entry
-            if strict_case and not text[m.start()].isupper():
+            original = text[m.start() : m.end()]
+            if strict_case and not _starts_upper(original):
                 continue
-            matches.append(
-                Match(m.start(), m.end(), text[m.start() : m.end()], term.replacement, term.source)
-            )
+            matches.append(Match(m.start(), m.end(), original, term.replacement, term.source))
         return matches
 
     def replace(self, text: str) -> str:

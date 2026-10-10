@@ -6,12 +6,21 @@
 - **Plataformas: macOS (principal) y Windows.** Hardware desconocido → la app debe
   adaptarse (la revisión con LLM se desactiva sola si no hay RAM suficiente).
 
+## Idioma de los documentos
+- **Catalán en el ~99,99% de los casos** → idioma por defecto.
+- Selector de idioma (Català / Castellano) por si llega algún documento en castellano.
+- El idioma afecta a: nombre de los alias sugeridos (`[TELEFON_1]` / `[TELEFONO_1]`),
+  opciones del desplegable, y (más adelante) modelo NER y prompt del LLM.
+- Nombres catalanes: `Joan Puig i Ferrer` (= `Puig Ferrer`), `Martí d'Orriols`
+  (→ `l'Orriols`, `Orriols`), `Marcel·lí`, apóstrofo tipográfico `’` de Word.
+
 ## Interfaz: UNA sola ventana, sencilla
 De arriba a abajo:
-1. **Documento**: botón "Elegir fichero" (.docx / .pdf).
+1. **Documento**: botón "Elegir fichero" (.docx / .pdf) + selector de idioma (Català por defecto).
 2. **Qué anonimizar**: tabla de dos columnas `Texto original | Sustituir por`.
    - "Sustituir por" es un **desplegable editable**: se puede elegir una opción
-     (`[PERSONA_1]`, `[EMPRESA_1]`, `Persona A`, `***`, `[DNI]`...) o escribir lo que se quiera.
+     (`[PERSONA_1]`, `[CLIENT_1]`, `[EMPRESA_1]`, `[ADRECA_1]`, `***`...) o escribir lo que
+     se quiera. Las opciones dependen del idioma (`core/lang.py`).
    - Botones `+ Añadir` / `– Quitar`.
 3. **Guardar como**: carpeta, nombre y formato (desplegable).
 4. Botón grande **"Anonimizar"**.

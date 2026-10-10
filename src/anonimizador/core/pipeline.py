@@ -6,21 +6,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from anonimizador.core import docx_io, regex_es
+from anonimizador.core.lang import DEFAULT_LANGUAGE, Language
 from anonimizador.core.matcher import Matcher, Term
 
 SUPPORTED_INPUTS = {".docx"}
 SUPPORTED_OUTPUTS = {".docx", ".txt"}
-
-# Opciones del desplegable "Sustituir por" (la interfaz permite además escribir cualquier texto).
-REPLACEMENT_PRESETS = [
-    "[PERSONA_{n}]",
-    "[CLIENTE_{n}]",
-    "[CONTRARIO_{n}]",
-    "[EMPRESA_{n}]",
-    "[DIRECCION_{n}]",
-    "Persona {letra}",
-    "***",
-]
 
 
 @dataclass(frozen=True)
@@ -76,8 +66,12 @@ def _next_alias(label: str, used: set[str]) -> str:
     return alias
 
 
-def analyze(path: Path, user_terms: list[Term]) -> Analysis:
-    """Busca datos identificativos que el usuario no ha incluido en su lista."""
+def analyze(path: Path, user_terms: list[Term], language: Language = DEFAULT_LANGUAGE) -> Analysis:
+    """Busca datos identificativos que el usuario no ha incluido en su lista.
+
+    El idioma decide el nombre de los alias sugeridos ([TELEFON_1] / [TELEFONO_1]) y, más
+    adelante, el modelo de detección de nombres.
+    """
     _check_input(path)
     text = docx_io.extract_text(path)
     matcher = Matcher(user_terms)
@@ -91,7 +85,12 @@ def analyze(path: Path, user_terms: list[Term]) -> Analysis:
 
     used = {t.replacement for t in user_terms}
     suggestions = [
-        Suggestion(label, _next_alias(label, used), tuple(dict.fromkeys(forms)), len(forms))
+        Suggestion(
+            label,
+            _next_alias(language.labels[label], used),
+            tuple(dict.fromkeys(forms)),
+            len(forms),
+        )
         for (label, _), forms in groups.items()
     ]
     warnings = [

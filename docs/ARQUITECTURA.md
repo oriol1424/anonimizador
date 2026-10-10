@@ -12,9 +12,13 @@
   1. Lista del usuario + generador de variantes (rapidfuzz para coincidencias aproximadas).
   2. Reglas/regex españolas: DNI, NIE, CIF, IBAN, teléfonos, emails, matrículas,
      nº de procedimiento/autos, códigos postales, direcciones.
-  3. NER: **GLiNER** multilingüe orientado a PII (rápido en CPU).
-  4. Revisión con **LLM local** vía `llama-cpp-python` + GGUF pequeño (Qwen 3–4B Q4).
-     Solo propone. Se desactiva automáticamente si la RAM es insuficiente.
+  3. NER — **debe rendir bien en catalán**. Candidatos a evaluar con el corpus catalán:
+     - GLiNER multilingüe orientado a PII (rápido en CPU, cubre catalán).
+     - Modelos NER catalanes del Projecte AINA / BSC (RoBERTa-ca entrenados en NER).
+     - spaCy `ca_core_news_*`.
+  4. Revisión con **LLM local** vía `llama-cpp-python` + GGUF pequeño. Candidatos:
+     **Salamandra** (BSC, entrenado con mucho catalán) o Qwen 3–4B; elegir por calidad en
+     catalán con el corpus. Solo propone. Se desactiva si la RAM es insuficiente.
 - **Empaquetado**: PyInstaller por plataforma. **No se puede compilar el .app de Mac
   desde Windows** → se construye con **GitHub Actions** (runners macos + windows).
   - Mac: sin firma/notarización (Apple Developer, 99 €/año) el usuario debe abrir con
@@ -29,6 +33,7 @@ src/anonimizador/
   ui/suggestions.py   # diálogo de sugerencias
   __main__.py         # CLI de pruebas                                  [hecho]
   core/
+    lang.py           # idiomas (ca por defecto, es): alias y presets   [hecho]
     text.py           # normalización sin tildes que conserva offsets   [hecho]
     matcher.py        # términos del usuario + variantes + ambigüedad    [hecho]
     regex_es.py       # DNI, NIE, CIF, IBAN, tel., email, matrícula...   [hecho]

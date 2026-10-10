@@ -1,6 +1,7 @@
 """Genera documentos de prueba con datos INVENTADOS.
 
-Uso manual:  python tests/corpus/generar_corpus.py  -> crea tests/corpus/demanda_ficticia.docx
+Uso manual:  python tests/corpus/generar_corpus.py
+    -> crea tests/corpus/demanda_ficticia_ca.docx (catalán) y demanda_ficticia_es.docx
 Cubre los casos difíciles: nombres partidos en varios runs con distinto formato, tablas,
 cabecera, pie, comentarios, control de cambios, hipervínculos mailto y metadatos.
 """
@@ -38,7 +39,70 @@ def _add_tracked_deletion(paragraph, text: str, author: str) -> None:
     paragraph._p.append(deletion)
 
 
-def build_demanda(path: Path) -> Path:
+def build_demanda_ca(path: Path) -> Path:
+    """Demanda en catalán: el caso habitual del bufete."""
+    doc = Document()
+    doc.core_properties.author = "Montserrat Soler i Vidal"
+    doc.core_properties.last_modified_by = "Montserrat Soler i Vidal"
+    doc.core_properties.title = "Demanda Joan Puig i Ferrer contra Construccions del Vallès SL"
+
+    section = doc.sections[0]
+    section.header.paragraphs[
+        0
+    ].text = "Despatx Soler & Associats — Lletrada Montserrat Soler i Vidal"
+    section.footer.paragraphs[0].text = "Tel. 972 123 456 · info@soler-associats.example"
+
+    doc.add_heading("AL JUTJAT DE PRIMERA INSTÀNCIA", level=1)
+
+    p = doc.add_paragraph("En ")
+    p.add_run("Jo").bold = True
+    p.add_run("an Puig").bold = True
+    p.add_run(" i Ferrer").italic = True
+    p.add_run(", major d’edat, amb DNI 12345678Z i domicili al Carrer Major 5, Girona, ")
+    p.add_run("actuant en nom propi, davant el Jutjat compareix i DIU:")
+
+    doc.add_paragraph(
+        "Que el Sr. Puig va subscriure un contracte amb CONSTRUCCIONS DEL VALLÈS SL "
+        "(NIF B12345674) en el procediment 1234/2025. J. Puig Ferrer va abonar les quantitats "
+        "al compte ES91 2100 0418 4502 0005 1332."
+    )
+    doc.add_paragraph(
+        "La part contrària, Martí d’Orriols, administrador de la societat, va reconèixer "
+        "el deute. L’Orriols no ha pagat. El perit Marcel·lí Roca ho confirma; "
+        "el senyor Roca ratificarà l’informe."
+    )
+
+    p = doc.add_paragraph("Contacte del demandant:	")
+    p.add_run("Joan")
+    p.add_run().add_tab()
+    p.add_run("Puig i Ferrer")
+
+    p = doc.add_paragraph("Correu: ")
+    _add_hyperlink(p, "mailto:joan.puig@correu.example", "joan.puig@correu.example")
+
+    p = doc.add_paragraph("Text revisat. ")
+    _add_tracked_deletion(p, "Abans hi deia Joan Puig i Ferrer", "Montserrat Soler i Vidal")
+
+    table = doc.add_table(rows=2, cols=2)
+    table.cell(0, 0).text = "Demandat"
+    table.cell(0, 1).text = "Construccions del Vallès SL"
+    table.cell(1, 0).text = "Vehicle"
+    table.cell(1, 1).text = "Matrícula 1234 BCD, conductora Anna Vila"
+
+    commented = doc.add_paragraph("Paràgraf amb comentari.")
+    doc.add_comment(
+        commented.runs,
+        text="Confirmar amb Joan Puig i Ferrer",
+        author="Montserrat Soler i Vidal",
+        initials="MS",
+    )
+
+    doc.add_paragraph("La part és major d’edat i viu al carrer major del poble.")
+    doc.save(str(path))
+    return path
+
+
+def build_demanda_es(path: Path) -> Path:
     doc = Document()
     doc.core_properties.author = "Laura Martín Ruiz"
     doc.core_properties.last_modified_by = "Laura Martín Ruiz"
@@ -94,5 +158,9 @@ def build_demanda(path: Path) -> Path:
 
 
 if __name__ == "__main__":
-    out = build_demanda(Path(__file__).with_name("demanda_ficticia.docx"))
-    print(f"Creado {out}")
+    here = Path(__file__).parent
+    for out in (
+        build_demanda_ca(here / "demanda_ficticia_ca.docx"),
+        build_demanda_es(here / "demanda_ficticia_es.docx"),
+    ):
+        print(f"Creado {out}")
