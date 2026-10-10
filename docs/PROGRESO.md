@@ -43,8 +43,17 @@ y el plan, aún SIN implementar.
    <pid>`; Windows: `SetThreadExecutionState`).
 10. Ventana de sugerencias con buscador (con 80 págs salen ~500 sugerencias).
 11. Repetir la medición y añadir un test "documento largo" (marcado lento).
+12. Protección del original: comparar también con `os.path.samefile` (en Windows,
+    `Demanda.docx` y `demanda.docx` son el mismo fichero) + test.
 
-Después: paso 9 (LLM local; falta saber la RAM del Mac M2) o paso 10 (empaquetado USB).
+Después (decidido con el usuario el 2026-10-10):
+- **Empaquetado USB** (paso 10).
+- **Alternativas sencillas a la IA conversacional** (nuevo paso 9b):
+  - Sugerir nombres ya anonimizados en casos anteriores (historial local, cifrado).
+  - Revisión final: resaltar palabras con mayúscula no sustituidas para un repaso rápido.
+  - Listas por cliente/caso reutilizables (ya existe cargar/guardar lista).
+- **LLM local (paso 9): aplazado / opcional.** Aporta poco frente a su coste (2–5 GB,
+  memoria, minutos en 80 págs, resultados no deterministas).
 
 ## Estado actual
 Fase 1 — **Word, PDF, OCR, detector de nombres/empresas/direcciones y guía de
@@ -90,7 +99,8 @@ python -m venv .venv
 7. [x] PDF escaneado con OCR (RapidOCR, catalán) + borrado de píxeles + verificación.
 8. [x] Detector de personas y empresas (AINA, ONNX) + direcciones por reglas + unión de
        variantes + guía de correspondencias.
-9. [ ] **LLM local de revisión** (desactivable por RAM) — evaluar Salamandra (BSC) vs. Qwen3
+9. [ ] ~~LLM local de revisión~~ **APLAZADO/opcional** (ver «Dónde nos quedamos»);
+       en su lugar 9b: historial de nombres + revisión final resaltada. (desactivable por RAM) — evaluar Salamandra (BSC) vs. Qwen3
        en catalán. ← SIGUIENTE
 10. [ ] GitHub Actions: build Mac + Windows; prueba desde USB en equipos limpios. Incluir en
        el paquete `codigo_fuente/` + textos de licencias (AGPL/LGPL), ver `docs/LICENCIAS.md`.

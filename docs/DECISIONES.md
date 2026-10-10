@@ -35,3 +35,5 @@
 | 2026-10-10 | Unir variantes de un nombre sin IA (`merge_variants`) | Las variantes ya se conocen por el matcher; determinista y explicable |
 | 2026-10-10 | Guía de correspondencias en .docx junto a la salida, activada por defecto | Registro pedido por el usuario; legible para el bufete; nombre y aviso dejan claro que es confidencial |
 | 2026-10-10 | "i"/"y" entre apellidos opcional; `·` forma parte de la palabra; `’` = `'` | Particularidades de los nombres catalanes y del autocorrector de Word |
+| 2026-10-10 | LLM local aplazado (opcional a futuro); en su lugar historial de nombres anonimizados + revisión final resaltada | OCR y NER ya cubren lo importante; el LLM cuesta 2–5 GB, mucha memoria, minutos por documento y no es determinista |
+| 2026-10-10 | El original nunca se modifica: siempre se escribe un fichero nuevo | Seguridad: no perder el documento original |
