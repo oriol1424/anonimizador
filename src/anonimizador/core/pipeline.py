@@ -8,6 +8,7 @@ from pathlib import Path
 from anonimizador.core import docx_io, regex_es
 from anonimizador.core.lang import DEFAULT_LANGUAGE, Language
 from anonimizador.core.matcher import Matcher, Term
+from anonimizador.i18n import tr
 
 SUPPORTED_INPUTS = {".docx"}
 SUPPORTED_OUTPUTS = {".docx", ".txt"}
@@ -31,17 +32,41 @@ class Suggestion:
         return [Term(f, alias, expand=False, source=self.label) for f in self.forms]
 
 
+class AnonymizerError(ValueError):
+    """Error explicable al usuario. `kind` es la clave de traducción (sin "error_")."""
+
+    def __init__(self, kind: str, **params: object):
+        self.kind = kind
+        self.params = params
+        super().__init__(tr(DEFAULT_LANGUAGE.code, f"error_{kind}", **params))
+
+    def message(self, language: Language) -> str:
+        return tr(language.code, f"error_{self.kind}", **self.params)
+
+
+@dataclass(frozen=True)
+class Notice:
+    """Aviso para el usuario: "ambiguous", "leftovers" o "images"."""
+
+    kind: str
+    detail: str = ""
+    count: int = 0
+
+    def message(self, language: Language) -> str:
+        return tr(language.code, f"notice_{self.kind}", detail=self.detail, count=self.count)
+
+
 @dataclass
 class Analysis:
     suggestions: list[Suggestion]
-    warnings: list[str] = field(default_factory=list)
+    notices: list[Notice] = field(default_factory=list)
 
 
 @dataclass
 class Report:
     output: Path
     replaced: dict[str, int]  # sustituto -> nº de sustituciones
-    warnings: list[str] = field(default_factory=list)
+    notices: list[Notice] = field(default_factory=list)
 
     @property
     def total(self) -> int:
@@ -50,7 +75,7 @@ class Report:
 
 def _check_input(path: Path) -> None:
     if path.suffix.lower() not in SUPPORTED_INPUTS:
-        raise ValueError(f"Formato no soportado todavía: {path.suffix}")
+        raise AnonymizerError("unsupported_input", suffix=path.suffix)
 
 
 def _normalize_value(text: str) -> str:
@@ -93,41 +118,32 @@ def analyze(path: Path, user_terms: list[Term], language: Language = DEFAULT_LAN
         )
         for (label, _), forms in groups.items()
     ]
-    warnings = [
-        f'"{v}" coincide con varios términos con sustitutos distintos; no se ha sustituido '
-        "automáticamente. Revísalo y añádelo a la lista con el sustituto correcto."
-        for v in sorted(matcher.ambiguous)
-    ]
-    return Analysis(suggestions, warnings)
+    notices = [Notice("ambiguous", detail=v) for v in sorted(matcher.ambiguous)]
+    return Analysis(suggestions, notices)
 
 
 def anonymize(src: Path, dst: Path, terms: list[Term]) -> Report:
     _check_input(src)
     if dst.suffix.lower() not in SUPPORTED_OUTPUTS:
-        raise ValueError(f"Formato de salida no soportado: {dst.suffix}")
+        raise AnonymizerError("unsupported_output", suffix=dst.suffix)
     if dst.resolve() == src.resolve():
-        raise ValueError("El fichero de salida no puede ser el mismo que el original.")
+        raise AnonymizerError("same_file")
 
     matcher = Matcher(terms)
     docx_dst = dst if dst.suffix.lower() == ".docx" else dst.with_suffix(".tmp.docx")
     result = docx_io.anonymize_docx(src, docx_dst, matcher)
 
-    warnings: list[str] = []
+    notices: list[Notice] = []
     leftovers = matcher.find(docx_io.extract_text(docx_dst))
     if leftovers:
-        warnings.append(
-            f"Verificación: quedan {len(leftovers)} apariciones sin sustituir "
-            f"({', '.join(sorted({m.text for m in leftovers}))}). Revisa el documento."
-        )
+        detail = ", ".join(sorted({m.text for m in leftovers}))
+        notices.append(Notice("leftovers", detail=detail, count=len(leftovers)))
     if result.images:
-        warnings.append(
-            f"El documento contiene {result.images} imágenes u objetos incrustados. "
-            "Su contenido no se anonimiza: revísalos manualmente."
-        )
+        notices.append(Notice("images", count=result.images))
 
     if docx_dst != dst:
         dst.write_text(docx_io.body_text(docx_dst), encoding="utf-8")
         docx_dst.unlink()
 
     replaced = Counter(m.replacement for m in result.matches)
-    return Report(dst, dict(replaced), warnings)
+    return Report(dst, dict(replaced), notices)

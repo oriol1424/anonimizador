@@ -42,8 +42,9 @@ def main(argv: list[str] | None = None) -> int:
     if sys.stdout.encoding.lower() != "utf-8":
         sys.stdout.reconfigure(encoding="utf-8")
 
+    language = LANGUAGES[args.idioma]
     terms: list[Term] = list(args.termino)
-    analysis = analyze(args.entrada, terms, LANGUAGES[args.idioma])
+    analysis = analyze(args.entrada, terms, language)
     if analysis.suggestions:
         print("Sugerencias (datos que no estaban en tu lista):")
         for s in analysis.suggestions:
@@ -56,8 +57,8 @@ def main(argv: list[str] | None = None) -> int:
     print(f"\nGuardado en {report.output} ({report.total} sustituciones)")
     for alias, n in sorted(report.replaced.items()):
         print(f"  {alias}: {n}")
-    for w in analysis.warnings + report.warnings:
-        print(f"AVISO: {w}")
+    for notice in analysis.notices + report.notices:
+        print(f"AVISO: {notice.message(language)}")
     return 0
 
 

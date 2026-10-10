@@ -9,13 +9,17 @@ description = "Anonimización local de documentos Word y PDF para bufetes"
 requires-python = ">=3.11"
 dependencies = [
     "python-docx>=1.2",
+    "PySide6-Essentials>=6.6",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "ruff>=0.6"]
+dev = ["pytest>=8", "pytest-qt>=4.4", "ruff>=0.6"]
 
 [project.scripts]
 anonimizador = "anonimizador.__main__:main"
+
+[project.gui-scripts]
+anonimitzador = "anonimizador.app:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

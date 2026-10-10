@@ -6,7 +6,7 @@ from docx import Document
 
 from anonimizador.core import docx_io
 from anonimizador.core.matcher import Term
-from anonimizador.core.pipeline import analyze, anonymize
+from anonimizador.core.pipeline import AnonymizerError, analyze, anonymize
 
 USER_TERMS = [
     Term("Juan Pérez García", "[CLIENTE_1]"),
@@ -73,7 +73,7 @@ def test_common_words_untouched(anonymized):
 def test_report_and_no_leftovers(anonymized):
     _, report = anonymized
     assert report.replaced["[CLIENTE_1]"] >= 5
-    assert not [w for w in report.warnings if w.startswith("Verificación")]
+    assert not [n for n in report.notices if n.kind == "leftovers"]
 
 
 def test_suggestions_find_unlisted_data(demanda: Path):
@@ -90,5 +90,5 @@ def test_txt_output(demanda: Path, tmp_path: Path):
 
 
 def test_refuses_to_overwrite_original(demanda: Path):
-    with pytest.raises(ValueError):
+    with pytest.raises(AnonymizerError):
         anonymize(demanda, demanda, USER_TERMS)

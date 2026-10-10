@@ -66,6 +66,16 @@ LANGUAGES = {lang.code: lang for lang in (CATALAN, SPANISH)}
 DEFAULT_LANGUAGE = CATALAN
 
 
+def fill_preset(template: str, used: set[str]) -> str:
+    """ "[CLIENT_{n}]" -> "[CLIENT_1]" o el primer número libre."""
+    if "{n}" not in template:
+        return template
+    n = 1
+    while template.format(n=n) in used:
+        n += 1
+    return template.format(n=n)
+
+
 def get_language(code: str) -> Language:
     try:
         return LANGUAGES[code]

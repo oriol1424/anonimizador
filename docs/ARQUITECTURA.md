@@ -28,9 +28,12 @@
 ## Módulos
 ```
 src/anonimizador/
-  app.py              # arranque
-  ui/main_window.py   # ventana única
-  ui/suggestions.py   # diálogo de sugerencias
+  app.py              # arranque de la app + estilos                     [hecho]
+  i18n.py             # TODOS los textos visibles, ca/es                  [hecho]
+  ui/main_window.py   # ventana única                                     [hecho]
+  ui/suggestions.py   # diálogo de sugerencias                            [hecho]
+  ui/widgets.py       # desplegable editable con numeración automática    [hecho]
+  ui/worker.py        # tareas en segundo plano (la ventana no se congela)[hecho]
   __main__.py         # CLI de pruebas                                  [hecho]
   core/
     lang.py           # idiomas (ca por defecto, es): alias y presets   [hecho]

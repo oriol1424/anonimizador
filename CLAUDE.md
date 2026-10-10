@@ -34,4 +34,6 @@ Plataformas: **macOS y Windows**. Repo: https://github.com/oriol1424/anonimizado
 - **Permisos**: cuando el usuario apruebe un comando que no estaba permitido,
   añadirlo a `permissions.allow` en `.claude/settings.json` para no volver a preguntar.
 - **Git**: al cerrar cada paso, commit y push a `main` (el usuario quiere ir publicando).
-- Idioma: código e identificadores en inglés; documentación e interfaz en español.
+- Idioma: código e identificadores en inglés; documentación interna en castellano;
+  **interfaz en catalán** (castellano si se elige ese idioma). Todo texto visible va en
+  `src/anonimizador/i18n.py` con versión `ca` y `es`; el núcleo devuelve códigos, no frases.

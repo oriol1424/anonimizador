@@ -20,4 +20,7 @@
 | 2026-10-10 | Catalán como idioma por defecto; castellano seleccionable | ~99,99% de los documentos del bufete están en catalán |
 | 2026-10-10 | El matcher acepta partículas de ambos idiomas siempre; el idioma solo cambia alias/presets (y luego NER/LLM) | Hay documentos que mezclan idiomas; no conviene que una opción mal puesta deje pasar un nombre |
 | 2026-10-10 | Alias sin tildes ni caracteres especiales (`[ADRECA_1]`, `[TELEFON_1]`) | Que sobrevivan intactos a la IA y se puedan revertir después |
+| 2026-10-10 | Interfaz en catalán; cambia a castellano junto con el idioma del documento | Petición del cliente; un solo selector, más sencillo |
+| 2026-10-10 | El núcleo devuelve `Notice`/`AnonymizerError` con código, la UI los traduce | Separar lógica y textos; mensajes siempre en el idioma de la interfaz |
+| 2026-10-10 | Listas de términos por caso en .json elegido por el usuario; QSettings solo guarda la última carpeta | Reutilizar listas sin que la app guarde datos personales por su cuenta |
 | 2026-10-10 | "i"/"y" entre apellidos opcional; `·` forma parte de la palabra; `’` = `'` | Particularidades de los nombres catalanes y del autocorrector de Word |

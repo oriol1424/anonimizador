@@ -108,7 +108,7 @@ def test_catalan_text_and_format_preserved(anonymized_ca):
     assert "viu al carrer major del poble" in text
     p = Document(str(out)).paragraphs[1]
     assert "[CLIENT_1]" in "".join(r.text for r in p.runs if r.bold)
-    assert not [w for w in report.warnings if w.startswith("Verificación")]
+    assert not [n for n in report.notices if n.kind == "leftovers"]
 
 
 def test_suggestion_aliases_in_catalan(anonymized_ca):
