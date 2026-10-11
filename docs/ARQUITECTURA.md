@@ -25,16 +25,22 @@
 ## Módulos
 ```
 src/anonimizador/
-  app.py              # arranque de la app + estilos                     [hecho]
+  app.py              # arranque de la app                               [hecho]
   i18n.py             # TODOS los textos visibles, ca/es                  [hecho]
-  ui/main_window.py   # ventana única                                     [hecho]
-  ui/suggestions.py   # diálogo de sugerencias                            [hecho]
-  ui/widgets.py       # desplegable editable con numeración automática    [hecho]
-  ui/worker.py        # tareas en segundo plano (la ventana no se congela)[hecho]
+  ui/main_window.py   # ventana única: asistente de 4 pasos + navegación  [hecho]
+  ui/sidebar.py       # barra lateral: pasos, idioma, «100% local»        [hecho]
+  ui/pages.py         # pasos 1 (documento), 2 (lista) y 4 (guardar)      [hecho]
+  ui/suggestions.py   # paso 3: sugerencias con buscador y filtros        [hecho]
+  ui/status_pages.py  # progreso por fases + Cancel·la; resultado         [hecho]
+  ui/style.py         # colores, hoja de estilos e iconos (propuesta B)   [hecho]
+  ui/widgets.py       # desplegable de alias, avisos, filtros, segmentos  [hecho]
+  ui/worker.py        # tareas en segundo plano, progreso y cancelación   [hecho]
   __main__.py         # CLI de pruebas                                  [hecho]
   core/
     lang.py           # idiomas (ca por defecto, es): alias y presets   [hecho]
     text.py           # normalización sin tildes que conserva offsets   [hecho]
+    progress.py       # progreso por fases y cancelación (Cancelled)    [hecho]
+    keep_awake.py     # el equipo no entra en reposo durante las tareas [hecho]
     matcher.py        # términos del usuario + variantes + ambigüedad    [hecho]
     regex_es.py       # DNI, NIE, CIF, IBAN, tel., email, matrícula...   [hecho]
     docx_io.py        # leer/anonimizar Word a nivel XML (todas las partes) [hecho]
@@ -81,7 +87,10 @@ runs (docx) o rectángulos (pdf). Así los detectores son independientes del for
   4. La verificación final vuelve a pasar OCR sobre la imagen resultante.
 - El OCR se cachea en memoria (hash de la imagen) para no repetirlo entre análisis y
   anonimización; nunca se guarda en disco.
-- La ventana muestra el progreso del OCR ("Llegint pàgines escanejades… 3/10").
+- Progreso por fases (`core/progress.py`): el núcleo llama `progress(fase, hecho, total)`
+  con códigos "read", "detect", "anonymize", "verify", "export"; la interfaz los traduce y
+  calcula el tiempo restante. Para cancelar, la función de progreso lanza `Cancelled`
+  (hereda de BaseException: ningún `except Exception` de página la confunde con un fallo).
 - El .txt se genera del original + sustituciones (el texto añadido saldría desordenado).
 
 ## Detección de personas, empresas y direcciones

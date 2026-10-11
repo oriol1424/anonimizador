@@ -154,7 +154,7 @@ def _anonymize_links(doc: DocxDocument, matcher: Matcher) -> None:
                     rel._target = new_target
 
 
-def anonymize(src: Path, dst: Path, matcher: Matcher, progress=None) -> ProcessResult:
+def anonymize(src: Path, dst: Path, matcher: Matcher) -> ProcessResult:
     doc = Document(str(src))
     all_matches: list[Match] = []
 
@@ -189,7 +189,7 @@ def count_images(doc: DocxDocument) -> int:
     )
 
 
-def extract_text(path: Path, progress=None) -> str:
+def extract_text(path: Path) -> str:
     """Todo el texto susceptible de contener datos, un párrafo por línea."""
     doc = Document(str(path))
     lines: list[str] = []

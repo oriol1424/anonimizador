@@ -149,7 +149,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "como DNI, teléfonos o direcciones. Revisa los nombres manualmente.",
     },
     # Diálogo de sugerencias
-    "sugg_title": {"ca": "Revisa les suggerències", "es": "Revisa las sugerencias"},
+    "sugg_title": {"ca": "Revisa els suggeriments", "es": "Revisa las sugerencias"},
     "sugg_intro": {
         "ca": "He trobat aquestes dades que no eren a la teva llista. Marca les que vols "
         "substituir i, si cal, canvia el substitut.",
@@ -212,6 +212,98 @@ STRINGS: dict[str, dict[str, str]] = {
         "ca": "Guia de correspondències (confidencial):\n{path}",
         "es": "Guía de correspondencias (confidencial):\n{path}",
     },
+    # Pasos (barra lateral)
+    "step_document": {"ca": "Document", "es": "Documento"},
+    "step_terms": {"ca": "La teva llista", "es": "Tu lista"},
+    "step_suggestions": {"ca": "Suggeriments", "es": "Sugerencias"},
+    "step_save": {"ca": "Desa", "es": "Guardar"},
+    "local_badge": {"ca": "100% local · sense internet", "es": "100% local · sin internet"},
+    "back": {"ca": "Enrere", "es": "Atrás"},
+    "continue": {"ca": "Continua", "es": "Continuar"},
+    # Paso 1: documento
+    "doc_title": {"ca": "Tria el document", "es": "Elige el documento"},
+    "doc_intro": {
+        "ca": "El document original no es modifica mai: es desa una còpia anonimitzada.",
+        "es": "El documento original nunca se modifica: se guarda una copia anonimizada.",
+    },
+    "drop_here": {
+        "ca": "Arrossega aquí un document Word o PDF",
+        "es": "Arrastra aquí un documento Word o PDF",
+    },
+    "drop_or": {"ca": "o bé", "es": "o bien"},
+    "change_file": {"ca": "Canvia el fitxer…", "es": "Cambiar fichero…"},
+    "file_word": {"ca": "Document Word", "es": "Documento Word"},
+    "file_pdf": {"ca": "PDF · {pages} pàgines", "es": "PDF · {pages} páginas"},
+    "file_pdf_scanned": {
+        "ca": "PDF · {pages} pàgines ({scanned} escanejades)",
+        "es": "PDF · {pages} páginas ({scanned} escaneadas)",
+    },
+    # Paso 2: lista
+    "analyze": {"ca": "Analitza el document", "es": "Analizar el documento"},
+    # Paso 3: sugerencias
+    "sugg_found": {
+        "ca": "He trobat {count} dades que no eren a la teva llista. Marca les que vols "
+        "substituir i, si cal, canvia el substitut.",
+        "es": "He encontrado {count} datos que no estaban en tu lista. Marca los que quieres "
+        "sustituir y, si hace falta, cambia el sustituto.",
+    },
+    "sugg_none": {
+        "ca": "No he trobat cap altra dada a part de la teva llista.",
+        "es": "No he encontrado ningún otro dato aparte de tu lista.",
+    },
+    "search": {"ca": "Cerca un nom o una dada…", "es": "Busca un nombre o un dato…"},
+    "filter_all": {"ca": "Tots", "es": "Todos"},
+    "group_people": {"ca": "Persones", "es": "Personas"},
+    "group_companies": {"ca": "Empreses", "es": "Empresas"},
+    "group_ids": {"ca": "Documents d'identitat", "es": "Documentos de identidad"},
+    "group_contact": {"ca": "Telèfons i correus", "es": "Teléfonos y correos"},
+    "group_addresses": {"ca": "Adreces", "es": "Direcciones"},
+    "group_other": {"ca": "Altres", "es": "Otros"},
+    "marked_count": {"ca": "{checked} de {total} marcades", "es": "{checked} de {total} marcadas"},
+    "apply_continue": {"ca": "Aplica i continua", "es": "Aplicar y continuar"},
+    # Paso 4: guardar
+    "save_title": {"ca": "On el vols desar?", "es": "¿Dónde lo quieres guardar?"},
+    "save_intro": {
+        "ca": "Per enganxar-lo a una IA, el format de text és el més net.",
+        "es": "Para pegarlo en una IA, el formato de texto es el más limpio.",
+    },
+    "format_text_short": {"ca": "Text per a la IA (.txt)", "es": "Texto para la IA (.txt)"},
+    # Progreso
+    "progress_analyzing": {"ca": "Analitzant el document…", "es": "Analizando el documento…"},
+    "progress_anonymizing": {"ca": "Anonimitzant…", "es": "Anonimizando…"},
+    "phase_read": {"ca": "Lectura de les pàgines", "es": "Lectura de las páginas"},
+    "phase_detect": {"ca": "Cerca de noms i dades", "es": "Búsqueda de nombres y datos"},
+    "phase_anonymize": {"ca": "Anonimització", "es": "Anonimización"},
+    "phase_verify": {"ca": "Comprovació final", "es": "Comprobación final"},
+    "phase_export": {"ca": "Exportació a text", "es": "Exportación a texto"},
+    "phase_pages": {"ca": "pàgina {done} de {total}", "es": "página {done} de {total}"},
+    "phase_percent": {"ca": "{percent}%", "es": "{percent}%"},
+    "phase_pending": {"ca": "pendent", "es": "pendiente"},
+    "phase_done": {"ca": "fet", "es": "hecho"},
+    "eta": {"ca": "Temps restant aproximat: {time}", "es": "Tiempo restante aproximado: {time}"},
+    "eta_minutes": {"ca": "{n} min", "es": "{n} min"},
+    "eta_less_minute": {"ca": "menys d'un minut", "es": "menos de un minuto"},
+    "eta_unknown": {"ca": "Calculant el temps restant…", "es": "Calculando el tiempo restante…"},
+    "keep_awake_note": {
+        "ca": "Pots fer servir altres programes mentrestant. L'ordinador no entrarà en repòs "
+        "fins que acabi.",
+        "es": "Puedes usar otros programas mientras tanto. El ordenador no entrará en reposo "
+        "hasta que termine.",
+    },
+    "cancelling": {"ca": "Cancel·lant…", "es": "Cancelando…"},
+    # Resultado
+    "result_ok": {"ca": "Document anonimitzat", "es": "Documento anonimizado"},
+    "result_warn": {"ca": "Fet, però revisa els avisos", "es": "Hecho, pero revisa los avisos"},
+    "result_serious": {
+        "ca": "Atenció: revisa el document abans de fer-lo servir",
+        "es": "Atención: revisa el documento antes de usarlo",
+    },
+    "result_summary": {
+        "ca": "{total} substitucions. Desat a:",
+        "es": "{total} sustituciones. Guardado en:",
+    },
+    "open_file": {"ca": "Obre el document", "es": "Abrir el documento"},
+    "new_document": {"ca": "Anonimitza un altre document", "es": "Anonimizar otro documento"},
     # Resultado
     "done_title": {"ca": "Fet", "es": "Hecho"},
     "done": {

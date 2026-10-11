@@ -15,7 +15,6 @@ Licencia: PyMuPDF bajo AGPL-3.0 (gratis). Ver docs/LICENCIAS.md.
 
 import threading
 from collections import deque
-from collections.abc import Callable
 from concurrent.futures import Future, wait
 from dataclasses import dataclass
 from pathlib import Path
@@ -24,6 +23,7 @@ import pymupdf
 
 from anonimizador.core import ocr
 from anonimizador.core.matcher import Match, Matcher
+from anonimizador.core.progress import PageProgress, Steps
 from anonimizador.core.result import ProcessResult
 
 MIN_IMAGE_COVERAGE = 0.5  # imagen que cubre ≥50% de la página -> se trata con OCR
@@ -34,7 +34,7 @@ JPEG_QUALITY = 80
 LOOKAHEAD = 2 * ocr.WORKERS  # páginas imagen cuyo OCR se encola por adelantado
 MAX_FIX_ROUNDS = 2  # vueltas de "verificar y volver a borrar" en páginas imagen
 
-Progress = Callable[[int, int], None]  # (páginas leídas con OCR, total)
+Progress = PageProgress  # (páginas hechas, total de páginas) dentro de una fase
 
 
 class EncryptedPdfError(Exception):
@@ -79,20 +79,8 @@ def is_image_page(page: pymupdf.Page) -> bool:
     return covered / page_area >= MIN_IMAGE_COVERAGE
 
 
-class _OcrCounter:
-    """Avisa del progreso del OCR (lo único lento) a la interfaz."""
-
-    def __init__(self, doc: pymupdf.Document, progress: Progress | None):
-        self.total = sum(1 for page in doc if is_image_page(page))
-        self.done = 0
-        self.progress = progress
-        if progress and self.total:
-            progress(0, self.total)
-
-    def tick(self) -> None:
-        self.done += 1
-        if self.progress:
-            self.progress(self.done, self.total)
+def _scanned_count(doc: pymupdf.Document) -> int:
+    return sum(1 for page in doc if is_image_page(page))
 
 
 # --- Páginas con texto ----------------------------------------------------------------
@@ -350,14 +338,11 @@ class _Prefetch:
             self.next += 1
 
 
-def _page_text(
-    page: pymupdf.Page, counter: _OcrCounter | None, doubts: dict[int, int] | None = None
-) -> str:
-    """Texto de la página; las páginas imagen se leen con OCR salvo si `counter` es None
+def _page_text(page: pymupdf.Page, use_ocr: bool, doubts: dict[int, int] | None = None) -> str:
+    """Texto de la página; las páginas imagen se leen con OCR salvo con `use_ocr=False`
     (entonces se devuelve su capa de texto, p. ej. la invisible ya anonimizada)."""
-    if counter is not None and is_image_page(page):
+    if use_ocr and is_image_page(page):
         result = ocr.recognize(ocr.render(page))
-        counter.tick()
         _note_doubts(page, result, doubts)
         return result.text_and_boxes()[0]
     return _page_chars(page)[0]
@@ -436,13 +421,14 @@ def anonymize(
     """Si una página falla, no se aborta todo: se sustituye por una página en blanco con
     `failed_page_text` ({n} = nº de página) y se anota en `ProcessResult.failed_pages`."""
     doc = _open(src)
+    scanned = _scanned_count(doc)
     all_matches: list[Match] = []
     leftovers: list[tuple[int, Match]] = []
     doubts: dict[int, int] = {}
     failed: set[int] = set()
     images = doc.embfile_count()
     try:
-        counter = _OcrCounter(doc, progress)
+        steps = Steps(progress, doc.page_count)
         prefetch = _Prefetch(doc)
         checks: deque[_ScanCheck] = deque()  # verificaciones en curso (en paralelo)
 
@@ -471,7 +457,6 @@ def anonymize(
                     state = _start_image_page(page, matcher, doubts)
                     if state is not None:
                         checks.append(state)
-                    counter.tick()
                 else:
                     page_images = len(page.get_images(full=True))
                     all_matches.extend(_anonymize_text_page(page, matcher))
@@ -480,6 +465,7 @@ def anonymize(
                 fail(number)
             while len(checks) > ocr.WORKERS:
                 finish_oldest()
+            steps.tick()
         while checks:
             finish_oldest()
         _anonymize_document_extras(doc, matcher)
@@ -487,7 +473,7 @@ def anonymize(
         doc.save(str(dst), garbage=4, deflate=True, clean=True)
     finally:
         doc.close()
-    return ProcessResult(all_matches, images, counter.total, leftovers, doubts, failed)
+    return ProcessResult(all_matches, images, scanned, leftovers, doubts, failed)
 
 
 def extract_text(
@@ -507,15 +493,16 @@ def extract_text(
     doc = _open(path)
     lines: list[str] = []
     try:
-        counter = _OcrCounter(doc, progress) if use_ocr else None
+        steps = Steps(progress, doc.page_count)
         prefetch = _Prefetch(doc) if use_ocr else None
         for page in doc:
             try:
-                lines.extend(_page_lines(page, counter, prefetch, doubts))
+                lines.extend(_page_lines(page, use_ocr, prefetch, doubts))
             except Exception:  # noqa: BLE001 - página ilegible: se avisa y se sigue
                 if failed is None:
                     raise
                 failed.add(page.number + 1)
+            steps.tick()
         meta = doc.metadata or {}
         lines.extend(v for k in ("title", "subject", "keywords", "author") if (v := meta.get(k)))
         lines.extend(entry[1] for entry in doc.get_toc())
@@ -526,13 +513,13 @@ def extract_text(
 
 def _page_lines(
     page: pymupdf.Page,
-    counter: _OcrCounter | None,
+    use_ocr: bool,
     prefetch: _Prefetch | None,
     doubts: dict[int, int] | None,
 ) -> list[str]:
     if prefetch:
         prefetch.upto(page.number)
-    lines = [_page_text(page, counter, doubts)]
+    lines = [_page_text(page, use_ocr, doubts)]
     for annot in page.annots():
         lines.extend(v for v in (annot.info.get("content"), annot.info.get("title")) if v)
     lines.extend(w.field_value for w in page.widgets() if isinstance(w.field_value, str))
@@ -554,17 +541,18 @@ def anonymized_text(
     """
     doc = _open(src)
     try:
-        counter = _OcrCounter(doc, progress)
+        steps = Steps(progress, doc.page_count)
         prefetch = _Prefetch(doc)
         pages = []
         for page in doc:
             try:
                 prefetch.upto(page.number)
-                pages.append(matcher.replace(_page_text(page, counter)).strip())
+                pages.append(matcher.replace(_page_text(page, True)).strip())
             except Exception:  # noqa: BLE001 - como en `anonymize`: nunca el original
                 pages.append(failed_page_text.format(n=page.number + 1))
                 if failed is not None:
                     failed.add(page.number + 1)
+            steps.tick()
         return "\n\n".join(p for p in pages if p).strip() + "\n"
     finally:
         doc.close()
@@ -594,9 +582,10 @@ def read_ahead(path: Path, stop: threading.Event) -> None:
         doc.close()
 
 
-def image_pages(path: Path) -> int:
+def page_counts(path: Path) -> tuple[int, int]:
+    """(páginas, páginas escaneadas)."""
     doc = _open(path)
     try:
-        return sum(1 for page in doc if is_image_page(page))
+        return doc.page_count, _scanned_count(doc)
     finally:
         doc.close()

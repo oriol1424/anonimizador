@@ -1,7 +1,31 @@
 # Progreso
 
 ## ▶ DÓNDE NOS QUEDAMOS (2026-10-11) — empezar por aquí
-Todo hecho, probado (**257 tests** + 2 lentos con `pytest -m slow`) y publicado. No hay código a medias.
+Todo hecho, probado (**280 tests** + 2 lentos con `pytest -m slow`) y publicado. No hay código a medias.
+
+### Hecho el 2026-10-11 (noche): interfaz nueva (propuesta B, elegida por el usuario)
+- Propuestas de diseño en un lienzo (A sobria, B asistente por pasos, C oscura):
+  https://claude.ai/artifact/H16aPwRUjJ6PJp2hThijEd — el usuario eligió **la B**.
+- Ventana con **barra lateral de 4 pasos** (Document → La teva llista → Suggeriments →
+  Desa), idioma Català/Castellano y «100% local · sense internet». Los pasos se
+  desbloquean en orden; si se cambia la lista, hay que volver a analizar.
+- Paso 1: zona para arrastrar + tarjeta del documento (Word / PDF con nº de páginas y
+  escaneadas). Un PDF protegido se avisa al elegirlo.
+- Paso 3: **sugerencias con buscador** (sin tildes ni mayúsculas) **y filtros por tipo**
+  (Persones, Empreses, Documents d'identitat...); «Marca/Desmarca-ho tot» actúa sobre lo
+  visible; recuento «N de M marcades». Sustituye al diálogo.
+- **Progreso por fases** con página actual, porcentaje, tiempo restante y **Cancel·la**
+  (vuelve al paso sin dejar ficheros). **Pantalla de resultado** con avisos (graves
+  primero, en rojo), «Obre el document», «Obre la carpeta», «Anonimitza un altre document».
+- Estilo: colores sobrios (verde azulado), tipografía del sistema (Segoe UI / San
+  Francisco: nada que empaquetar), siempre en claro, iconos dibujados en el código.
+- Núcleo: `core/progress.py` (fases + `Cancelled`), progreso en el detector de nombres y
+  en todas las páginas del PDF, `pipeline.document_info`.
+- Privacidad: los tests **bloquean cualquier conexión de red** (`conftest.no_network`):
+  RapidOCR importa `requests` para descargar modelos que falten; con los modelos dentro no
+  se conecta, y ahora está comprobado. Consola de RapidOCR solo con errores.
+- Capturas de cada pantalla generadas sin abrir ventanas (Qt `offscreen` +
+  `QT_QPA_FONTDIR=C:/Windows/Fonts`).
 
 ### Hecho el 2026-10-11 (tarde)
 - `docs/PENDIENTES_BUFETE.md` enlazado desde `CLAUDE.md`.
@@ -50,12 +74,9 @@ Todo hecho, probado (**257 tests** + 2 lentos con `pytest -m slow`) y publicado.
   (formatos CASS/residencia/causas Batllia, países de los pasaportes, equipos Windows...).
 
 ### Siguiente (en este orden)
-1. **Interfaz más profesional y moderna** (petición del usuario, 2026-10-11): que siga
-   siendo simple (una ventana, pocos botones) pero con aspecto cuidado: tipografía,
-   espaciado, colores sobrios, iconos, estados claros (vacío / analizando / listo),
-   tema claro/oscuro del sistema. Encaja con el punto 8 (Cancel·la + progreso por fases)
-   y el 10 (buscador de sugerencias): hacerlos juntos.
-2. Después: empaquetado USB (paso 10) y alternativas sencillas a la IA (9b).
+1. Que el usuario pruebe la interfaz nueva (`.venv/Scripts/python -m anonimizador.app`)
+   y ajustar lo que pida. Pendiente opcional: tema oscuro (colores de la propuesta C).
+2. Empaquetado USB (paso 10) y alternativas sencillas a la IA (9b).
 
 ### Medición (`scripts/bench_documents_grans.py <carpeta> <págs_escaneadas>`)
 | Documento | Análisis | Anonimizar + verificar |
@@ -107,11 +128,11 @@ menos; falta medirlo allí y probar CoreML.
      pierde la "segunda opinión" de releer la página entera). Probar CoreML en el Mac M2.
 7. [x] Si una página falla, no abortar todo: sustituirla por una página "[Pàgina N no
    processada]" + aviso (nunca dejarla sin anonimizar).
-8. Interfaz: **botón Cancel·la**, progreso por fases ("Analitzant… / Anonimitzant… /
+8. [x] Interfaz: **botón Cancel·la**, progreso por fases ("Analitzant… / Anonimitzant… /
    Verificant… pàgina 12 de 80") con tiempo estimado.
 9. [x] Evitar que el ordenador se duerma durante procesos largos (macOS: `caffeinate -i -w
    <pid>`; Windows: `SetThreadExecutionState`).
-10. Ventana de sugerencias con buscador (con 80 págs salen ~500 sugerencias).
+10. [x] Ventana de sugerencias con buscador (con 80 págs salen ~500 sugerencias).
 11. [x] Repetir la medición y añadir un test "documento largo" (marcado lento).
 12. [x] Protección del original: comparar también con `os.path.samefile` (en Windows,
     `Demanda.docx` y `demanda.docx` son el mismo fichero) + test.

@@ -13,10 +13,11 @@ import os
 import re
 import sys
 import threading
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
 
+from anonimizador.core.progress import PageProgress, Steps
 from anonimizador.core.text import fold
 
 MODEL_NAME = "ner-ca"
@@ -240,8 +241,11 @@ def _join_elisions(spans: list[tuple[int, int, str]], text: str) -> list[tuple[i
     return joined
 
 
-def detect(text: str) -> list[Entity]:
-    """Personas y empresas del texto. Vacío si el modelo no está instalado."""
+def detect(text: str, progress: PageProgress | None = None) -> list[Entity]:
+    """Personas y empresas del texto. Vacío si el modelo no está instalado.
+
+    `progress(hecho, total)` se llama con cada trozo revisado (y puede cancelar).
+    """
     if not is_available():
         return []
     model = _get_model()
@@ -251,8 +255,17 @@ def detect(text: str) -> list[Entity]:
     chunks = _chunks(normalized)
     # Trozos repetidos (cabeceras, pies, cláusulas tipo) se analizan una sola vez.
     unique = list(dict.fromkeys(chunk for _, chunk in chunks))
-    with ThreadPoolExecutor(max(1, min(WORKERS, len(unique)))) as pool:
-        predictions = dict(zip(unique, pool.map(model.predict, unique), strict=True))
+    predictions: dict[str, list[tuple[int, int, str]]] = {}
+    steps = Steps(progress, len(unique))
+    pool = ThreadPoolExecutor(max(1, min(WORKERS, len(unique))))
+    try:
+        futures = {pool.submit(model.predict, chunk): chunk for chunk in unique}
+        for future in as_completed(futures):
+            predictions[futures[future]] = future.result()
+            steps.tick()
+    finally:
+        # Si se cancela, no se espera a los trozos que aún no han empezado.
+        pool.shutdown(wait=True, cancel_futures=True)
     entities: list[Entity] = []
     for offset, chunk in chunks:
         spans = _join_elisions(predictions[chunk], chunk)

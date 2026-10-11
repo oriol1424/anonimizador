@@ -13,7 +13,7 @@ from anonimizador.core import docx_io, ner, pdf_io, regex_es
 from anonimizador.core.guide import GuideEntry, build_entries, write_guide
 from anonimizador.core.lang import DEFAULT_LANGUAGE, Language
 from anonimizador.core.matcher import Matcher, Term
-from anonimizador.core.pdf_io import Progress
+from anonimizador.core.progress import Progress, phase
 from anonimizador.core.text import fold
 from anonimizador.i18n import tr
 
@@ -23,6 +23,25 @@ FORMATS: dict[str, tuple[ModuleType, tuple[str, ...]]] = {
     ".pdf": (pdf_io, (".pdf", ".txt")),
 }
 SUPPORTED_INPUTS = set(FORMATS)
+
+
+@dataclass(frozen=True)
+class DocumentInfo:
+    kind: str  # "docx" o "pdf"
+    pages: int | None = None  # solo PDF (en Word depende de cómo se imprima)
+    scanned: int = 0
+
+
+def document_info(path: Path) -> DocumentInfo:
+    """Qué es el documento, para mostrarlo al elegirlo (y avisar pronto si no se puede
+    abrir: p. ej. un PDF protegido). Llamar ANTES de `read_ahead`: PyMuPDF no admite
+    dos hilos a la vez."""
+    _backend(path)
+    if path.suffix.lower() != ".pdf":
+        return DocumentInfo("docx")
+    with _friendly_errors():
+        pages, scanned = pdf_io.page_counts(path)
+    return DocumentInfo("pdf", pages, scanned)
 
 
 def output_formats(path: Path) -> tuple[str, ...]:
@@ -208,16 +227,18 @@ def analyze(
     unreadable: set[int] = set()
     with _friendly_errors():
         if backend is pdf_io:
-            text = pdf_io.extract_text(path, progress, doubts=doubts, failed=unreadable)
+            text = pdf_io.extract_text(
+                path, phase(progress, "read"), doubts=doubts, failed=unreadable
+            )
         else:
-            text = backend.extract_text(path, progress)
+            text = backend.extract_text(path)
     matcher = Matcher(user_terms)
     covered = matcher.find(text)
 
     rules = [d for d in regex_es.detect(text) if not _overlaps(d.start, d.end, covered)]
     entities = [
         e
-        for e in ner.detect(text)
+        for e in ner.detect(text, phase(progress, "detect"))
         if not _overlaps(e.start, e.end, covered)
         and not _overlaps(e.start, e.end, rules)
         and not _part_of_user_term(e.text, user_terms)
@@ -316,19 +337,25 @@ def anonymize(
         with _friendly_errors():
             failed: set[int] = set()
             if backend is pdf_io:
-                result = pdf_io.anonymize(src, work, matcher, progress, language.failed_page)
+                result = pdf_io.anonymize(
+                    src, work, matcher, phase(progress, "anonymize"), language.failed_page
+                )
                 failed |= result.failed_pages
             else:
-                result = backend.anonymize(src, work, matcher, progress)
+                result = backend.anonymize(src, work, matcher)
             if backend is pdf_io:
                 # Las páginas imagen ya se verificaron con OCR al anonimizarlas: aquí se
                 # revisa su capa de texto y el resto del documento.
-                leftovers = matcher.find(pdf_io.extract_text(work, use_ocr=False))
+                leftovers = matcher.find(
+                    pdf_io.extract_text(work, phase(progress, "verify"), use_ocr=False)
+                )
             else:
-                leftovers = matcher.find(backend.extract_text(work, progress))
+                leftovers = matcher.find(backend.extract_text(work))
             if work != dst:
                 text = (
-                    pdf_io.anonymized_text(src, matcher, progress, language.failed_page, failed)
+                    pdf_io.anonymized_text(
+                        src, matcher, phase(progress, "export"), language.failed_page, failed
+                    )
                     if backend is pdf_io
                     else docx_io.body_text(work)
                 )

@@ -97,7 +97,9 @@ def _get_engine():
 
         _local.engine = RapidOCR(
             params={
-                "Global.log_level": "warning",
+                # Solo errores: sus avisos no llevan texto del documento, pero así no
+                # dependemos de lo que la librería decida escribir (regla 3).
+                "Global.log_level": "error",
                 "Global.return_word_box": True,
                 # El clasificador de orientación giraba 180° líneas correctas y las leía
                 # mal ("2 a 02s"): un nombre quedaba sin borrar. Las páginas giradas ya se

@@ -54,3 +54,8 @@
 | 2026-10-11 | Si `anonymize` falla a mitad, se borra la salida | Mejor no tener fichero que tener uno a medias o sin verificar |
 | 2026-10-11 | Evitar el reposo durante las tareas (SetThreadExecutionState / caffeinate), sin impedir que se apague la pantalla | 80 págs escaneadas ≈ 10 min: si el equipo se duerme, el usuario cree que se ha colgado |
 | 2026-10-11 | Tests lentos marcados `slow` y excluidos por defecto (`pytest -m slow`) | La suite normal sigue en ~1 min |
+| 2026-10-11 | Interfaz: propuesta B (asistente de 4 pasos con barra lateral), elegida por el usuario entre 3 propuestas | Una tarea por pantalla: lo más fácil de seguir para un usuario no técnico; las sugerencias pasan a ser un paso con buscador |
+| 2026-10-11 | Tipografía del sistema (Segoe UI / San Francisco), no fuentes empaquetadas | Aspecto nativo y profesional sin ficheros de terceros ni licencias que anotar |
+| 2026-10-11 | Interfaz siempre en claro (Fusion + paleta fija) | Con el modo oscuro del sistema, Qt mezclaba colores; el tema oscuro queda como opcional |
+| 2026-10-11 | Progreso por fases con códigos (`read`, `detect`, `anonymize`, `verify`, `export`) y cancelación lanzando `Cancelled` (BaseException) desde la función de progreso | El núcleo no conoce la interfaz; la cancelación atraviesa la protección de páginas que fallan y borra la salida a medias |
+| 2026-10-11 | Los tests bloquean toda conexión de red fuera del equipo | RapidOCR trae código de descarga de modelos: así se comprueba la regla 1 en cada ejecución |
