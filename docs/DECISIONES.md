@@ -44,3 +44,4 @@
 | 2026-10-11 | OCR de 2 páginas en paralelo (no más) | Medido: 2 → ~1,2× con 1,3 GB; 4 → ~1,3× con 2 GB. Prioridad: que vaya bien en el Mac de 8 GB |
 | 2026-10-11 | OCR anticipado al elegir un PDF, detenido antes de analizar | El tiempo de rellenar la lista se aprovecha; PyMuPDF no es seguro con dos hilos |
 | 2026-10-11 | Se mantiene la verificación con OCR de la página entera | Es más lenta que releer solo lo modificado, pero puede detectar líneas mal leídas la primera vez |
+| 2026-10-11 | Aviso de líneas dudosas del OCR por confianza de línea (< 0,90) y densidad de letras, no por palabra | La confianza por palabra es ruidosa (palabras correctas con 0,53); la de línea separa bien |

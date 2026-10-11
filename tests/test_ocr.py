@@ -43,3 +43,46 @@ def test_read_ahead_can_be_stopped(demanda_pdf):
     ahead = read_ahead(demanda_pdf)
     ahead.stop()  # no se queda colgado
     assert read_ahead(demanda_pdf.with_suffix(".docx")) is None
+
+
+def test_blank_scanned_page_does_not_fail(tmp_path):
+    from anonimizador.core.matcher import Term
+    from anonimizador.core.pipeline import anonymize
+
+    blank = pymupdf.open().new_page().get_pixmap(dpi=100, colorspace=pymupdf.csGRAY)
+    doc = pymupdf.open()
+    doc.new_page().insert_image(pymupdf.Rect(0, 0, 595, 842), pixmap=blank)
+    doc.save(str(tmp_path / "blanc.pdf"))
+    report = anonymize(tmp_path / "blanc.pdf", tmp_path / "sortida.pdf", [Term("Joan", "[C]")])
+    assert report.total == 0
+
+
+def _page(lines, scores=()):
+    return ocr.OcrPage(
+        tuple(
+            tuple(ocr.OcrWord(t, pymupdf.Rect(x0, y, x1, y + 20)) for t, x0, x1 in line)
+            for y, line in enumerate(lines)
+        ),
+        tuple(scores),
+    )
+
+
+NORMAL = [
+    ("Jo,", 0, 30), ("Joan", 40, 90), ("Puig", 100, 150), ("amb", 160, 200), ("DNI", 210, 250)
+]  # fmt: skip
+
+
+def test_line_with_low_score_is_doubtful():
+    page = _page([NORMAL, NORMAL, NORMAL], scores=(0.99, 0.71, 0.98))
+    assert page.doubtful_lines() == [1]
+
+
+def test_wide_line_with_few_letters_is_doubtful():
+    """Como "24 … 025" ocupando toda la línea (un nombre y un DNI mal leídos)."""
+    page = _page([NORMAL, [("24", 0, 20), ("025", 220, 250)], NORMAL], scores=(0.99, 0.99, 0.99))
+    assert page.doubtful_lines() == [1]
+
+
+def test_clean_page_has_no_doubtful_lines():
+    assert _page([NORMAL, NORMAL, NORMAL[:2]], scores=(0.99, 0.98, 0.99)).doubtful_lines() == []
+    assert ocr.OcrPage(()).doubtful_lines() == []

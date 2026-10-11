@@ -23,6 +23,10 @@ OCR_DPI = 200
 WORKERS = 2 if (os.cpu_count() or 1) >= 4 else 1
 _THREADS_PER_WORKER = max(1, (os.cpu_count() or 1) // WORKERS)
 _CACHE_SIZE = 256
+# Línea dudosa: confianza baja o texto demasiado disperso para su ancho (p. ej. "24 … 025"
+# ocupando toda la línea). Medido: líneas bien leídas ≥ 0,967; la mal leída, 0,714.
+LOW_LINE_SCORE = 0.90
+SPARSE_RATIO = 0.3  # letras por píxel frente a la mediana de la página
 
 _lock = threading.Lock()
 _cache: OrderedDict[str, "OcrPage"] = OrderedDict()
@@ -40,6 +44,26 @@ class OcrWord:
 @dataclass(frozen=True)
 class OcrPage:
     lines: tuple[tuple[OcrWord, ...], ...]
+    scores: tuple[float, ...] = ()  # confianza de cada línea (0–1), si se conoce
+
+    def doubtful_lines(self) -> list[int]:
+        """Líneas que el OCR probablemente ha leído mal (para avisar al usuario)."""
+        widths = [ws[-1].rect.x1 - ws[0].rect.x0 for ws in self.lines]
+        density = [
+            sum(len(w.text) for w in ws) / width if width > 0 else 0.0
+            for ws, width in zip(self.lines, widths, strict=True)
+        ]
+        if not self.lines:
+            return []
+        typical = sorted(density)[len(density) // 2]
+        widest = max(widths)
+        doubtful = []
+        for i in range(len(self.lines)):
+            low = i < len(self.scores) and self.scores[i] < LOW_LINE_SCORE
+            sparse = widths[i] >= widest / 2 and density[i] < typical * SPARSE_RATIO
+            if low or sparse:
+                doubtful.append(i)
+        return doubtful
 
     def text_and_boxes(self) -> tuple[str, list[tuple[pymupdf.Rect, int] | None]]:
         """Texto de la página y, por carácter, su caja aproximada y su línea.
@@ -104,13 +128,22 @@ def pixels(pix: pymupdf.Pixmap) -> np.ndarray:
 def _run(key: str, image: np.ndarray) -> "OcrPage":
     try:
         result = _get_engine()(image)
-        lines: list[tuple[OcrWord, ...]] = []
-        for line in result.word_results or ():
-            words = tuple(OcrWord(text, _box_rect(box)) for text, _score, box in line if text)
+        # Página en blanco: RapidOCR no da textos y `word_results` vale (("", 1.0, None),).
+        word_lines = list(result.word_results or ()) if result.txts else []
+        scores = list(result.scores or ())
+        if len(scores) != len(word_lines):
+            scores = [1.0] * len(word_lines)
+        lines: list[tuple[tuple[OcrWord, ...], float]] = []
+        for line, score in zip(word_lines, scores, strict=True):
+            words = tuple(
+                OcrWord(item[0], _box_rect(item[2]))
+                for item in line
+                if len(item) == 3 and item[0] and item[2] is not None
+            )
             if words:
-                lines.append(words)
-        lines.sort(key=lambda ws: (round(ws[0].rect.y0 / 10), ws[0].rect.x0))
-        page = OcrPage(tuple(lines))
+                lines.append((words, float(score)))
+        lines.sort(key=lambda item: (round(item[0][0].rect.y0 / 10), item[0][0].rect.x0))
+        page = OcrPage(tuple(ws for ws, _ in lines), tuple(sc for _, sc in lines))
         with _lock:
             _cache[key] = page
             if len(_cache) > _CACHE_SIZE:

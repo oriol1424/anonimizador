@@ -2,7 +2,7 @@
 
 ## ▶ DÓNDE NOS QUEDAMOS (2026-10-11) — empezar por aquí
 Estábamos haciendo **robustez con documentos largos (80+ páginas)**. Todo lo anterior está
-hecho, probado (145 tests) y publicado. Hechos los puntos 1–3 y 6 del plan; sigue el 4.
+hecho, probado (151 tests) y publicado. Hechos los puntos 1–4 y 6 del plan; sigue el 5.
 
 ### Medición (`scripts/bench_documents_grans.py <carpeta> <págs_escaneadas>`)
 | Documento | Análisis | Anonimizar + verificar | Problema |
@@ -36,7 +36,12 @@ PC (i7-1065G7, 4 núcleos), parte de ellos mientras el usuario rellena la lista.
    queda algo → aviso `leftovers_scan` con nº de página, primero y con icono de error.
 3. [x] Las páginas escaneadas sin datos no se vuelven a pasar por OCR; la verificación
    final del pipeline ya no repite el OCR (revisa la capa de texto invisible).
-4. Aviso de **líneas con baja confianza del OCR** (score bajo / texto raro) con nº de página.
+4. [x] Aviso de **líneas dudosas del OCR** con nº de página (`OcrPage.doubtful_lines`):
+   confianza de línea < 0,90 (medido: bien leídas ≥ 0,967; la mal leída 0,714; la
+   confianza por palabra no sirve, palabras bien leídas dan 0,53) o línea ancha con muy
+   pocas letras. Sale en el análisis (antes de anonimizar) y en el resultado. Sin falsas
+   alarmas en escaneados limpios; salta en todas las líneas de un escaneado muy malo.
+   Arreglado de paso: una **página escaneada en blanco** rompía el proceso.
 5. `ner.py`: precalcular conjuntos, trozos en paralelo, no repetir líneas idénticas
    (cabeceras/pies de cada página).
 6. [x] Acelerar escaneados (2026-10-11):

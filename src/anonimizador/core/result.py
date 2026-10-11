@@ -12,3 +12,5 @@ class ProcessResult:
     scanned_pages: int = 0  # páginas que son solo imagen (necesitan OCR)
     # datos que el OCR aún ve en páginas imagen tras borrarlos: (nº de página, dato)
     scan_leftovers: list[tuple[int, Match]] = field(default_factory=list)
+    # líneas que el OCR probablemente leyó mal: {nº de página: nº de líneas}
+    ocr_doubts: dict[int, int] = field(default_factory=dict)

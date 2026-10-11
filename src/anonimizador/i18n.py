@@ -109,6 +109,12 @@ STRINGS: dict[str, dict[str, str]] = {
         "que no se han podido borrar ({detail}). Revisa esas páginas antes de usar el "
         "documento.",
     },
+    "notice_ocr_doubtful": {
+        "ca": "El reconeixement de text (OCR) no està segur de {count} línies (pàgines "
+        "{pages}). Comprova-les a l'original: si hi ha noms o dades, afegeix-los a la llista.",
+        "es": "El reconocimiento de texto (OCR) no está seguro de {count} líneas (páginas "
+        "{pages}). Compruébalas en el original: si hay nombres o datos, añádelos a la lista.",
+    },
     "notice_images": {
         "ca": "El document conté {count} imatges o objectes incrustats. El seu contingut no "
         "s'anonimitza: revisa'ls manualment.",

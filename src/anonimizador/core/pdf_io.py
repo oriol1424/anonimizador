@@ -280,7 +280,14 @@ class _ScanCheck:
     check: Future
 
 
-def _start_image_page(page: pymupdf.Page, matcher: Matcher) -> _ScanCheck | None:
+def _note_doubts(page: pymupdf.Page, result: ocr.OcrPage, doubts: dict[int, int] | None) -> None:
+    if doubts is not None and (count := len(result.doubtful_lines())):
+        doubts[page.number + 1] = count
+
+
+def _start_image_page(
+    page: pymupdf.Page, matcher: Matcher, doubts: dict[int, int]
+) -> _ScanCheck | None:
     """Borra los datos de una página imagen, la rehace y encola el OCR que la verifica.
 
     Las páginas sin datos no se verifican: su imagen no cambia y otro OCR no aportaría.
@@ -289,6 +296,7 @@ def _start_image_page(page: pymupdf.Page, matcher: Matcher) -> _ScanCheck | None
         page.remove_rotation()
     pix = ocr.render(page)
     result = ocr.recognize(pix)
+    _note_doubts(page, result, doubts)
     text, boxes = result.text_and_boxes()
     matches = matcher.find(text)
     aliases = _erase(pix, boxes, matches)
@@ -337,13 +345,16 @@ class _Prefetch:
             self.next += 1
 
 
-def _page_text(page: pymupdf.Page, counter: _OcrCounter | None) -> str:
+def _page_text(
+    page: pymupdf.Page, counter: _OcrCounter | None, doubts: dict[int, int] | None = None
+) -> str:
     """Texto de la página; las páginas imagen se leen con OCR salvo si `counter` es None
     (entonces se devuelve su capa de texto, p. ej. la invisible ya anonimizada)."""
     if counter is not None and is_image_page(page):
-        text, _ = ocr.recognize(ocr.render(page)).text_and_boxes()
+        result = ocr.recognize(ocr.render(page))
         counter.tick()
-        return text
+        _note_doubts(page, result, doubts)
+        return result.text_and_boxes()[0]
     return _page_chars(page)[0]
 
 
@@ -396,6 +407,7 @@ def anonymize(
     doc = _open(src)
     all_matches: list[Match] = []
     leftovers: list[tuple[int, Match]] = []
+    doubts: dict[int, int] = {}
     images = doc.embfile_count()
     try:
         counter = _OcrCounter(doc, progress)
@@ -412,7 +424,7 @@ def anonymize(
             prefetch.upto(page.number)
             _anonymize_page_extras(page, matcher)
             if is_image_page(page):
-                state = _start_image_page(page, matcher)
+                state = _start_image_page(page, matcher, doubts)
                 if state is not None:
                     checks.append(state)
                 while len(checks) > ocr.WORKERS:
@@ -428,14 +440,20 @@ def anonymize(
         doc.save(str(dst), garbage=4, deflate=True, clean=True)
     finally:
         doc.close()
-    return ProcessResult(all_matches, images, counter.total, leftovers)
+    return ProcessResult(all_matches, images, counter.total, leftovers, doubts)
 
 
-def extract_text(path: Path, progress: Progress | None = None, use_ocr: bool = True) -> str:
+def extract_text(
+    path: Path,
+    progress: Progress | None = None,
+    use_ocr: bool = True,
+    doubts: dict[int, int] | None = None,
+) -> str:
     """Todo el texto susceptible de contener datos (páginas, metadatos, notas, enlaces...).
 
     Las páginas imagen se leen con OCR. Con `use_ocr=False` se toma su capa de texto: lo
     usa la verificación final, porque `anonymize` ya verificó su imagen con OCR.
+    Si se pasa `doubts`, se anota en él {nº de página: líneas dudosas del OCR}.
     """
     doc = _open(path)
     lines: list[str] = []
@@ -445,7 +463,7 @@ def extract_text(path: Path, progress: Progress | None = None, use_ocr: bool = T
         for page in doc:
             if prefetch:
                 prefetch.upto(page.number)
-            lines.append(_page_text(page, counter))
+            lines.append(_page_text(page, counter, doubts))
             for annot in page.annots():
                 lines.extend(v for v in (annot.info.get("content"), annot.info.get("title")) if v)
             lines.extend(w.field_value for w in page.widgets() if isinstance(w.field_value, str))

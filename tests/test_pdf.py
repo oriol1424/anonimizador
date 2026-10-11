@@ -209,3 +209,24 @@ def test_scanned_leftovers_are_reported_with_page(demanda_pdf, tmp_path, monkeyp
     assert leak.pages == "2"
     assert "pàgines escanejades 2" in leak.message(CATALAN)
     assert len(erase_calls) == 1 + pdf_io.MAX_FIX_ROUNDS
+
+
+def test_doubtful_ocr_lines_are_reported_with_page(demanda_pdf, tmp_path, monkeypatch):
+    real = ocr.recognize
+
+    def doubtful(pix):
+        page = real(pix)
+        return ocr.OcrPage(page.lines, (0.5,) + page.scores[1:])
+
+    monkeypatch.setattr(ocr, "recognize", doubtful)
+    analysis = analyze(demanda_pdf, USER_TERMS, CATALAN)
+    report = anonymize(demanda_pdf, tmp_path / "sortida.pdf", USER_TERMS)
+    for notices in (analysis.notices, report.notices):
+        notice = next(n for n in notices if n.kind == "ocr_doubtful")
+        assert (notice.count, notice.pages) == (1, "2")
+        assert "pàgines 2" in notice.message(CATALAN)
+
+
+def test_clean_scan_has_no_doubtful_notice(run):
+    assert not [n for n in run.report.notices if n.kind == "ocr_doubtful"]
+    assert not [n for n in run.analysis.notices if n.kind == "ocr_doubtful"]

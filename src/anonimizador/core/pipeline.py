@@ -121,6 +121,14 @@ def read_ahead(path: Path) -> ReadAhead | None:
     return ReadAhead(path) if path.suffix.lower() == ".pdf" else None
 
 
+def _pages(numbers) -> str:
+    return ", ".join(map(str, sorted(set(numbers))))
+
+
+def _doubts_notice(doubts: dict[int, int]) -> Notice:
+    return Notice("ocr_doubtful", count=sum(doubts.values()), pages=_pages(doubts))
+
+
 def _backend(path: Path) -> ModuleType:
     if path.suffix.lower() not in FORMATS:
         raise AnonymizerError("unsupported_input", suffix=path.suffix)
@@ -179,8 +187,12 @@ def analyze(
     El idioma decide el nombre de los alias sugeridos ([TELEFON_1] / [TELEFONO_1]).
     """
     backend = _backend(path)
+    doubts: dict[int, int] = {}
     with _friendly_errors():
-        text = backend.extract_text(path, progress)
+        if backend is pdf_io:
+            text = pdf_io.extract_text(path, progress, doubts=doubts)
+        else:
+            text = backend.extract_text(path, progress)
     matcher = Matcher(user_terms)
     covered = matcher.find(text)
 
@@ -220,6 +232,8 @@ def analyze(
     ]  # fmt: skip
 
     notices = [Notice("ambiguous", detail=v) for v in sorted(matcher.ambiguous)]
+    if doubts:
+        notices.append(_doubts_notice(doubts))
     if not ner.is_available():
         notices.append(Notice("ner_unavailable"))
     return Analysis(suggestions, notices)
@@ -300,15 +314,16 @@ def anonymize(
 
     notices: list[Notice] = []
     if result.scan_leftovers:
-        pages = sorted({page for page, _ in result.scan_leftovers})
         notices.append(
             Notice(
                 "leftovers_scan",
                 detail=", ".join(sorted({m.text for _, m in result.scan_leftovers})),
                 count=len(result.scan_leftovers),
-                pages=", ".join(map(str, pages)),
+                pages=_pages(page for page, _ in result.scan_leftovers),
             )
         )
+    if result.ocr_doubts:
+        notices.append(_doubts_notice(result.ocr_doubts))
     if result.scanned_pages:
         notices.append(Notice("ocr", count=result.scanned_pages))
     if leftovers:
