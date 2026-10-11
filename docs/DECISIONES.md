@@ -76,3 +76,7 @@
 | 2026-10-11 | Tests en GitHub Actions (Windows + macOS) | Detectar fallos de una plataforma antes de empaquetar; mismo sistema que el build del USB |
 | 2026-10-11 | Salida Markdown (.md) recomendada para la IA; .txt se mantiene | Conserva títulos, listas y tablas (la IA entiende mejor la estructura); es texto, igual de seguro |
 | 2026-10-11 | Porcentaje global ponderado por la duración estimada de cada fase y ETA recalibrada con lo transcurrido | Un % por fase confundía (volvía a 0); los tiempos varían mucho entre equipos |
+| 2026-10-11 | Código propio bajo AGPL-3.0 | Obligatorio al distribuir con PyMuPDF (AGPL) sin pagar la licencia comercial; decisión del usuario |
+| 2026-10-11 | Paquete PyInstaller --onedir; Mac construido en GitHub Actions (macos-14) | Qt enlazado dinámicamente (LGPL); el .app de Mac no se puede compilar desde Windows |
+| 2026-10-11 | En el USB, el Mac va como .zip (no como .app suelto) | Un USB FAT/exFAT pierde permisos y enlaces del .app; descomprimir en el Mac los conserva |
+| 2026-10-11 | Autoprueba integrada (`--prova`) en vez de solo tests | Verifica el paquete real (modelos, Qt, OCR) en GitHub y en los equipos del bufete |

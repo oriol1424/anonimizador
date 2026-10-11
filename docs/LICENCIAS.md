@@ -46,6 +46,14 @@ MPL-2.0 (certifi, tqdm) solo obliga a publicar cambios en esos ficheros: no los 
 `requests`/`huggingface_hub` traen código de red: la app no lo usa (los modelos van en el
 paquete) y los tests bloquean cualquier conexión (`tests/conftest.py`).
 
+### Herramienta de empaquetado
+| PyInstaller | GPL-2.0+ con excepción del bootloader | Sí | Permite distribuir el programa generado con cualquier licencia; no va «dentro» como librería |
+
+### Licencia del proyecto
+**AGPL-3.0** (`LICENSE`, decidido por el usuario el 2026-10-11): obligatoria al distribuir
+la app junto a PyMuPDF (AGPL). El USB lleva el código fuente (`codi_font/`) y todas las
+licencias (`llicencies/`, generadas con `packaging/llicencies.py`).
+
 ### Para el paquete (paso 10)
 - Solo **PySide6-Essentials** (QtCore, QtGui, QtWidgets, QtSvg: todo lo que usa la app,
   comprobado). El entorno de desarrollo tiene además PySide6 completo (Addons, WebEngine

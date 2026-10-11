@@ -87,6 +87,7 @@ class MainWindow(QMainWindow):
         self.resize(1100, 760)
         self.setMinimumSize(920, 640)
         self._build()
+        style.set_qt_language(self.language.code)
         self.retranslate()
         self.go_to(STEP_DOCUMENT)
 
@@ -154,6 +155,7 @@ class MainWindow(QMainWindow):
 
     def set_language(self, code: str) -> None:
         self.language = LANGUAGES[code]
+        style.set_qt_language(code)
         self.sidebar.language.set_value(code)
         self.table.set_language(self.language)
         if self.input_path is not None:

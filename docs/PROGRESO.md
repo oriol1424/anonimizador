@@ -3,6 +3,21 @@
 ## ▶ DÓNDE NOS QUEDAMOS (2026-10-11) — empezar por aquí
 Todo hecho, probado (**337 tests** + 2 lentos con `pytest -m slow`) y publicado. No hay código a medias.
 
+### Hecho el 2026-10-11 (noche): empaquetado (paso 10)
+- **Licencia AGPL-3.0** para el código propio (`LICENSE`; decisión del usuario).
+- `packaging/anonimitzador.spec` (PyInstaller `--onedir`): Windows construido y probado
+  aquí (473 MB: modelo de nombres 125, OpenCV 114, Qt 96...). Fuera Qml/Quick/teclado
+  virtual/visor PDF/red de Qt y OpenGL por software. Traducciones de Qt ca/es (botones «Sí/No»).
+- **Autoprueba** `Anonimitzador --prova [resultat.txt]` (`core/selftest.py`): Word y PDF
+  inventados (con página escaneada), comprueba OCR, detector de nombres y ventana.
+- `.github/workflows/build.yml`: construye y prueba **Windows y Mac (Apple Silicon)** a mano
+  o con una etiqueta `v*`; el modelo se convierte allí (caché) y los zip quedan en Artifacts.
+- `packaging/fer_usb.py`: carpeta del USB (Windows listo, Mac en zip, código fuente,
+  licencias, `LLEGEIX-ME.txt` en catalán con los avisos de Windows/Mac y la autoprueba).
+- Pendiente: lanzar el build en GitHub (Actions > build > Run workflow), descargar
+  `Anonimitzador-Mac.zip` a `dist/`, volver a ejecutar `fer_usb.py` y **probar en el MacBook
+  Air M2** y en un Windows limpio desde el USB.
+
 ### Hecho el 2026-10-11 (noche): progreso y salida Markdown (petición del usuario)
 - **Progreso global** (%), **tiempo restante** recalibrado con la velocidad real del equipo,
   **tiempo transcurrido** que avanza cada segundo, indicador «Treballant ●●●» y aviso
@@ -119,7 +134,8 @@ Todo hecho, probado (**337 tests** + 2 lentos con `pytest -m slow`) y publicado.
 ### Siguiente (en este orden)
 0. [x] Auditoría (`docs/AUDITORIA.md`): graves y medios resueltos el 2026-10-11 (la guía
    sin cifrar se mantiene por decisión del usuario). Menores 12-18 también resueltos.
-1. Que el usuario pruebe la interfaz nueva (`.venv/Scripts/python -m anonimizador.app`)
+1. **Build de Mac en GitHub + prueba en el MacBook Air M2 y en un Windows limpio.**
+1b. Que el usuario pruebe la interfaz nueva (`.venv/Scripts/python -m anonimizador.app`)
    y ajustar lo que pida. Pendiente opcional: tema oscuro (colores de la propuesta C).
 2. Empaquetado USB (paso 10) y alternativas sencillas a la IA (9b).
 

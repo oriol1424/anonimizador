@@ -1,0 +1,93 @@
+# Construye el paquete de Windows y de macOS (Apple Silicon), lo prueba y lo deja para
+# descargar (pestaña Actions > la ejecución > Artifacts). Se lanza a mano o con una
+# etiqueta de versión (git tag v0.2.0 && git push --tags).
+#
+# El modelo de nombres no está en git: se descarga de Hugging Face y se convierte aquí
+# (red solo durante la construcción, nunca en la app), y se guarda en caché.
+name: build
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            name: Windows
+          - os: macos-14
+            name: Mac
+    runs-on: ${{ matrix.os }}
+    env:
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Model de noms (caché)
+        id: model
+        uses: actions/cache@v4
+        with:
+          path: models/ner-ca
+          key: ner-ca-v1-${{ hashFiles('scripts/preparar_models.py') }}
+
+      - name: Preparar el model de noms
+        if: steps.model.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          python -m venv .venv-models
+          if [ -d .venv-models/Scripts ]; then PY=.venv-models/Scripts/python; else PY=.venv-models/bin/python; fi
+          $PY -m pip install --quiet optimum-onnx onnx onnxruntime transformers torch --extra-index-url https://download.pytorch.org/whl/cpu
+          $PY scripts/preparar_models.py
+
+      - name: Instal·lar (entorn net, només PySide6-Essentials)
+        run: python -m pip install . "pyinstaller>=6.10"
+
+      - name: Construir
+        shell: bash
+        run: |
+          mkdir -p build
+          QT_QPA_PLATFORM=offscreen python packaging/icona.py build/icona.png
+          pyinstaller packaging/anonimitzador.spec --noconfirm --distpath dist --workpath build/pyi
+          python packaging/llicencies.py dist/llicencies
+
+      - name: Prova del paquet (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $p = Start-Process -FilePath dist\Anonimitzador\Anonimitzador.exe -ArgumentList "--prova", "$PWD\prova.txt" -Wait -PassThru
+          Get-Content prova.txt
+          if ($p.ExitCode -ne 0) { exit 1 }
+
+      - name: Prova del paquet (Mac)
+        if: runner.os == 'macOS'
+        run: |
+          dist/Anonimitzador.app/Contents/MacOS/Anonimitzador --prova "$PWD/prova.txt"
+          cat prova.txt
+
+      - name: Comprimir (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Copy-Item -Recurse dist\llicencies dist\Anonimitzador\llicencies
+          Compress-Archive -Path dist\Anonimitzador -DestinationPath Anonimitzador-Windows.zip
+
+      - name: Comprimir (Mac)
+        if: runner.os == 'macOS'
+        run: |
+          cp -R dist/llicencies dist/Anonimitzador.app/Contents/Resources/llicencies
+          ditto -c -k --keepParent dist/Anonimitzador.app Anonimitzador-Mac.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Anonimitzador-${{ matrix.name }}
+          path: |
+            Anonimitzador-${{ matrix.name }}.zip
+            prova.txt
+          retention-days: 30

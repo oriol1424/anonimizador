@@ -5,7 +5,7 @@ en Windows, San Francisco en macOS): no hay que empaquetar fuentes. Siempre en c
 aunque el sistema esté en modo oscuro, para que no se mezclen colores.
 """
 
-from PySide6.QtCore import QByteArray, QPointF, QRectF, QSize, Qt
+from PySide6.QtCore import QByteArray, QLibraryInfo, QPointF, QRectF, QSize, Qt, QTranslator
 from PySide6.QtGui import QColor, QFont, QIcon, QPainter, QPalette, QPen, QPixmap
 from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import QApplication
@@ -136,6 +136,26 @@ QFrame#phase[current="true"] {{ background: #EEF0EE; }}
 QLabel#phaseName {{ font-size: 11pt; font-weight: 600; }}
 QLabel#phaseName[pending="true"] {{ color: {SUBTLE}; font-weight: 500; }}
 """
+
+
+_translators: list[QTranslator] = []
+
+
+def set_qt_language(code: str) -> None:
+    """Textos propios de Qt (botones «Sí/No» de los avisos, menú de copiar/pegar) en el
+    idioma de la app."""
+    app = QApplication.instance()
+    if app is None:
+        return
+    for old in _translators:
+        app.removeTranslator(old)
+    _translators.clear()
+    folder = QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)
+    for name in ("qtbase", "qt"):
+        translator = QTranslator(app)
+        if translator.load(f"{name}_{code}", folder):
+            app.installTranslator(translator)
+            _translators.append(translator)
 
 
 def apply(app: QApplication) -> None:

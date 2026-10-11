@@ -1,0 +1,48 @@
+ANONIMITZADOR {version}
+=======================
+
+Anonimitza documents Word i PDF abans de passar-los a una IA.
+Tot es fa en aquest ordinador: no es connecta a internet i no envia cap dada.
+
+WINDOWS
+-------
+1. Copia la carpeta «Anonimitzador (Windows)» a l'ordinador (per exemple, a Documents).
+   També es pot obrir directament des del USB, però va més lent.
+2. Obre la carpeta i fes doble clic a «Anonimitzador.exe».
+3. La primera vegada, Windows pot mostrar «Windows ha protegit l'ordinador».
+   Fes clic a «Més informació» i després a «Executa igualment».
+   (Passa perquè l'aplicació no està signada amb un certificat de pagament.)
+
+MAC
+---
+1. Copia «Anonimitzador (Mac).zip» a l'ordinador i fes-hi doble clic per descomprimir-lo.
+2. Arrossega «Anonimitzador.app» a la carpeta Aplicacions.
+3. La primera vegada: clic dret (o Control + clic) sobre l'aplicació > «Obre» > «Obre».
+   Les vegades següents ja s'obre amb doble clic.
+
+COMPROVAR QUE FUNCIONA
+----------------------
+L'aplicació porta una prova automàtica amb documents inventats:
+- Windows: obre «Símbol del sistema» a la carpeta i escriu:
+      Anonimitzador.exe --prova resultat.txt
+- Mac: obre «Terminal» i escriu:
+      /Applications/Anonimitzador.app/Contents/MacOS/Anonimitzador --prova ~/resultat.txt
+Al fitxer resultat.txt ha de posar «RESULTAT: OK».
+
+ÚS
+--
+Dins de l'aplicació, «Com funciona» explica els passos. En resum:
+1. Tria el document.  2. Escriu els noms a treure.  3. Revisa els suggeriments.
+4. Desa'l. Per passar-lo a una IA, tria «Per a la IA (.md)».
+La guia de correspondències (qui és cada [CLIENT_1]) és confidencial: no la pugis a cap IA.
+
+PRIVACITAT
+----------
+- No es connecta a internet ni envia res.
+- No desa còpies dels documents. Només desa a l'ordinador la llista «No anonimitzar» i,
+  si hi ha un error, un informe tècnic sense cap dada del document (errors.log).
+
+LLICÈNCIA I CODI FONT
+---------------------
+Programari lliure sota la llicència AGPL-3.0 (carpeta «llicencies»).
+El codi font complet és a la carpeta «codi_font» i a https://github.com/oriol1424/anonimizador
