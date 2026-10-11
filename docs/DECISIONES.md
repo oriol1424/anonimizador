@@ -59,3 +59,6 @@
 | 2026-10-11 | Interfaz siempre en claro (Fusion + paleta fija) | Con el modo oscuro del sistema, Qt mezclaba colores; el tema oscuro queda como opcional |
 | 2026-10-11 | Progreso por fases con códigos (`read`, `detect`, `anonymize`, `verify`, `export`) y cancelación lanzando `Cancelled` (BaseException) desde la función de progreso | El núcleo no conoce la interfaz; la cancelación atraviesa la protección de páginas que fallan y borra la salida a medias |
 | 2026-10-11 | Los tests bloquean toda conexión de red fuera del equipo | RapidOCR trae código de descarga de modelos: así se comprueba la regla 1 en cada ejecución |
+| 2026-10-11 | Lista «No anonimitzar» (abogados, despacho) como términos `keep` dentro del matcher, no como filtro aparte | Así ocupan su sitio y ninguna variante de otro término los sustituye a medias; sustitución, verificación y guía los respetan sin código extra |
+| 2026-10-11 | De la lista «No anonimitzar» solo se protegen el nombre completo y variantes de 2+ palabras; la lista del caso gana si hay conflicto | Un apellido suelto puede ser de un cliente: ante la duda se anonimiza (regla 7) |
+| 2026-10-11 | La lista «No anonimitzar» se guarda sin cifrar en la configuración del usuario | Son datos del propio despacho (no de clientes) que el bufete quiere justamente mostrar a la IA; nunca sale del equipo |

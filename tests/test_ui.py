@@ -27,7 +27,10 @@ from anonimizador.ui.worker import run_in_background
 
 @pytest.fixture
 def window(qtbot, tmp_path):
-    w = MainWindow(QSettings(str(tmp_path / "settings.ini"), QSettings.Format.IniFormat))
+    w = MainWindow(
+        QSettings(str(tmp_path / "settings.ini"), QSettings.Format.IniFormat),
+        keep_path=tmp_path / "no_anonimitzar.json",  # nunca la configuración real
+    )
     qtbot.addWidget(w)
     return w
 
@@ -332,3 +335,74 @@ def test_result_page_highlights_serious_notices(window, tmp_path):
 def test_cancelled_is_not_an_exception_subclass():
     """Si lo fuera, la protección de páginas que fallan (except Exception) lo atraparía."""
     assert not issubclass(Cancelled, Exception)
+
+
+# --- Lista «No anonimitzar» ----------------------------------------------------------------
+
+
+def test_keep_list_is_saved_and_shown(window, qtbot, tmp_path):
+    assert window.sidebar.keep_button.text() == "No anonimitzar · 0"
+    window.add_to_keep_list(["Montserrat Soler i Vidal", "Montserrat Soler i Vidal"])
+    assert window.sidebar.keep_button.text() == "No anonimitzar · 1"
+    other = MainWindow(
+        QSettings(str(tmp_path / "s2.ini"), QSettings.Format.IniFormat),
+        keep_path=tmp_path / "no_anonimitzar.json",
+    )
+    qtbot.addWidget(other)
+    assert other.keep == ["Montserrat Soler i Vidal"]  # se recuerda al volver a abrir
+
+
+def test_keep_dialog_items(qtbot):
+    from anonimizador.ui.keep_dialog import KeepDialog
+
+    dialog = KeepDialog(["Montserrat Soler i Vidal"], "ca")
+    qtbot.addWidget(dialog)
+    dialog.add_row("  Despatx Soler & Associats ")
+    dialog.add_row("")
+    assert dialog.items() == ["Montserrat Soler i Vidal", "Despatx Soler & Associats"]
+    dialog.table.selectRow(0)
+    dialog.remove_selected()
+    assert dialog.items() == ["Despatx Soler & Associats"]
+
+
+def test_never_anonymize_from_suggestions(window):
+    analysis = Analysis([
+        Suggestion("PERSONA", "[PERSONA_1]", ("Sra. Soler", "Montserrat Soler i Vidal"), 3,
+                   expand=True),
+        Suggestion("DNI", "[DNI_1]", ("12345678Z",), 1),
+    ])  # fmt: skip
+    page = window.suggestions_page
+    page.show_analysis(analysis, CATALAN, set())
+    assert not page.keep_button.isEnabled()
+    page.table.selectRow(0)
+    assert page.keep_button.isEnabled()
+    page.keep_button.click()
+    assert window.keep == ["Montserrat Soler i Vidal"]  # la forma más completa
+    assert page.table.isRowHidden(0)
+    assert [t.source for t in page.selected_terms()] == ["DNI"]
+    assert page.count_label.text() == "1 de 1 marcades"
+
+
+def test_keep_list_reaches_analysis_and_output(window, qtbot, demanda_ca: Path):
+    window.add_to_keep_list(["Montserrat Soler i Vidal"])
+    window.set_input(demanda_ca)
+    window.go_to(STEP_TERMS)
+    _fill_list(window, [("Joan Puig i Ferrer", "[CLIENT_1]")])
+    window.terms_page.analyze_button.click()
+    qtbot.waitUntil(lambda: window.current_step() == STEP_SUGGESTIONS, timeout=20000)
+    forms = {f for s in window.analysis.suggestions for f in s.forms}
+    assert "Montserrat Soler i Vidal" not in forms
+    window.suggestions_page.apply_button.click()
+    window.run_button.click()
+    qtbot.waitUntil(lambda: window.pages.currentWidget() is window.result_page, timeout=20000)
+    out = window.result_page.report.output
+    assert "Montserrat Soler i Vidal" in Document(str(out)).sections[0].header.paragraphs[0].text
+
+
+def test_editing_keep_list_requires_new_analysis(window, demanda_ca: Path):
+    window.set_input(demanda_ca)
+    terms = window._user_terms()
+    window._analysis_done(analyze(demanda_ca, terms, CATALAN), window._current_key(), terms)
+    assert window._reachable()[STEP_SUGGESTIONS]
+    window._save_keep(["Anna Vila"])  # como si se hubiera editado en el diálogo
+    assert not window._reachable()[STEP_SUGGESTIONS]

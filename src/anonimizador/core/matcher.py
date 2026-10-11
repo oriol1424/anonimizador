@@ -35,6 +35,13 @@ class Term:
     replacement: str
     expand: bool = True  # generar variantes ("Sr. Puig", "J. Puig"...)
     source: str = "usuario"
+    # No anonimizar nunca (p. ej. el nombre de la abogada): se busca para que nadie lo
+    # sustituya ni en parte, pero no se cambia.
+    keep: bool = False
+
+
+def keep_term(text: str) -> Term:
+    return Term(text, text, source="keep", keep=True)
 
 
 @dataclass(frozen=True)
@@ -119,6 +126,11 @@ class Matcher:
       "Major" (de "Carrer Major") no sustituya "major d'edat".
     - Si una variante es común a dos términos con sustitutos distintos (dos
       personas apellidadas Puig), no se aplica y se informa en `ambiguous`.
+    - Los términos `keep` (no anonimizar nunca) ocupan su sitio pero no se sustituyen:
+      "Montserrat Soler i Vidal" queda intacto aunque otro término tenga la variante
+      "Soler". De ellos solo se protegen el nombre completo y las variantes de dos o más
+      palabras: un apellido suelto podría ser de otra persona (ante la duda, anonimizar).
+      Si un texto está a la vez en la lista del usuario y en `keep`, gana la lista.
     """
 
     def __init__(self, terms: list[Term]):
@@ -126,14 +138,17 @@ class Matcher:
         entries: dict[str, tuple[Term, bool, str]] = {}
         derived: dict[str, list[tuple[Term, str]]] = {}
 
-        for term in terms:
+        ordered = [t for t in terms if not t.keep] + [t for t in terms if t.keep]
+        for term in ordered:
             if not term.original.strip():
                 continue
             entries.setdefault(_key(term.original), (term, False, term.original))
-        for term in terms:
+        for term in ordered:
             if not term.expand:
                 continue
             for variant in variants(term.original):
+                if term.keep and len(variant.split()) < 2:
+                    continue
                 derived.setdefault(_key(variant), []).append((term, variant))
         for key, options in derived.items():
             if key in entries:
@@ -150,7 +165,9 @@ class Matcher:
             texts = sorted((v[2] for v in entries.values()), key=len, reverse=True)
             self._regex = re.compile("|".join(_pattern(t) for t in texts))
 
-    def find(self, text: str) -> list[Match]:
+    def find(self, text: str, include_kept: bool = False) -> list[Match]:
+        """Apariciones a sustituir. Con `include_kept`, también las de los términos que
+        no se anonimizan (con `source="keep"`)."""
         if self._regex is None:
             return []
         matches = []
@@ -161,6 +178,8 @@ class Matcher:
             term, strict_case, _ = entry
             original = text[m.start() : m.end()]
             if strict_case and not _starts_upper(original):
+                continue
+            if term.keep and not include_kept:
                 continue
             matches.append(Match(m.start(), m.end(), original, term.replacement, term.source))
         return matches

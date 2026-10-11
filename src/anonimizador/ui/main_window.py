@@ -4,7 +4,7 @@ guardar) con barra lateral, más las pantallas de progreso y de resultado."""
 import json
 from pathlib import Path
 
-from PySide6.QtCore import QSettings, QUrl
+from PySide6.QtCore import QSettings, QStandardPaths, QUrl
 from PySide6.QtGui import QCloseEvent, QDesktopServices, QDragEnterEvent, QDropEvent
 from PySide6.QtWidgets import (
     QFileDialog,
@@ -15,9 +15,10 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from anonimizador.core import keep_list
 from anonimizador.core.guide import default_path as default_guide_path
 from anonimizador.core.lang import DEFAULT_LANGUAGE, LANGUAGES, Language
-from anonimizador.core.matcher import Term
+from anonimizador.core.matcher import Term, keep_term
 from anonimizador.core.pipeline import (
     SUPPORTED_INPUTS,
     Analysis,
@@ -32,6 +33,7 @@ from anonimizador.core.pipeline import (
     read_ahead,
 )
 from anonimizador.i18n import tr
+from anonimizador.ui.keep_dialog import KeepDialog
 from anonimizador.ui.pages import DocumentPage, SavePage, TermsPage
 from anonimizador.ui.sidebar import Sidebar
 from anonimizador.ui.status_pages import ProgressPage, ResultPage
@@ -39,11 +41,22 @@ from anonimizador.ui.suggestions import SuggestionsPage
 from anonimizador.ui.worker import Task, run_in_background
 
 STEP_DOCUMENT, STEP_TERMS, STEP_SUGGESTIONS, STEP_SAVE = range(4)
+KEEP_FILE = "no_anonimitzar.json"
+
+
+def default_keep_path() -> Path:
+    """Carpeta de configuración del usuario en este ordenador (%APPDATA% en Windows,
+    ~/Library/Application Support en macOS)."""
+    folder = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.AppConfigLocation)
+    return Path(folder or Path.home() / ".anonimitzador") / KEEP_FILE
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, settings: QSettings | None = None):
+    def __init__(self, settings: QSettings | None = None, keep_path: Path | None = None):
         super().__init__()
+        # Nombres y datos que no se anonimizan nunca (la abogada, el despacho...).
+        self.keep_path = keep_path or default_keep_path()
+        self.keep: list[str] = keep_list.load(self.keep_path)
         # Solo guarda la última carpeta usada; nunca nombres ni contenido de documentos.
         self.settings = settings or QSettings("Anonimitzador", "Anonimitzador")
         self.input_path: Path | None = None
@@ -70,7 +83,7 @@ class MainWindow(QMainWindow):
         row = QHBoxLayout(central)
         row.setContentsMargins(0, 0, 0, 0)
         row.setSpacing(0)
-        self.sidebar = Sidebar(self.go_to, self.set_language)
+        self.sidebar = Sidebar(self.go_to, self.set_language, self.edit_keep_list)
         self.sidebar.language.set_value(self.language.code)
         row.addWidget(self.sidebar)
 
@@ -83,8 +96,9 @@ class MainWindow(QMainWindow):
         )  # fmt: skip
         self.table = self.terms_page.table
         self.table.changed.connect(self._refresh_steps)
-        self.suggestions_page = SuggestionsPage(lambda: self.go_to(STEP_TERMS),
-                                                self.accept_suggestions)  # fmt: skip
+        self.suggestions_page = SuggestionsPage(
+            lambda: self.go_to(STEP_TERMS), self.accept_suggestions, self.add_to_keep_list
+        )
         self.save_page = SavePage(lambda: self.go_to(STEP_SUGGESTIONS), self.start_anonymize)
         self.progress_page = ProgressPage(self.cancel_task)
         self.result_page = ResultPage(self.open_folder, self.open_output, self.new_document)
@@ -112,6 +126,7 @@ class MainWindow(QMainWindow):
         lang = self.language.code
         self.setWindowTitle(tr(lang, "app_title"))
         self.sidebar.retranslate(lang)
+        self.sidebar.set_keep_count(lang, len(self.keep))
         self.document_page.retranslate(lang, self.input_path, self.info)
         self.terms_page.retranslate(lang)
         self.suggestions_page.retranslate(self.language)
@@ -134,7 +149,8 @@ class MainWindow(QMainWindow):
     # --- Navegación ------------------------------------------------------------------
 
     def _current_key(self) -> tuple:
-        return (self.input_path, tuple(self.table.entries()), self.language.code)
+        return (self.input_path, tuple(self.table.entries()), self.language.code,
+                tuple(self.keep))  # fmt: skip
 
     def _analysis_valid(self) -> bool:
         return self.analysis is not None and self._analysis_key == self._current_key()
@@ -263,6 +279,27 @@ class MainWindow(QMainWindow):
         if not entries:
             self.table.add_row()
 
+    # --- Lista «No anonimitzar» ----------------------------------------------------------
+
+    def _save_keep(self, items: list[str]) -> None:
+        self.keep = keep_list.clean(items)
+        keep_list.save(self.keep_path, self.keep)
+        self.sidebar.set_keep_count(self.language.code, len(self.keep))
+
+    def edit_keep_list(self) -> None:
+        dialog = KeepDialog(self.keep, self.language.code, self)
+        if dialog.exec() == KeepDialog.DialogCode.Accepted:
+            self._save_keep(dialog.items())
+            self._refresh_steps()  # si ha cambiado, hay que volver a analizar
+
+    def add_to_keep_list(self, texts: list[str]) -> None:
+        """Desde las sugerencias: el análisis sigue valiendo (esas filas ya se quitaron)."""
+        valid = self._analysis_valid()
+        self._save_keep(self.keep + texts)
+        if valid:
+            self._analysis_key = self._current_key()
+        self._refresh_steps()
+
     # --- Análisis y sugerencias ---------------------------------------------------------
 
     def _user_terms(self) -> list[Term] | None:
@@ -275,7 +312,7 @@ class MainWindow(QMainWindow):
                     tr(lang, "err_empty_replacement", original=original),
                 )
                 return None
-        return [Term(o, r) for o, r in self.table.entries()]
+        return [Term(o, r) for o, r in self.table.entries()] + [keep_term(k) for k in self.keep]
 
     def start_analysis(self) -> None:
         if self.input_path is None:
@@ -296,7 +333,9 @@ class MainWindow(QMainWindow):
     def _analysis_done(self, analysis: Analysis, key: tuple, terms: list[Term]) -> None:
         self.analysis, self._analysis_key = analysis, key
         self._reviewed = False
-        self.suggestions_page.show_analysis(analysis, self.language, {t.replacement for t in terms})
+        self.suggestions_page.show_analysis(
+            analysis, self.language, {t.replacement for t in terms if not t.keep}
+        )
         self._show(self.suggestions_page)
 
     def accept_suggestions(self) -> None:

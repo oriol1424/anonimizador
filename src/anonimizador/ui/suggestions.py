@@ -39,8 +39,10 @@ def _group_of(label_code: str) -> str:
 
 
 class SuggestionsPage(Page):
-    def __init__(self, on_back, on_apply):
+    def __init__(self, on_back, on_apply, on_keep):
         super().__init__()
+        self._on_keep = on_keep
+        self._dropped: set[int] = set()  # filas pasadas a «No anonimitzar»
         self._suggestions: list[Suggestion] = []
         self._used: set[str] = set()
         self._language: Language | None = None
@@ -57,6 +59,11 @@ class SuggestionsPage(Page):
                               QLineEdit.ActionPosition.LeadingPosition)  # fmt: skip
         self.search.textChanged.connect(lambda _: self._apply_filter())
         search_row.addWidget(self.search, 1)
+        self.keep_button = button("")
+        self.keep_button.setIcon(style.icon("shield", style.ACCENT, 18))
+        self.keep_button.setEnabled(False)
+        self.keep_button.clicked.connect(self._keep_selected)
+        search_row.addWidget(self.keep_button)
         self.body.addLayout(search_row)
 
         self.chips_box = QWidget()
@@ -68,6 +75,10 @@ class SuggestionsPage(Page):
         self.table.verticalHeader().setVisible(False)
         self.table.verticalHeader().setDefaultSectionSize(40)
         self.table.setShowGrid(False)
+        self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.table.itemSelectionChanged.connect(
+            lambda: self.keep_button.setEnabled(bool(self.selected_rows()))
+        )
         header = self.table.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(COL_FOUND, QHeaderView.ResizeMode.Stretch)
@@ -102,6 +113,7 @@ class SuggestionsPage(Page):
         self._used = used
         self._language = language
         self._group = None
+        self._dropped = set()
         self.search.clear()
         self.notices.show_notices(analysis.notices, language)
 
@@ -145,6 +157,8 @@ class SuggestionsPage(Page):
         self.table.blockSignals(False)
         for combo in self.combos:
             combo.set_language(language)
+        self.keep_button.setText(tr(lang, "never_anonymize"))
+        self.keep_button.setToolTip(tr(lang, "never_anonymize_tip"))
         self.back_button.setText(tr(lang, "back"))
         self.all_button.setText(tr(lang, "select_all"))
         self.none_button.setText(tr(lang, "select_none"))
@@ -179,7 +193,8 @@ class SuggestionsPage(Page):
     def _apply_filter(self) -> None:
         query = fold(self.search.text().strip())
         for row, s in enumerate(self._suggestions):
-            visible = self._group is None or _group_of(s.label) == self._group
+            visible = row not in self._dropped
+            visible = visible and (self._group is None or _group_of(s.label) == self._group)
             if visible and query:
                 haystack = " ".join(
                     (*s.forms, self.table.item(row, COL_TYPE).text(), self.combos[row].value())
@@ -190,7 +205,7 @@ class SuggestionsPage(Page):
         self.table.setVisible(has_rows)
         self.empty.setVisible(not has_rows)
         self.search.setVisible(has_rows)
-        for w in (self.all_button, self.none_button, self.count_label):
+        for w in (self.all_button, self.none_button, self.count_label, self.keep_button):
             w.setVisible(has_rows)
         self._update_count()
 
@@ -211,13 +226,34 @@ class SuggestionsPage(Page):
     def _update_count(self) -> None:
         if self._language is None:
             return
+        rows = [r for r in range(self.table.rowCount()) if r not in self._dropped]
         checked = sum(
-            1 for row in range(self.table.rowCount())
+            1 for row in rows
             if self.table.item(row, COL_CHECK).checkState() == Qt.CheckState.Checked
         )  # fmt: skip
         self.count_label.setText(
-            tr(self._language.code, "marked_count", checked=checked, total=len(self._suggestions))
+            tr(self._language.code, "marked_count", checked=checked, total=len(rows))
         )
+
+    def selected_rows(self) -> list[int]:
+        return sorted({i.row() for i in self.table.selectedIndexes()
+                       if not self.table.isRowHidden(i.row())})  # fmt: skip
+
+    def _keep_selected(self) -> None:
+        """Pasa las filas seleccionadas a la lista «No anonimitzar» y las quita de aquí."""
+        rows = self.selected_rows()
+        if not rows:
+            return
+        # La forma más completa ("Montserrat Soler i Vidal", no "Sra. Soler").
+        texts = [max(self._suggestions[r].forms, key=len) for r in rows]
+        self.table.blockSignals(True)
+        for row in rows:
+            self.table.item(row, COL_CHECK).setCheckState(Qt.CheckState.Unchecked)
+            self._dropped.add(row)
+        self.table.blockSignals(False)
+        self.table.clearSelection()
+        self._on_keep(texts)
+        self._apply_filter()
 
     def set_checked(self, row: int, checked: bool) -> None:
         state = Qt.CheckState.Checked if checked else Qt.CheckState.Unchecked
@@ -226,6 +262,8 @@ class SuggestionsPage(Page):
     def selected_terms(self) -> list[Term]:
         terms: list[Term] = []
         for row, s in enumerate(self._suggestions):
+            if row in self._dropped:
+                continue
             if self.table.item(row, COL_CHECK).checkState() == Qt.CheckState.Checked:
                 terms.extend(s.to_terms(self.combos[row].value() or s.replacement))
         return terms

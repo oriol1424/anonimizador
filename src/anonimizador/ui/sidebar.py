@@ -9,7 +9,7 @@ from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLay
 from anonimizador.core.lang import LANGUAGES
 from anonimizador.i18n import tr
 from anonimizador.ui import style
-from anonimizador.ui.widgets import Segmented, label, set_prop
+from anonimizador.ui.widgets import Segmented, button, label, set_prop
 
 STEPS = ("step_document", "step_terms", "step_suggestions", "step_save")
 
@@ -47,7 +47,12 @@ class StepButton(QPushButton):
 
 
 class Sidebar(QFrame):
-    def __init__(self, on_step: Callable[[int], None], on_language: Callable[[str], None]):
+    def __init__(
+        self,
+        on_step: Callable[[int], None],
+        on_language: Callable[[str], None],
+        on_keep: Callable[[], None],
+    ):
         super().__init__()
         self.setObjectName("sidebar")
         self.setFixedWidth(250)
@@ -84,6 +89,13 @@ class Sidebar(QFrame):
         layout.addLayout(steps)
         layout.addStretch()
 
+        # Lista de nombres que no se anonimizan nunca (la abogada, el despacho...).
+        self.keep_button = button("", "flat")
+        self.keep_button.setIcon(style.icon("shield", style.ACCENT, 18))
+        self.keep_button.setStyleSheet("text-align: left; padding-left: 10px;")
+        self.keep_button.clicked.connect(on_keep)
+        layout.addWidget(self.keep_button)
+
         self.language = Segmented([(lang.name, code) for code, lang in LANGUAGES.items()],
                                   on_language)  # fmt: skip
         layout.addWidget(self.language)
@@ -111,6 +123,9 @@ class Sidebar(QFrame):
         for i, b in enumerate(self.steps):
             state = "current" if i == current else ("done" if done[i] else "todo")
             b.set_state(state, reachable[i])
+
+    def set_keep_count(self, lang: str, count: int) -> None:
+        self.keep_button.setText(tr(lang, "keep_button", count=count))
 
     def set_badge(self, count: int | None) -> None:
         badge = self.steps[2].badge

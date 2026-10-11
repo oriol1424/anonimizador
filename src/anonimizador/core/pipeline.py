@@ -232,8 +232,11 @@ def analyze(
             )
         else:
             text = backend.extract_text(path)
+    # Lo que el usuario ya puso en su lista y lo que no se anonimiza nunca (la abogada,
+    # el despacho): no se sugiere.
     matcher = Matcher(user_terms)
-    covered = matcher.find(text)
+    covered = matcher.find(text, include_kept=True)
+    user_terms = [t for t in user_terms if not t.keep]
 
     rules = [d for d in regex_es.detect(text) if not _overlaps(d.start, d.end, covered)]
     entities = [
@@ -391,7 +394,7 @@ def anonymize(
         notices.append(Notice("images", count=result.images))
 
     replaced = Counter(m.replacement for m in result.matches)
-    entries = build_entries(terms, result.matches)
+    entries = build_entries([t for t in terms if not t.keep], result.matches)
     if guide is not None:
         write_guide(guide, entries, src, dst, language)
     return Report(dst, dict(replaced), notices, entries, guide)

@@ -168,6 +168,7 @@ _SVG = {
     "upload": '<path d="M12 16V4"/><path d="M7 9l5-5 5 5"/><path d="M5 20h14"/>',
     "logo": '<path d="M4 7h16M4 12h10M4 17h7"/><rect x="15" y="14" width="6" height="6" rx="1"/>',
     "check": '<path d="M5 12l5 5 9-10"/>',
+    "shield": '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
     "alert": '<path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17h.01"/>',
     "clock": '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
 }

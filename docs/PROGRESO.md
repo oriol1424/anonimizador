@@ -1,7 +1,22 @@
 # Progreso
 
 ## ▶ DÓNDE NOS QUEDAMOS (2026-10-11) — empezar por aquí
-Todo hecho, probado (**280 tests** + 2 lentos con `pytest -m slow`) y publicado. No hay código a medias.
+Todo hecho, probado (**292 tests** + 2 lentos con `pytest -m slow`) y publicado. No hay código a medias.
+
+### Hecho el 2026-10-11 (noche): lista «No anonimitzar» (petición del usuario)
+- Nombres y datos que **no se anonimizan nunca** (la abogada, el despacho, su dirección,
+  teléfono o correo) para que la IA pueda usarlos. Se guardan en este ordenador
+  (`%APPDATA%/Anonimitzador/no_anonimitzar.json`; macOS: Application Support) y valen
+  para todos los documentos.
+- Se edita desde la barra lateral («No anonimitzar · N») o, en las sugerencias,
+  seleccionando filas y pulsando «No anonimitzar mai» (se guarda la forma más completa).
+- Núcleo: `Term.keep` / `keep_term()`. El matcher los encuentra para que ocupen su sitio
+  (el «Soler» de «Montserrat Soler i Vidal» no se toca aunque el cliente sea «Pere
+  Soler») pero no los sustituye; no se sugieren, no cuentan como «datos que quedan» y no
+  salen en la guía. Se protegen el nombre completo y sus variantes de 2+ palabras; un
+  apellido suelto («Sra. Soler») se sigue sugiriendo (regla 7). Si un texto está también
+  en la lista del caso, gana la lista (se anonimiza).
+- Cambiar la lista obliga a volver a analizar (salvo si se añade desde las sugerencias).
 
 ### Hecho el 2026-10-11 (noche): interfaz nueva (propuesta B, elegida por el usuario)
 - Propuestas de diseño en un lienzo (A sobria, B asistente por pasos, C oscura):

@@ -35,11 +35,13 @@ src/anonimizador/
   ui/style.py         # colores, hoja de estilos e iconos (propuesta B)   [hecho]
   ui/widgets.py       # desplegable de alias, avisos, filtros, segmentos  [hecho]
   ui/worker.py        # tareas en segundo plano, progreso y cancelación   [hecho]
+  ui/keep_dialog.py   # editar la lista «No anonimitzar»                  [hecho]
   __main__.py         # CLI de pruebas                                  [hecho]
   core/
     lang.py           # idiomas (ca por defecto, es): alias y presets   [hecho]
     text.py           # normalización sin tildes que conserva offsets   [hecho]
     progress.py       # progreso por fases y cancelación (Cancelled)    [hecho]
+    keep_list.py      # lista «No anonimitzar» (JSON en la config local) [hecho]
     keep_awake.py     # el equipo no entra en reposo durante las tareas [hecho]
     matcher.py        # términos del usuario + variantes + ambigüedad    [hecho]
     regex_es.py       # DNI, NIE, CIF, IBAN, tel., email, matrícula...   [hecho]

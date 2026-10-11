@@ -304,6 +304,33 @@ STRINGS: dict[str, dict[str, str]] = {
     },
     "open_file": {"ca": "Obre el document", "es": "Abrir el documento"},
     "new_document": {"ca": "Anonimitza un altre document", "es": "Anonimizar otro documento"},
+    # Lista "No anonimitzar"
+    "keep_button": {"ca": "No anonimitzar · {count}", "es": "No anonimizar · {count}"},
+    "keep_title": {
+        "ca": "Noms i dades que no s'anonimitzen",
+        "es": "Nombres y datos que no se anonimizan",
+    },
+    "keep_intro": {
+        "ca": "Per exemple, el nom de l'advocada o l'adreça i el telèfon del despatx: es "
+        "deixen tal qual perquè la IA els pugui fer servir. Es desen en aquest ordinador i "
+        "s'apliquen a tots els documents. Si un nom també és a la llista del cas, s'anonimitza.",
+        "es": "Por ejemplo, el nombre de la abogada o la dirección y el teléfono del despacho: "
+        "se dejan tal cual para que la IA los pueda usar. Se guardan en este ordenador y se "
+        "aplican a todos los documentos. Si un nombre también está en la lista del caso, se "
+        "anonimiza.",
+    },
+    "keep_col": {
+        "ca": "Nom o dada que es deixa tal qual",
+        "es": "Nombre o dato que se deja tal cual",
+    },
+    "save_button": {"ca": "Desa", "es": "Guardar"},
+    "never_anonymize": {"ca": "No anonimitzar mai", "es": "No anonimizar nunca"},
+    "never_anonymize_tip": {
+        "ca": "Afegeix les files seleccionades a la llista «No anonimitzar» (per a tots els "
+        "documents).",
+        "es": "Añade las filas seleccionadas a la lista «No anonimizar» (para todos los "
+        "documentos).",
+    },
     # Resultado
     "done_title": {"ca": "Fet", "es": "Hecho"},
     "done": {
