@@ -3,6 +3,40 @@
 ## ▶ DÓNDE NOS QUEDAMOS (2026-10-11) — empezar por aquí
 Todo hecho, probado (**337 tests** + 2 lentos con `pytest -m slow`) y publicado. No hay código a medias.
 
+### ⏳ PENDIENTE — lo que falta para entregar el USB (en este orden)
+**A. GitHub (lo hace el usuario; aquí no está la herramienta `gh`)**
+- [ ] Ver que el flujo **tests** sale en verde (Actions > tests). Es su primera ejecución en
+      Mac: si falla, pasar el error a Claude.
+- [ ] Lanzar el **build**: Actions > build > *Run workflow* (rama `main`). La 1ª vez tarda
+      ~15-20 min (convierte el modelo de nombres). Debe salir en verde en Windows y Mac,
+      con «RESULTAT: OK» en `prova.txt`. Si falla, pasar el error a Claude.
+- [ ] Descargar el artifact **Anonimitzador-Mac** y dejar `Anonimitzador-Mac.zip` en `dist/`.
+- [ ] (Opcional) Descargar también **Anonimitzador-Windows** para usar el build limpio de
+      GitHub en lugar del construido en este PC (`--windows dist/Anonimitzador-Windows.zip`).
+
+**B. Montar el USB (en este PC)**
+- [ ] `.venv/Scripts/python packaging/fer_usb.py` → `dist/USB/` con Windows + Mac + código
+      fuente + licencias + LLEGEIX-ME.txt.
+- [ ] Copiar el contenido de `dist/USB/` al USB (formato exFAT para que vaya en Windows y Mac).
+
+**C. Probar desde el USB**
+- [ ] **MacBook Air M2 (8 GB)**: descomprimir, mover a Aplicaciones, abrir con clic derecho >
+      Obre; autoprueba (`--prova`); caso completo con un PDF escaneado; medir tiempos;
+      comprobar que no entra en reposo durante un proceso largo (`caffeinate`).
+- [ ] **Windows sin nada instalado**: aviso de SmartScreen, autoprueba, caso completo.
+- [ ] Revisar en ambos: tipografía, diálogos de abrir/guardar, botones «Sí/No» traducidos.
+
+**D. Con el bufete**
+- [ ] Prueba en local con documentos reales (por el bufete, nunca en este repo) y anotar
+      los fallos del detector para ampliar el corpus inventado.
+- [ ] Responder `docs/PENDIENTES_BUFETE.md` (formatos CASS, residencia, causas Batllia...).
+- [ ] Rellenar en cada equipo la lista «No anonimitzar» (abogados, despacho).
+
+**E. Opcional, más adelante**
+- [ ] Tema oscuro; exportar/importar la lista «No anonimitzar»; historial de nombres (9b).
+- [ ] Publicar una versión con etiqueta (`git tag v0.2.0 && git push --tags`) para que el
+      build quede asociado a la versión.
+
 ### Hecho el 2026-10-11 (noche): empaquetado (paso 10)
 - **Licencia AGPL-3.0** para el código propio (`LICENSE`; decisión del usuario).
 - `packaging/anonimitzador.spec` (PyInstaller `--onedir`): Windows construido y probado
@@ -134,10 +168,7 @@ Todo hecho, probado (**337 tests** + 2 lentos con `pytest -m slow`) y publicado.
 ### Siguiente (en este orden)
 0. [x] Auditoría (`docs/AUDITORIA.md`): graves y medios resueltos el 2026-10-11 (la guía
    sin cifrar se mantiene por decisión del usuario). Menores 12-18 también resueltos.
-1. **Build de Mac en GitHub + prueba en el MacBook Air M2 y en un Windows limpio.**
-1b. Que el usuario pruebe la interfaz nueva (`.venv/Scripts/python -m anonimizador.app`)
-   y ajustar lo que pida. Pendiente opcional: tema oscuro (colores de la propuesta C).
-2. Empaquetado USB (paso 10) y alternativas sencillas a la IA (9b).
+1. Ver «⏳ PENDIENTE» arriba (GitHub, USB, pruebas en Mac/Windows, bufete).
 
 ### Medición (`scripts/bench_documents_grans.py <carpeta> <págs_escaneadas>`)
 | Documento | Análisis | Anonimizar + verificar |
