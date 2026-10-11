@@ -89,6 +89,8 @@ Todo hecho, probado (**292 tests** + 2 lentos con `pytest -m slow`) y publicado.
   (formatos CASS/residencia/causas Batllia, países de los pasaportes, equipos Windows...).
 
 ### Siguiente (en este orden)
+0. **Resolver la auditoría** (`docs/AUDITORIA.md`, 2026-10-11): 4 graves (nombre del
+   fichero, propiedades personalizadas y miniatura de Word, guía sin cifrar) y 7 medios.
 1. Que el usuario pruebe la interfaz nueva (`.venv/Scripts/python -m anonimizador.app`)
    y ajustar lo que pida. Pendiente opcional: tema oscuro (colores de la propuesta C).
 2. Empaquetado USB (paso 10) y alternativas sencillas a la IA (9b).

@@ -20,6 +20,7 @@ Plataformas: **macOS y Windows**. Repo: https://github.com/oriol1424/anonimizado
 | Por qué se decidió algo             | `docs/DECISIONES.md`     |
 | Licencias de dependencias y modelos | `docs/LICENCIAS.md`      |
 | Qué hay que preguntar al bufete     | `docs/PENDIENTES_BUFETE.md` |
+| Fallos conocidos (auditoría)        | `docs/AUDITORIA.md`      |
 
 ## Reglas innegociables
 1. **Nada sale del equipo**: sin llamadas de red en ejecución, sin telemetría, sin
