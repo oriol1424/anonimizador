@@ -1,7 +1,18 @@
 # Progreso
 
 ## ▶ DÓNDE NOS QUEDAMOS (2026-10-11) — empezar por aquí
-Todo hecho, probado (**331 tests** + 2 lentos con `pytest -m slow`) y publicado. No hay código a medias.
+Todo hecho, probado (**337 tests** + 2 lentos con `pytest -m slow`) y publicado. No hay código a medias.
+
+### Hecho el 2026-10-11 (noche): progreso y salida Markdown (petición del usuario)
+- **Progreso global** (%), **tiempo restante** recalibrado con la velocidad real del equipo,
+  **tiempo transcurrido** que avanza cada segundo, indicador «Treballant ●●●» y aviso
+  tranquilizador si una parte tarda >40 s sin noticias. Estimación previa por fase en
+  `core/estimate.py` (tiempos medidos en este PC) y estimación total en el paso 1.
+- **Salida Markdown «Per a la IA (.md)»** (recomendada): Word → títulos, listas, negritas,
+  enlaces y tablas; PDF → párrafos unidos. El texto final (.md/.txt) también se verifica.
+  Se mantiene «Text pla (.txt)».
+- **Guía «Com funciona»** (barra lateral y paso 1): pasos, revisión final, tiempos,
+  privacidad.
 
 ### Hecho el 2026-10-11 (noche): versión 0.2.0 — profesionalización antes del USB
 - **Imágenes dentro de Word y PDF** (`core/images.py`): fotos de DNI, escaneados pegados,

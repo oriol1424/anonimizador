@@ -284,8 +284,10 @@ STRINGS: dict[str, dict[str, str]] = {
     # Paso 4: guardar
     "save_title": {"ca": "On el vols desar?", "es": "¿Dónde lo quieres guardar?"},
     "save_intro": {
-        "ca": "Per enganxar-lo a una IA, el format de text és el més net.",
-        "es": "Para pegarlo en una IA, el formato de texto es el más limpio.",
+        "ca": "Per passar-lo a una IA, el millor és «Per a la IA (.md)»: és text, però "
+        "conserva els títols, les llistes i les taules.",
+        "es": "Para pasarlo a una IA, lo mejor es «Para la IA (.md)»: es texto, pero conserva "
+        "los títulos, las listas y las tablas.",
     },
     "cloud_warning": {
         "ca": "Aquesta carpeta es sincronitza amb el núvol (OneDrive, Dropbox, iCloud...): la "
@@ -295,7 +297,8 @@ STRINGS: dict[str, dict[str, str]] = {
         "de correspondencias, con los nombres reales, se subirá. Si no quieres, elige otra "
         "carpeta o desmarca la guía.",
     },
-    "format_text_short": {"ca": "Text per a la IA (.txt)", "es": "Texto para la IA (.txt)"},
+    "format_text_short": {"ca": "Text pla (.txt)", "es": "Texto plano (.txt)"},
+    "format_md": {"ca": "Per a la IA (.md)", "es": "Para la IA (.md)"},
     # Progreso
     "progress_analyzing": {"ca": "Analitzant el document…", "es": "Analizando el documento…"},
     "progress_anonymizing": {"ca": "Anonimitzant…", "es": "Anonimizando…"},
@@ -310,7 +313,20 @@ STRINGS: dict[str, dict[str, str]] = {
     "phase_pending": {"ca": "pendent", "es": "pendiente"},
     "phase_done": {"ca": "fet", "es": "hecho"},
     "eta": {"ca": "Temps restant aproximat: {time}", "es": "Tiempo restante aproximado: {time}"},
-    "eta_minutes": {"ca": "{n} min", "es": "{n} min"},
+    "eta_minutes": {"ca": "uns {n} min", "es": "unos {n} min"},
+    "eta_estimated": {"ca": "Temps estimat: {time}", "es": "Tiempo estimado: {time}"},
+    "elapsed": {"ca": "Temps transcorregut: {time}", "es": "Tiempo transcurrido: {time}"},
+    "working_now": {"ca": "Treballant", "es": "Trabajando"},
+    "still_working": {
+        "ca": "Aquesta part pot trigar una mica (pàgines escanejades, imatges o el detector de "
+        "noms). L'aplicació continua treballant: no cal fer res.",
+        "es": "Esta parte puede tardar un poco (páginas escaneadas, imágenes o el detector de "
+        "nombres). La aplicación sigue trabajando: no hace falta hacer nada.",
+    },
+    "doc_estimate": {
+        "ca": "Temps estimat per analitzar-lo i anonimitzar-lo: {time}",
+        "es": "Tiempo estimado para analizarlo y anonimizarlo: {time}",
+    },
     "eta_less_minute": {"ca": "menys d'un minut", "es": "menos de un minuto"},
     "eta_unknown": {"ca": "Calculant el temps restant…", "es": "Calculando el tiempo restante…"},
     "keep_awake_note": {
@@ -381,6 +397,46 @@ STRINGS: dict[str, dict[str, str]] = {
     },
     "review_apply": {"ca": "Anonimitza les marcades", "es": "Anonimizar las marcadas"},
     "label_REVISIO": {"ca": "Revisió final", "es": "Revisión final"},
+    # Guía
+    "help_button": {"ca": "Com funciona", "es": "Cómo funciona"},
+    "help_html": {
+        "ca": "<h3>1. Tria el document</h3><p>Arrossega un Word o un PDF (també escanejat). "
+        "L'original no es modifica mai.</p>"
+        "<h3>2. La teva llista</h3><p>Escriu els noms complets i les dades que vols treure "
+        "(«Joan Puig i Ferrer»). Se substituiran també «Sr. Puig», «J. Puig»... Pots desar "
+        "la llista del cas i carregar-la un altre dia.</p>"
+        "<h3>3. Suggeriments</h3><p>L'aplicació busca sola noms, empreses, adreces, DNI, "
+        "passaports, NRT, telèfons, comptes... Marca el que vols anonimitzar. Amb el cercador "
+        "i els filtres trobaràs ràpid el que busques. Els noms del despatx que han de quedar "
+        "(l'advocada, l'adreça del despatx) posa'ls a «No anonimitzar».</p>"
+        "<h3>4. Desa</h3><p>Per passar-lo a una IA, tria «Per a la IA (.md)». La guia de "
+        "correspondències (qui és cada [CLIENT_1]) és confidencial: no la pugis mai a una IA."
+        "</p><h3>Revisió final</h3><p>En acabar, revisa les paraules amb majúscula que han "
+        "quedat. Si n'hi ha alguna que sigui un nom, marca-la i torna a anonimitzar.</p>"
+        "<h3>Quant triga</h3><p>Un Word de 80 pàgines, menys d'un minut. Les pàgines "
+        "escanejades i les imatges es llegeixen amb OCR: uns 8 segons per pàgina. La barra "
+        "mostra el percentatge, el temps restant i el temps transcorregut; si el rellotge "
+        "avança, l'aplicació està treballant.</p>"
+        "<h3>Privacitat</h3><p>Tot es fa en aquest ordinador. No es connecta a internet.</p>",
+        "es": "<h3>1. Elige el documento</h3><p>Arrastra un Word o un PDF (también escaneado). "
+        "El original nunca se modifica.</p>"
+        "<h3>2. Tu lista</h3><p>Escribe los nombres completos y los datos que quieres quitar "
+        "(«Juan Pérez García»). Se sustituirán también «Sr. Pérez», «J. Pérez»... Puedes "
+        "guardar la lista del caso y cargarla otro día.</p>"
+        "<h3>3. Sugerencias</h3><p>La aplicación busca sola nombres, empresas, direcciones, "
+        "DNI, pasaportes, NRT, teléfonos, cuentas... Marca lo que quieres anonimizar. Con el "
+        "buscador y los filtros encontrarás rápido lo que buscas. Los nombres del despacho "
+        "que deben quedar (la abogada, la dirección del despacho) ponlos en «No anonimizar»."
+        "</p><h3>4. Guardar</h3><p>Para pasarlo a una IA, elige «Para la IA (.md)». La guía "
+        "de correspondencias (quién es cada [CLIENTE_1]) es confidencial: no la subas nunca a "
+        "una IA.</p><h3>Revisión final</h3><p>Al terminar, revisa las palabras con mayúscula "
+        "que han quedado. Si alguna es un nombre, márcala y vuelve a anonimizar.</p>"
+        "<h3>Cuánto tarda</h3><p>Un Word de 80 páginas, menos de un minuto. Las páginas "
+        "escaneadas y las imágenes se leen con OCR: unos 8 segundos por página. La barra "
+        "muestra el porcentaje, el tiempo restante y el transcurrido; si el reloj avanza, la "
+        "aplicación está trabajando.</p>"
+        "<h3>Privacidad</h3><p>Todo se hace en este ordenador. No se conecta a internet.</p>",
+    },
     # Quant a
     "about_button": {"ca": "Quant a", "es": "Acerca de"},
     "about_version": {"ca": "Versió {version}", "es": "Versión {version}"},

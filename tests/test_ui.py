@@ -114,7 +114,7 @@ def test_output_suffix_follows_language_if_untouched(window, demanda_ca: Path):
 
 def test_pdf_input_offers_pdf_and_txt(window, demanda_pdf: Path, demanda_ca: Path):
     window.set_input(demanda_pdf)
-    assert list(window.save_page.formats.buttons) == [".pdf", ".txt"]
+    assert list(window.save_page.formats.buttons) == [".pdf", ".md", ".txt"]
     assert "escanejades" in window.document_page.file_details.text()
     assert window.output_path().suffix == ".pdf"
     window.save_page.formats.set_value(".txt")
@@ -313,7 +313,7 @@ def test_progress_page_shows_phases_and_pages(window):
     page.start("progress_anonymizing", ["anonymize", "verify"], "ca")
     page.update_progress("anonymize", 52, 80)
     assert page.position.text() == "Pàgina 52 de 80"
-    assert page.percent.text() == "65%"
+    assert page.percent.text() == "32 %"  # global: la mitad de 2 fases iguales × 65 %
     assert page._rows[0].detail.text() == "pàgina 52 de 80"
     assert page._rows[1].detail.text() == "pendent"
     page.update_progress("verify", 1, 80)

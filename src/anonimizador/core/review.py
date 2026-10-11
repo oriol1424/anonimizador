@@ -95,7 +95,7 @@ def suspicious(text: str, ignore: set[str] = frozenset()) -> list[tuple[str, int
 def review_text(path: Path) -> str:
     """Texto del documento ya anonimizado tal como lo leería la IA (sin OCR: rápido)."""
     suffix = path.suffix.lower()
-    if suffix == ".txt":
+    if suffix in (".txt", ".md"):
         return path.read_text(encoding="utf-8", errors="replace")
     if suffix == ".docx":
         return docx_io.visible_text(path)

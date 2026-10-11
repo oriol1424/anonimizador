@@ -74,3 +74,5 @@
 | 2026-10-11 | Revisión final por reglas (mayúsculas no sustituidas), sin IA | Red de seguridad rápida y explicable contra los falsos negativos del detector |
 | 2026-10-11 | Registro de errores local sin el mensaje de la excepción | Permite diagnosticar en el bufete sin incumplir la regla 3 (el mensaje puede llevar texto) |
 | 2026-10-11 | Tests en GitHub Actions (Windows + macOS) | Detectar fallos de una plataforma antes de empaquetar; mismo sistema que el build del USB |
+| 2026-10-11 | Salida Markdown (.md) recomendada para la IA; .txt se mantiene | Conserva títulos, listas y tablas (la IA entiende mejor la estructura); es texto, igual de seguro |
+| 2026-10-11 | Porcentaje global ponderado por la duración estimada de cada fase y ETA recalibrada con lo transcurrido | Un % por fase confundía (volvía a 0); los tiempos varían mucho entre equipos |

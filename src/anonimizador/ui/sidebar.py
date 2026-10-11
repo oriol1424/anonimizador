@@ -53,6 +53,7 @@ class Sidebar(QFrame):
         on_language: Callable[[str], None],
         on_keep: Callable[[], None],
         on_about: Callable[[], None] = lambda: None,
+        on_help: Callable[[], None] = lambda: None,
     ):
         super().__init__()
         self.setObjectName("sidebar")
@@ -104,7 +105,12 @@ class Sidebar(QFrame):
         layout.removeWidget(self.keep_button)
         links = QVBoxLayout()
         links.setSpacing(2)
+        self.help_button = button("", "flat")
+        self.help_button.setIcon(style.icon("help", style.SUBTLE, 18))
+        self.help_button.setStyleSheet("text-align: left; padding-left: 10px;")
+        self.help_button.clicked.connect(on_help)
         links.addWidget(self.keep_button)
+        links.addWidget(self.help_button)
         links.addWidget(self.about_button)
         layout.insertLayout(index, links)
 
@@ -126,6 +132,7 @@ class Sidebar(QFrame):
             b.text_label.setText(tr(lang, key))
         self.local_badge.setText(tr(lang, "local_badge"))
         self.about_button.setText(tr(lang, "about_button"))
+        self.help_button.setText(tr(lang, "help_button"))
 
     def set_file(self, name: str) -> None:
         metrics = self.file_name.fontMetrics()

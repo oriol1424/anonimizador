@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QTableWidget,
     QTableWidgetItem,
+    QTextBrowser,
     QVBoxLayout,
 )
 
@@ -79,6 +80,30 @@ class AboutDialog(QDialog):
         source = label(tr(lang, "about_source", url=SOURCE_URL), "small", wrap=True)
         source.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         layout.addWidget(source)
+        row = QHBoxLayout()
+        row.addStretch()
+        close = button(tr(lang, "close"), "primary")
+        close.clicked.connect(self.accept)
+        row.addWidget(close)
+        layout.addLayout(row)
+
+
+class HelpDialog(QDialog):
+    """Guía breve: los cuatro pasos, la revisión final, cuánto tarda y la privacidad."""
+
+    def __init__(self, lang: str, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle(tr(lang, "help_button"))
+        self.resize(640, 620)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(24, 22, 24, 18)
+        layout.setSpacing(12)
+        layout.addWidget(label(tr(lang, "help_button"), "h2"))
+        self.text = QTextBrowser()
+        self.text.setHtml(
+            f"<div style='font-size: 10.5pt; color: {style.TEXT}'>{tr(lang, 'help_html')}</div>"
+        )
+        layout.addWidget(self.text, 1)
         row = QHBoxLayout()
         row.addStretch()
         close = button(tr(lang, "close"), "primary")

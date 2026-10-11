@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from anonimizador.core import errlog, keep_list, review
+from anonimizador.core import errlog, estimate, keep_list, ner, review
 from anonimizador.core.guide import default_path as default_guide_path
 from anonimizador.core.lang import DEFAULT_LANGUAGE, LANGUAGES, Language, fill_preset
 from anonimizador.core.matcher import Matcher, Term, keep_term
@@ -35,7 +35,7 @@ from anonimizador.core.pipeline import (
 )
 from anonimizador.i18n import tr
 from anonimizador.ui import style
-from anonimizador.ui.about_dialog import AboutDialog
+from anonimizador.ui.about_dialog import AboutDialog, HelpDialog
 from anonimizador.ui.keep_dialog import KeepDialog
 from anonimizador.ui.pages import DocumentPage, SavePage, TermsPage
 from anonimizador.ui.review_dialog import ReviewDialog
@@ -98,7 +98,7 @@ class MainWindow(QMainWindow):
         row.setContentsMargins(0, 0, 0, 0)
         row.setSpacing(0)
         self.sidebar = Sidebar(self.go_to, self.set_language, self.edit_keep_list,
-                               self.show_about)  # fmt: skip
+                               self.show_about, self.show_help)  # fmt: skip
         self.sidebar.language.set_value(self.language.code)
         row.addWidget(self.sidebar)
 
@@ -109,6 +109,7 @@ class MainWindow(QMainWindow):
             self.language, lambda: self.go_to(STEP_DOCUMENT), self.start_analysis,
             self.load_list, self.save_list,
         )  # fmt: skip
+        self.document_page.help_link.clicked.connect(self.show_help)
         self.table = self.terms_page.table
         self.table.changed.connect(self._refresh_steps)
         self.suggestions_page = SuggestionsPage(
@@ -144,7 +145,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(tr(lang, "app_title"))
         self.sidebar.retranslate(lang)
         self.sidebar.set_keep_count(lang, len(self.keep))
-        self.document_page.retranslate(lang, self.input_path, self.info)
+        self.document_page.retranslate(lang, self.input_path, self.info, self._estimate_total())
         self.terms_page.retranslate(lang)
         self.suggestions_page.retranslate(self.language)
         self.save_page.retranslate(lang)
@@ -220,7 +221,7 @@ class MainWindow(QMainWindow):
         self.name_edit.setText(path.stem + tr(self.language.code, "anonymized_suffix"))
         self.save_page.set_formats(output_formats(path), self.language.code)
         self._last_dir = str(path.parent)
-        self.document_page.retranslate(self.language.code, path, info)
+        self.document_page.retranslate(self.language.code, path, info, self._estimate_total())
         self._refresh_steps()
 
     def choose_file(self) -> None:
@@ -341,11 +342,12 @@ class MainWindow(QMainWindow):
         self._stop_read_ahead()  # el análisis aprovecha lo ya leído
         src, language, key = self.input_path, self.language, self._current_key()
         phases = ["read", "detect"]  # Word: "read" son sus imágenes (OCR)
+        estimates = estimate.analysis(self.info.workload, ner.is_available())
         self._run(
             "progress_analyzing", phases,
             lambda progress: analyze(src, terms, language, progress),
             lambda analysis: self._analysis_done(analysis, key, terms),
-            back_to=STEP_TERMS,
+            back_to=STEP_TERMS, estimates=estimates,
         )  # fmt: skip
 
     def _analysis_done(self, analysis: Analysis, key: tuple, terms: list[Term]) -> None:
@@ -431,7 +433,9 @@ class MainWindow(QMainWindow):
             report.review_words = review.suspicious(report.review_text, keep)
             return report
 
-        self._run("progress_anonymizing", phases, task, self._finished, back_to=STEP_SAVE)
+        estimates = estimate.anonymization(self.info.workload, dst.suffix.lower())
+        self._run("progress_anonymizing", phases, task, self._finished, back_to=STEP_SAVE,
+                  estimates=estimates)  # fmt: skip
 
     def review_output(self) -> None:
         """Revisión final: si el usuario marca palabras, se vuelve a anonimizar con ellas."""
@@ -452,23 +456,26 @@ class MainWindow(QMainWindow):
 
     # --- Tareas en segundo plano ---------------------------------------------------------
 
-    def _run(self, title_key: str, phases: list[str], fn, on_done, back_to: int) -> None:
+    def _run(self, title_key, phases, fn, on_done, back_to: int, estimates=None) -> None:
         self._step = title_key
         unit = "pages" if self.info is not None and self.info.kind == "pdf" else "images"
-        self.progress_page.start(title_key, phases, self.language.code, unit)
+        self.progress_page.start(title_key, phases, self.language.code, unit, estimates)
         self._show(self.progress_page)
 
         def finished(result: object) -> None:
             self._task = None
+            self.progress_page.stop()
             on_done(result)
 
         def failed(error: Exception) -> None:
             self._task = None
+            self.progress_page.stop()
             self.go_to(back_to)
             self._failed(error)
 
         def cancelled() -> None:
             self._task = None
+            self.progress_page.stop()
             self.go_to(back_to)
 
         self._task = run_in_background(
@@ -500,6 +507,15 @@ class MainWindow(QMainWindow):
 
     def show_about(self) -> None:
         AboutDialog(self.language.code, self).exec()
+
+    def show_help(self) -> None:
+        HelpDialog(self.language.code, self).exec()
+
+    def _estimate_total(self) -> float:
+        if self.info is None:
+            return 0.0
+        suffix = self.save_page.formats.value() or ".docx"
+        return estimate.total(self.info.workload, suffix, ner.is_available())
 
     def open_folder(self) -> None:
         if self.result_page.report:

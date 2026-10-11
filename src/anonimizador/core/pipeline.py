@@ -10,6 +10,7 @@ from pathlib import Path
 from types import ModuleType
 
 from anonimizador.core import docx_io, ner, pdf_io, regex_es
+from anonimizador.core.estimate import Workload
 from anonimizador.core.guide import GuideEntry, build_entries, write_guide
 from anonimizador.core.lang import DEFAULT_LANGUAGE, Language
 from anonimizador.core.matcher import Matcher, Term
@@ -19,8 +20,8 @@ from anonimizador.i18n import tr
 
 # Formato de entrada -> (módulo que lo procesa, formatos de salida posibles).
 FORMATS: dict[str, tuple[ModuleType, tuple[str, ...]]] = {
-    ".docx": (docx_io, (".docx", ".txt")),
-    ".pdf": (pdf_io, (".pdf", ".txt")),
+    ".docx": (docx_io, (".docx", ".md", ".txt")),
+    ".pdf": (pdf_io, (".pdf", ".md", ".txt")),
 }
 SUPPORTED_INPUTS = set(FORMATS)
 
@@ -30,6 +31,12 @@ class DocumentInfo:
     kind: str  # "docx" o "pdf"
     pages: int | None = None  # solo PDF (en Word depende de cómo se imprima)
     scanned: int = 0
+    images: int = 0  # imágenes sueltas que se leerán con OCR
+    chars: int = 0  # Word: caracteres del texto
+
+    @property
+    def workload(self) -> Workload:
+        return Workload(self.kind, self.pages or 0, self.scanned, self.images, self.chars)
 
 
 def document_info(path: Path) -> DocumentInfo:
@@ -38,10 +45,11 @@ def document_info(path: Path) -> DocumentInfo:
     dos hilos a la vez."""
     _backend(path)
     if path.suffix.lower() != ".pdf":
-        return DocumentInfo("docx")
+        chars, images_ = docx_io.stats(path)
+        return DocumentInfo("docx", images=images_, chars=chars)
     with _friendly_errors():
-        pages, scanned = pdf_io.page_counts(path)
-    return DocumentInfo("pdf", pages, scanned)
+        pages, scanned, images_ = pdf_io.page_counts(path)
+    return DocumentInfo("pdf", pages, scanned, images_)
 
 
 def output_formats(path: Path) -> tuple[str, ...]:
@@ -364,13 +372,16 @@ def anonymize(
             else:
                 leftovers = matcher.find(backend.extract_text(work, phase(progress, "verify")))
             if work != dst:
-                text = (
-                    pdf_io.anonymized_text(
+                markdown = dst.suffix.lower() == ".md"
+                if backend is pdf_io:
+                    text = pdf_io.anonymized_text(
                         src, matcher, phase(progress, "export"), language.failed_page, failed
                     )
-                    if backend is pdf_io
-                    else docx_io.body_text(work)
-                )
+                    text = pdf_io.paragraphs(text) if markdown else text
+                else:
+                    text = docx_io.markdown(work) if markdown else docx_io.body_text(work)
+                # Segunda red: el texto final también se revisa.
+                leftovers += matcher.find(text)
                 dst.write_text(text, encoding="utf-8")
     except BaseException:
         # Sin salida a medias o sin verificar: o se termina entero, o no queda nada.

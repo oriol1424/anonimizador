@@ -378,6 +378,102 @@ def visible_text(path: Path) -> str:
     return "\n".join(lines)
 
 
+def stats(path: Path) -> tuple[int, int]:
+    """(caracteres del texto, imágenes que se leerán con OCR): para estimar el tiempo."""
+    doc = Document(str(path))
+    chars = sum(
+        len(text)
+        for handle in _xml_roots(doc, TEXT_CONTENT_TYPES | DRAWING_CONTENT_TYPES)
+        for text, _ in _segmented(handle.root)
+    )  # fmt: skip
+    readable = 0
+    for part in _media(doc):
+        pix = images.load(part.blob)
+        readable += pix is not None and images.worth_reading(pix)
+    return chars, readable
+
+
+def _heading_level(p) -> int:
+    """Nivel de título del párrafo (0 = no es título), por su estilo de Word."""
+    name = (p.style.name if p.style is not None else "").lower()
+    if name in ("title", "títol", "título"):
+        return 1
+    for prefix in ("heading ", "títol ", "título "):
+        if name.startswith(prefix) and name[len(prefix) :].isdigit():
+            return min(6, int(name[len(prefix) :]))
+    return 0
+
+
+def _is_list(p) -> bool:
+    name = (p.style.name if p.style is not None else "").lower()
+    return p._p.pPr is not None and p._p.pPr.numPr is not None or name.startswith("list")
+
+
+def _md_inline(p) -> str:
+    """Texto del párrafo con negrita (**) y cursiva (*) de Word."""
+    pieces: list[str] = []
+    runs = []
+    for item in p.iter_inner_content():  # los enlaces también tienen texto
+        runs.extend(item.runs if hasattr(item, "runs") else [item])
+    for run in runs:
+        text = run.text.replace("*", "\\*")
+        if not text.strip():
+            pieces.append(text)
+            continue
+        lead = text[: len(text) - len(text.lstrip())]
+        trail = text[len(text.rstrip()) :]
+        core = text.strip()
+        if run.bold and run.italic:
+            core = f"***{core}***"
+        elif run.bold:
+            core = f"**{core}**"
+        elif run.italic:
+            core = f"*{core}*"
+        pieces.append(lead + core + trail)
+    return "".join(pieces).replace("****", "").strip()
+
+
+def markdown(path: Path) -> str:
+    """El documento (ya anonimizado) en Markdown: títulos, listas, negritas y tablas. Es
+    el formato que mejor entiende una IA."""
+    from docx.table import Table
+    from docx.text.paragraph import Paragraph
+
+    doc = Document(str(path))
+    blocks: list[str] = []
+    for child in doc.element.body.iterchildren():
+        if child.tag == P:
+            p = Paragraph(child, doc)
+            text = _md_inline(p)
+            if not text:
+                continue
+            level = _heading_level(p)
+            if level:
+                blocks.append("#" * level + " " + p.text.strip())
+            elif _is_list(p):
+                blocks.append("- " + text)
+            else:
+                blocks.append(text)
+        elif child.tag == f"{{{W}}}tbl":
+            rows = [[c.text.strip().replace("|", "\\|").replace("\n", " ") for c in r.cells]
+                    for r in Table(child, doc).rows]  # fmt: skip
+            if not rows:
+                continue
+            width = max(len(r) for r in rows)
+            rows = [r + [""] * (width - len(r)) for r in rows]
+            table = ["| " + " | ".join(rows[0]) + " |", "|" + " --- |" * width]
+            table += ["| " + " | ".join(r) + " |" for r in rows[1:]]
+            blocks.append("\n".join(table))
+    # Las listas seguidas van juntas; el resto, separado por una línea en blanco.
+    out: list[str] = []
+    for block in blocks:
+        if out and block.startswith("- ") and out[-1].startswith("- "):
+            out[-1] += "\n" + block
+        else:
+            out.append(block)
+    return "\n\n".join(out).strip() + "\n"
+
+
 def body_text(path: Path) -> str:
     """Texto visible del cuerpo del documento (para exportar a .txt).
 

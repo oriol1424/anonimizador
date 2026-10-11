@@ -1,5 +1,6 @@
 """Pantallas de los pasos 1 (documento), 2 (lista) y 4 (guardar)."""
 
+import math
 from collections.abc import Callable
 from pathlib import Path
 
@@ -26,7 +27,9 @@ from anonimizador.i18n import tr
 from anonimizador.ui import style
 from anonimizador.ui.widgets import ReplacementCombo, Segmented, button, card, label, set_prop
 
-FORMAT_LABELS = {".docx": "format_docx", ".pdf": "format_pdf", ".txt": "format_text_short"}
+FORMAT_LABELS = {
+    ".docx": "format_docx", ".pdf": "format_pdf", ".md": "format_md", ".txt": "format_text_short",
+}  # fmt: skip
 # Carpetas que se sincronizan con la nube (por nombre de la ruta).
 CLOUD_MARKERS = ("onedrive", "dropbox", "google drive", "googledrive", "icloud",
                  "mobile documents", "nextcloud", "pcloud", "box sync")  # fmt: skip
@@ -45,6 +48,12 @@ class NoticeLabel(QLabel):
         self.setObjectName("inlineWarning")
         self.setWordWrap(True)
         self.hide()
+
+
+def _duration(lang: str, seconds: float) -> str:
+    if seconds < 60:
+        return tr(lang, "eta_less_minute")
+    return tr(lang, "eta_minutes", n=math.ceil(seconds / 60))
 
 
 class Page(QWidget):
@@ -111,6 +120,12 @@ class DocumentPage(Page):
         super().__init__()
         self.drop = DropZone(on_choose)
         self.body.addWidget(self.drop)
+        self.help_link = button("", "flat")
+        self.help_link.setIcon(style.icon("info", style.ACCENT, 18))
+        help_row = QHBoxLayout()
+        help_row.addWidget(self.help_link)
+        help_row.addStretch()
+        self.body.addLayout(help_row)
 
         self.file_card, card_layout = card()
         row = QHBoxLayout()
@@ -126,7 +141,8 @@ class DocumentPage(Page):
         self.file_name.setTextFormat(Qt.TextFormat.PlainText)
         self.file_details = label("", "small")
         self.file_folder = label("", "small")
-        for w in (self.file_name, self.file_details, self.file_folder):
+        self.file_estimate = label("", "small")
+        for w in (self.file_name, self.file_details, self.file_folder, self.file_estimate):
             w.setTextFormat(Qt.TextFormat.PlainText)
             names.addWidget(w)
         self.change = button("")
@@ -145,12 +161,15 @@ class DocumentPage(Page):
         self.continue_button.setEnabled(False)
         self.footer.addWidget(self.continue_button)
 
-    def retranslate(self, lang: str, path: Path | None, info: DocumentInfo | None) -> None:
+    def retranslate(
+        self, lang: str, path: Path | None, info: DocumentInfo | None, seconds: float = 0
+    ) -> None:
         self.title.setText(tr(lang, "doc_title"))
         self.intro.setText(tr(lang, "doc_intro"))
         self.drop.text.setText(tr(lang, "drop_here"))
         self.drop.or_label.setText(tr(lang, "drop_or"))
         self.drop.choose.setText(tr(lang, "choose_file"))
+        self.help_link.setText(tr(lang, "help_button"))
         self.change.setText(tr(lang, "change_file"))
         self.continue_button.setText(tr(lang, "continue"))
         if path is not None and info is not None:
@@ -162,6 +181,7 @@ class DocumentPage(Page):
                 kind = tr(lang, "file_word")
             self.file_name.setText(path.name)
             self.file_details.setText(kind)
+            self.file_estimate.setText(tr(lang, "doc_estimate", time=_duration(lang, seconds)))
             # La carpeta puede ser muy larga: se recorta por el medio (entera en la ayuda).
             metrics = self.file_folder.fontMetrics()
             self.file_folder.setText(

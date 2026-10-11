@@ -13,6 +13,7 @@ Dos tipos de página:
 Licencia: PyMuPDF bajo AGPL-3.0 (gratis). Ver docs/LICENCIAS.md.
 """
 
+import re
 import threading
 from collections import deque
 from concurrent.futures import Future, wait
@@ -701,10 +702,33 @@ def read_ahead(path: Path, stop: threading.Event) -> None:
         doc.close()
 
 
-def page_counts(path: Path) -> tuple[int, int]:
-    """(páginas, páginas escaneadas)."""
+def page_counts(path: Path) -> tuple[int, int, int]:
+    """(páginas, páginas escaneadas, imágenes sueltas que se leerán con OCR)."""
     doc = _open(path)
     try:
-        return doc.page_count, _scanned_count(doc)
+        scanned = images_ = 0
+        for page in doc:
+            if is_image_page(page):
+                scanned += 1
+                continue
+            sizes = {info[0]: (info[2], info[3]) for info in page.get_images(full=True)}
+            images_ += sum(
+                1 for w, h in sizes.values()
+                if min(w, h) >= images.MIN_SIDE and w * h >= images.MIN_AREA
+            )  # fmt: skip
+        return doc.page_count, scanned, images_
     finally:
         doc.close()
+
+
+def paragraphs(text: str) -> str:
+    """Une las líneas partidas de un PDF en párrafos (para Markdown): una línea que no
+    acaba en punto y otra que empieza en minúscula son el mismo párrafo."""
+    out: list[str] = []
+    for line in text.splitlines():
+        line = line.strip()
+        if out and line and out[-1] and out[-1][-1] not in ".:;!?»)" and line[0].islower():
+            out[-1] += " " + line
+        else:
+            out.append(line)
+    return re.sub(r"\n{3,}", "\n\n", "\n\n".join(p for p in out if p) + "\n")
