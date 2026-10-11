@@ -14,3 +14,5 @@ class ProcessResult:
     scan_leftovers: list[tuple[int, Match]] = field(default_factory=list)
     # líneas que el OCR probablemente leyó mal: {nº de página: nº de líneas}
     ocr_doubts: dict[int, int] = field(default_factory=dict)
+    # páginas que fallaron y se sustituyeron por una página en blanco con un aviso
+    failed_pages: set[int] = field(default_factory=set)

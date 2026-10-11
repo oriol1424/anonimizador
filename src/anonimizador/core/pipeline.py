@@ -1,5 +1,6 @@
 """Flujo completo: analizar -> sugerir -> anonimizar -> verificar."""
 
+import os
 import re
 import threading
 from collections import Counter
@@ -71,8 +72,13 @@ class Notice:
 
     @property
     def is_leak(self) -> bool:
-        """Quedan datos sin borrar: el aviso debe destacarse."""
+        """Quedan datos sin borrar."""
         return self.kind in ("leftovers", "leftovers_scan")
+
+    @property
+    def is_serious(self) -> bool:
+        """El aviso debe destacarse: datos sin borrar o páginas que no se han procesado."""
+        return self.is_leak or self.kind in ("failed_pages", "unreadable_pages")
 
     def message(self, language: Language) -> str:
         return tr(
@@ -169,6 +175,17 @@ def _overlaps(start: int, end: int, spans) -> bool:
     return any(start < s.end and end > s.start for s in spans)
 
 
+def _same_file(a: Path, b: Path) -> bool:
+    """Mismo fichero aunque cambie la ruta o las mayúsculas (en Windows y macOS
+    "Demanda.docx" y "demanda.docx" son el mismo fichero)."""
+    if a.resolve() == b.resolve():
+        return True
+    try:
+        return a.exists() and os.path.samefile(a, b)
+    except OSError:
+        return False
+
+
 def _part_of_user_term(text: str, user_terms: list[Term]) -> bool:
     """ "Joan" cuando el usuario ya puso "Joan Puig i Ferrer": es la misma persona."""
     words = set(fold(text).split())
@@ -188,9 +205,10 @@ def analyze(
     """
     backend = _backend(path)
     doubts: dict[int, int] = {}
+    unreadable: set[int] = set()
     with _friendly_errors():
         if backend is pdf_io:
-            text = pdf_io.extract_text(path, progress, doubts=doubts)
+            text = pdf_io.extract_text(path, progress, doubts=doubts, failed=unreadable)
         else:
             text = backend.extract_text(path, progress)
     matcher = Matcher(user_terms)
@@ -232,6 +250,8 @@ def analyze(
     ]  # fmt: skip
 
     notices = [Notice("ambiguous", detail=v) for v in sorted(matcher.ambiguous)]
+    if unreadable:
+        notices.append(Notice("unreadable_pages", count=len(unreadable), pages=_pages(unreadable)))
     if doubts:
         notices.append(_doubts_notice(doubts))
     if not ner.is_available():
@@ -287,14 +307,19 @@ def anonymize(
     native = src.suffix.lower()
     if dst.suffix.lower() not in output_formats(src):
         raise AnonymizerError("unsupported_output", suffix=dst.suffix)
-    if dst.resolve() == src.resolve():
+    if any(_same_file(path, src) for path in (dst, guide) if path is not None):
         raise AnonymizerError("same_file")
 
     matcher = Matcher(terms)
     work = dst if dst.suffix.lower() == native else dst.with_suffix(".tmp" + native)
     try:
         with _friendly_errors():
-            result = backend.anonymize(src, work, matcher, progress)
+            failed: set[int] = set()
+            if backend is pdf_io:
+                result = pdf_io.anonymize(src, work, matcher, progress, language.failed_page)
+                failed |= result.failed_pages
+            else:
+                result = backend.anonymize(src, work, matcher, progress)
             if backend is pdf_io:
                 # Las páginas imagen ya se verificaron con OCR al anonimizarlas: aquí se
                 # revisa su capa de texto y el resto del documento.
@@ -303,16 +328,22 @@ def anonymize(
                 leftovers = matcher.find(backend.extract_text(work, progress))
             if work != dst:
                 text = (
-                    pdf_io.anonymized_text(src, matcher, progress)
+                    pdf_io.anonymized_text(src, matcher, progress, language.failed_page, failed)
                     if backend is pdf_io
                     else docx_io.body_text(work)
                 )
                 dst.write_text(text, encoding="utf-8")
+    except BaseException:
+        # Sin salida a medias o sin verificar: o se termina entero, o no queda nada.
+        dst.unlink(missing_ok=True)
+        raise
     finally:
         if work != dst:
             work.unlink(missing_ok=True)
 
     notices: list[Notice] = []
+    if failed:
+        notices.append(Notice("failed_pages", count=len(failed), pages=_pages(failed)))
     if result.scan_leftovers:
         notices.append(
             Notice(

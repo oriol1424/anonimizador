@@ -50,3 +50,7 @@
 | 2026-10-11 | PDF: las ligaduras ("ﬁ", "ﬂ") se separan en letras al leer el texto (sin `TEXT_PRESERVE_LIGATURES`) | Con ligaduras "Oﬁcial" o "Griﬃn" no coincidían con la lista ni con los filtros; la 1ª letra se queda la caja del glifo y el borrado lo cubre entero |
 | 2026-10-11 | Lista aparte de nombres públicos que solo se descartan si son la entidad entera (CASS, BOPA, Andorra, parroquias) | Como prefijo quitarían empresas reales ("Cassany SL"); el modelo tomaba "CASS" o "la Vella" por empresas |
 | 2026-10-11 | Detector de nombres: trozos en paralelo (hilos = núcleos, máx. 8) con 1 hilo de onnxruntime por trozo, en vez de un trozo cada vez con todos los hilos | Medido 16,2 → 13,2 s en 4 núcleos; los lotes no mejoran. Mismo resultado exacto |
+| 2026-10-11 | Página de PDF que falla → se borra y se sustituye por una página en blanco «[Pàgina N no processada]» con aviso grave; no se aborta todo | Un documento de 80 págs no debe perderse por una página dañada, y nunca puede quedar la página original sin anonimizar |
+| 2026-10-11 | Si `anonymize` falla a mitad, se borra la salida | Mejor no tener fichero que tener uno a medias o sin verificar |
+| 2026-10-11 | Evitar el reposo durante las tareas (SetThreadExecutionState / caffeinate), sin impedir que se apague la pantalla | 80 págs escaneadas ≈ 10 min: si el equipo se duerme, el usuario cree que se ha colgado |
+| 2026-10-11 | Tests lentos marcados `slow` y excluidos por defecto (`pytest -m slow`) | La suite normal sigue en ~1 min |

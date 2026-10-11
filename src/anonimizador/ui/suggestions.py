@@ -32,7 +32,10 @@ class SuggestionsDialog(QDialog):
         if analysis.notices:
             notices = QLabel(
                 f"<b>{tr(lang, 'warnings')}:</b><br>"
-                + "<br>".join(f"• {n.message(language)}" for n in analysis.notices)
+                + "<br>".join(
+                    f"• {n.message(language)}"
+                    for n in sorted(analysis.notices, key=lambda n: not n.is_serious)
+                )
             )
             notices.setWordWrap(True)
             notices.setObjectName("notices")

@@ -109,6 +109,21 @@ STRINGS: dict[str, dict[str, str]] = {
         "que no se han podido borrar ({detail}). Revisa esas páginas antes de usar el "
         "documento.",
     },
+    "notice_failed_pages": {
+        "ca": "ATENCIÓ: no s'han pogut processar les pàgines {pages}. S'han substituït per "
+        "una pàgina en blanc amb l'avís «Pàgina no processada», així que el document no "
+        "les inclou. Revisa-les a l'original.",
+        "es": "ATENCIÓN: no se han podido procesar las páginas {pages}. Se han sustituido por "
+        "una página en blanco con el aviso «Página no procesada», así que el documento no "
+        "las incluye. Revísalas en el original.",
+    },
+    "notice_unreadable_pages": {
+        "ca": "ATENCIÓ: no s'han pogut llegir les pàgines {pages} i no s'hi han buscat dades. "
+        "Revisa-les a l'original i afegeix a la llista els noms i dades que hi apareguin.",
+        "es": "ATENCIÓN: no se han podido leer las páginas {pages} y no se han buscado datos "
+        "en ellas. Revísalas en el original y añade a la lista los nombres y datos que "
+        "aparezcan.",
+    },
     "notice_ocr_doubtful": {
         "ca": "El reconeixement de text (OCR) no està segur de {count} línies (pàgines "
         "{pages}). Comprova-les a l'original: si hi ha noms o dades, afegeix-los a la llista.",

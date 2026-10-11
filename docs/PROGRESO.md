@@ -1,7 +1,7 @@
 # Progreso
 
 ## ▶ DÓNDE NOS QUEDAMOS (2026-10-11) — empezar por aquí
-Todo hecho, probado (**244 tests**) y publicado. No hay código a medias.
+Todo hecho, probado (**257 tests** + 2 lentos con `pytest -m slow`) y publicado. No hay código a medias.
 
 ### Hecho el 2026-10-11 (tarde)
 - `docs/PENDIENTES_BUFETE.md` enlazado desde `CLAUDE.md`.
@@ -21,6 +21,18 @@ Todo hecho, probado (**244 tests**) y publicado. No hay código a medias.
   máx. 8, 1 hilo de onnxruntime cada uno) y trozos repetidos analizados una vez.
   Resultado idéntico al de antes (1.920/1.920 entidades). Probado sin éxito: lotes de
   varios trozos (no mejora) — el modelo int8 va al límite de la CPU (~0,48 ms/token).
+- **Robustez** (`tests/test_robustesa.py`, `tests/test_keep_awake.py`):
+  - Una página de PDF que falla (al borrar, al verificar con OCR o al exportar a .txt) se
+    sustituye por una página en blanco «[Pàgina N no processada]» y se avisa (aviso grave,
+    primero y con icono de error). Nunca se deja la página original.
+  - En el análisis, una página ilegible se salta con aviso grave («no s'hi han buscat dades»).
+  - Si algo falla a mitad, no queda fichero de salida a medias ni sin verificar.
+  - Protección del original con `os.path.samefile` (en macOS "Demanda.docx" =
+    "demanda.docx"; en Windows ya lo detectaba `resolve()`); la guía tampoco puede
+    sobrescribir el original.
+  - El ordenador no se duerme durante las tareas (`core/keep_awake.py`: Windows
+    `SetThreadExecutionState`, macOS `caffeinate -i -w`).
+  - Test de documento largo (80 págs Word + 40 págs PDF), marcado `slow`.
 
 ### Hecho el 2026-10-11
 - **Fuga en escaneados arreglada**: OCR sin clasificador de orientación (`use_cls: False`).
@@ -38,15 +50,12 @@ Todo hecho, probado (**244 tests**) y publicado. No hay código a medias.
   (formatos CASS/residencia/causas Batllia, países de los pasaportes, equipos Windows...).
 
 ### Siguiente (en este orden)
-1. Puntos 7–12 del plan de abajo (página que falla, botón Cancel·la, progreso por fases,
-   que no se duerma el ordenador, buscador de sugerencias, test de documento largo,
-   `samefile`).
-2. **Interfaz más profesional y moderna** (petición del usuario, 2026-10-11): que siga
+1. **Interfaz más profesional y moderna** (petición del usuario, 2026-10-11): que siga
    siendo simple (una ventana, pocos botones) pero con aspecto cuidado: tipografía,
    espaciado, colores sobrios, iconos, estados claros (vacío / analizando / listo),
    tema claro/oscuro del sistema. Encaja con el punto 8 (Cancel·la + progreso por fases)
    y el 10 (buscador de sugerencias): hacerlos juntos.
-3. Después: empaquetado USB (paso 10) y alternativas sencillas a la IA (9b).
+2. Después: empaquetado USB (paso 10) y alternativas sencillas a la IA (9b).
 
 ### Medición (`scripts/bench_documents_grans.py <carpeta> <págs_escaneadas>`)
 | Documento | Análisis | Anonimizar + verificar |
@@ -96,15 +105,15 @@ menos; falta medirlo allí y probar CoreML.
      rellena la lista; se detiene antes de analizar (PyMuPDF no admite dos hilos).
    - Pendiente de decidir: verificar solo las franjas modificadas (~-3 s/pág, pero se
      pierde la "segunda opinión" de releer la página entera). Probar CoreML en el Mac M2.
-7. Si una página falla, no abortar todo: sustituirla por una página "[Pàgina N no
+7. [x] Si una página falla, no abortar todo: sustituirla por una página "[Pàgina N no
    processada]" + aviso (nunca dejarla sin anonimizar).
 8. Interfaz: **botón Cancel·la**, progreso por fases ("Analitzant… / Anonimitzant… /
    Verificant… pàgina 12 de 80") con tiempo estimado.
-9. Evitar que el ordenador se duerma durante procesos largos (macOS: `caffeinate -i -w
+9. [x] Evitar que el ordenador se duerma durante procesos largos (macOS: `caffeinate -i -w
    <pid>`; Windows: `SetThreadExecutionState`).
 10. Ventana de sugerencias con buscador (con 80 págs salen ~500 sugerencias).
-11. Repetir la medición y añadir un test "documento largo" (marcado lento).
-12. Protección del original: comparar también con `os.path.samefile` (en Windows,
+11. [x] Repetir la medición y añadir un test "documento largo" (marcado lento).
+12. [x] Protección del original: comparar también con `os.path.samefile` (en Windows,
     `Demanda.docx` y `demanda.docx` son el mismo fichero) + test.
 
 Después (decidido con el usuario el 2026-10-10):

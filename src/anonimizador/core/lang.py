@@ -12,6 +12,8 @@ class Language:
     labels: dict[str, str]
     # Opciones del desplegable "Sustituir por" ({n} = número correlativo).
     presets: tuple[str, ...]
+    # Texto de la página en blanco que sustituye a una página que no se pudo procesar.
+    failed_page: str = "[Pàgina {n} no processada]"
 
 
 CATALAN = Language(
@@ -43,6 +45,7 @@ CATALAN = Language(
         "[ADVOCAT_{n}]",
         "***",
     ),
+    failed_page="[Pàgina {n} no processada]",
 )
 
 SPANISH = Language(
@@ -74,6 +77,7 @@ SPANISH = Language(
         "[ABOGADO_{n}]",
         "***",
     ),
+    failed_page="[Página {n} no procesada]",
 )
 
 LANGUAGES = {lang.code: lang for lang in (CATALAN, SPANISH)}

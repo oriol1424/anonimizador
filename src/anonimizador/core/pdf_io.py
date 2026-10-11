@@ -403,41 +403,83 @@ def _anonymize_document_extras(doc: pymupdf.Document, matcher: Matcher) -> None:
         doc.set_toc([[lvl, matcher.replace(title), page, *rest] for lvl, title, page, *rest in toc])
 
 
+# --- Páginas que fallan ----------------------------------------------------------------
+
+FAILED_PAGE_TEXT = "[Pàgina {n} no processada]"
+
+
+def _replace_failed_page(doc: pymupdf.Document, number: int, text: str) -> None:
+    """Sustituye una página que no se ha podido procesar por una en blanco con un aviso.
+
+    Nunca se deja la original: podría contener datos sin anonimizar. Se borra y se crea
+    de nuevo (y no se vacía con una redacción) porque la página puede estar dañada.
+    """
+    try:
+        rect = doc[number].rect
+    except Exception:  # noqa: BLE001 - página ilegible: tamaño A4
+        rect = pymupdf.paper_rect("a4")
+    doc.delete_page(number)
+    page = doc.new_page(number, width=rect.width, height=rect.height)
+    page.insert_text((56, 72), text.format(n=number + 1), fontsize=14, fontname="helv")
+
+
 # --- API ------------------------------------------------------------------------------
 
 
 def anonymize(
-    src: Path, dst: Path, matcher: Matcher, progress: Progress | None = None
+    src: Path,
+    dst: Path,
+    matcher: Matcher,
+    progress: Progress | None = None,
+    failed_page_text: str = FAILED_PAGE_TEXT,
 ) -> ProcessResult:
+    """Si una página falla, no se aborta todo: se sustituye por una página en blanco con
+    `failed_page_text` ({n} = nº de página) y se anota en `ProcessResult.failed_pages`."""
     doc = _open(src)
     all_matches: list[Match] = []
     leftovers: list[tuple[int, Match]] = []
     doubts: dict[int, int] = {}
+    failed: set[int] = set()
     images = doc.embfile_count()
     try:
         counter = _OcrCounter(doc, progress)
         prefetch = _Prefetch(doc)
         checks: deque[_ScanCheck] = deque()  # verificaciones en curso (en paralelo)
 
+        def fail(number: int) -> None:
+            _replace_failed_page(doc, number, failed_page_text)
+            failed.add(number + 1)
+
         def finish_oldest() -> None:
             state = checks.popleft()
-            done, remaining = _finish_image_page(doc[state.number], state, matcher)
+            if state.number + 1 in failed:
+                return
+            try:
+                done, remaining = _finish_image_page(doc[state.number], state, matcher)
+            except Exception:  # noqa: BLE001 - cualquier fallo de una página
+                fail(state.number)
+                return
             all_matches.extend(done)
             leftovers.extend((state.number + 1, m) for m in remaining)
 
-        for page in doc:
-            prefetch.upto(page.number)
-            _anonymize_page_extras(page, matcher)
-            if is_image_page(page):
-                state = _start_image_page(page, matcher, doubts)
-                if state is not None:
-                    checks.append(state)
-                while len(checks) > ocr.WORKERS:
-                    finish_oldest()
-                counter.tick()
-            else:
-                images += len(page.get_images(full=True))
-                all_matches.extend(_anonymize_text_page(page, matcher))
+        for number in range(doc.page_count):
+            page = doc[number]
+            try:
+                prefetch.upto(number)
+                _anonymize_page_extras(page, matcher)
+                if is_image_page(page):
+                    state = _start_image_page(page, matcher, doubts)
+                    if state is not None:
+                        checks.append(state)
+                    counter.tick()
+                else:
+                    page_images = len(page.get_images(full=True))
+                    all_matches.extend(_anonymize_text_page(page, matcher))
+                    images += page_images
+            except Exception:  # noqa: BLE001 - cualquier fallo de una página
+                fail(number)
+            while len(checks) > ocr.WORKERS:
+                finish_oldest()
         while checks:
             finish_oldest()
         _anonymize_document_extras(doc, matcher)
@@ -445,7 +487,7 @@ def anonymize(
         doc.save(str(dst), garbage=4, deflate=True, clean=True)
     finally:
         doc.close()
-    return ProcessResult(all_matches, images, counter.total, leftovers, doubts)
+    return ProcessResult(all_matches, images, counter.total, leftovers, doubts, failed)
 
 
 def extract_text(
@@ -453,12 +495,14 @@ def extract_text(
     progress: Progress | None = None,
     use_ocr: bool = True,
     doubts: dict[int, int] | None = None,
+    failed: set[int] | None = None,
 ) -> str:
     """Todo el texto susceptible de contener datos (páginas, metadatos, notas, enlaces...).
 
     Las páginas imagen se leen con OCR. Con `use_ocr=False` se toma su capa de texto: lo
     usa la verificación final, porque `anonymize` ya verificó su imagen con OCR.
     Si se pasa `doubts`, se anota en él {nº de página: líneas dudosas del OCR}.
+    Si se pasa `failed`, las páginas que no se pueden leer se saltan y se anotan en él.
     """
     doc = _open(path)
     lines: list[str] = []
@@ -466,13 +510,12 @@ def extract_text(
         counter = _OcrCounter(doc, progress) if use_ocr else None
         prefetch = _Prefetch(doc) if use_ocr else None
         for page in doc:
-            if prefetch:
-                prefetch.upto(page.number)
-            lines.append(_page_text(page, counter, doubts))
-            for annot in page.annots():
-                lines.extend(v for v in (annot.info.get("content"), annot.info.get("title")) if v)
-            lines.extend(w.field_value for w in page.widgets() if isinstance(w.field_value, str))
-            lines.extend(link["uri"] for link in page.get_links() if link.get("uri"))
+            try:
+                lines.extend(_page_lines(page, counter, prefetch, doubts))
+            except Exception:  # noqa: BLE001 - página ilegible: se avisa y se sigue
+                if failed is None:
+                    raise
+                failed.add(page.number + 1)
         meta = doc.metadata or {}
         lines.extend(v for k in ("title", "subject", "keywords", "author") if (v := meta.get(k)))
         lines.extend(entry[1] for entry in doc.get_toc())
@@ -481,7 +524,29 @@ def extract_text(
     return "\n".join(line for line in lines if line)
 
 
-def anonymized_text(src: Path, matcher: Matcher, progress: Progress | None = None) -> str:
+def _page_lines(
+    page: pymupdf.Page,
+    counter: _OcrCounter | None,
+    prefetch: _Prefetch | None,
+    doubts: dict[int, int] | None,
+) -> list[str]:
+    if prefetch:
+        prefetch.upto(page.number)
+    lines = [_page_text(page, counter, doubts)]
+    for annot in page.annots():
+        lines.extend(v for v in (annot.info.get("content"), annot.info.get("title")) if v)
+    lines.extend(w.field_value for w in page.widgets() if isinstance(w.field_value, str))
+    lines.extend(link["uri"] for link in page.get_links() if link.get("uri"))
+    return lines
+
+
+def anonymized_text(
+    src: Path,
+    matcher: Matcher,
+    progress: Progress | None = None,
+    failed_page_text: str = FAILED_PAGE_TEXT,
+    failed: set[int] | None = None,
+) -> str:
     """Texto del PDF ORIGINAL con las sustituciones aplicadas (para exportar a .txt).
 
     Se parte del original y no del PDF anonimizado porque los alias insertados quedan al
@@ -493,8 +558,13 @@ def anonymized_text(src: Path, matcher: Matcher, progress: Progress | None = Non
         prefetch = _Prefetch(doc)
         pages = []
         for page in doc:
-            prefetch.upto(page.number)
-            pages.append(matcher.replace(_page_text(page, counter)).strip())
+            try:
+                prefetch.upto(page.number)
+                pages.append(matcher.replace(_page_text(page, counter)).strip())
+            except Exception:  # noqa: BLE001 - como en `anonymize`: nunca el original
+                pages.append(failed_page_text.format(n=page.number + 1))
+                if failed is not None:
+                    failed.add(page.number + 1)
         return "\n\n".join(p for p in pages if p).strip() + "\n"
     finally:
         doc.close()

@@ -4,6 +4,8 @@ from collections.abc import Callable
 
 from PySide6.QtCore import QObject, QRunnable, Qt, QThreadPool, Signal
 
+from anonimizador.core.keep_awake import keep_awake
+
 # Las señales deben vivir hasta que el resultado llegue al hilo de la interfaz; si Python las
 # recolecta antes, el aviso se pierde y la ventana se queda "Treballant…" para siempre.
 _alive: set["_Signals"] = set()
@@ -23,7 +25,8 @@ class _Task(QRunnable):
 
     def run(self) -> None:
         try:
-            result = self.fn(self.signals.progress.emit)
+            with keep_awake():  # que el ordenador no se duerma a media tarea
+                result = self.fn(self.signals.progress.emit)
         except Exception as exc:  # se muestra al usuario en la ventana
             self.signals.failed.emit(exc)
         else:
