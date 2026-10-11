@@ -16,34 +16,39 @@ pruebas empíricas sobre documentos inventados. Marcar `[x]` al resolver cada pu
 - Rendimiento de la interfaz: 500 sugerencias se muestran en 0,5 s; búsqueda instantánea.
 - Fusión de variantes en el flujo real («Jordi Casals i Pons» / «Sr. Casals» / «Casals»).
 
+## Resuelto el 2026-10-11
+Puntos 1-3 y 5-11 corregidos con tests en `tests/test_auditoria.py` (y el nombre del
+fichero en `tests/test_ui.py`). El nombre de salida se anonimiza en el paso 4 (los "_"
+cuentan como separador). El punto 4 queda así por decisión del usuario.
+
 ## Hallazgos
 
 ### Graves (posible fuga hacia la IA)
-1. [ ] **Nombre del fichero de salida**: copia el del original. «Demanda Joan Puig.docx» →
+1. [x] **Nombre del fichero de salida**: copia el del original. «Demanda Joan Puig.docx» →
    «Demanda Joan Puig_anonimitzat.docx», y el nombre llega a la IA con el fichero.
    Arreglo: en el paso 4, aplicar la lista al nombre (o avisar si contiene algún término).
-2. [ ] **Word: propiedades personalizadas** (`docProps/custom.xml`, p. ej. «Client = …»)
+2. [x] **Word: propiedades personalizadas** (`docProps/custom.xml`, p. ej. «Client = …»)
    no se anonimizan ni las revisa la verificación. Comprobado.
-3. [ ] **Word: miniatura de la 1ª página** (`docProps/thumbnail.*`) se conserva sin aviso:
+3. [x] **Word: miniatura de la 1ª página** (`docProps/thumbnail.*`) se conserva sin aviso:
    es una imagen de la portada con los nombres. Comprobado. Arreglo: eliminarla.
-4. [ ] **Guía de correspondencias sin cifrar** junto al documento anonimizado: la regla 4
+4. [x] **Decidido por el usuario (2026-10-11): la guía NO se cifra y se guarda en la misma carpeta.** Antes: **Guía de correspondencias sin cifrar** junto al documento anonimizado: la regla 4
    de CLAUDE.md exige cifrado. Riesgo real: adjuntarla a la IA por error. Decidir con el
    usuario: cifrar con contraseña, guardarla en otra carpeta, o ambas.
 
 ### Medios
-5. [ ] **Word: texto alternativo de imágenes** (`descr`/`title`, p. ej. «Foto del DNI de
+5. [x] **Word: texto alternativo de imágenes** (`descr`/`title`, p. ej. «Foto del DNI de
    …») se conserva. Comprobado.
-6. [ ] **PDF: texto fuera del recorte visible** (CropBox) se conserva y la verificación no
+6. [x] **PDF: texto fuera del recorte visible** (CropBox) se conserva y la verificación no
    lo ve (la extracción recorta). Otras herramientas sí lo leen. Comprobado.
-7. [ ] **PDF: ficheros adjuntos** se conservan con su contenido (solo aviso genérico de
+7. [x] **PDF: ficheros adjuntos** se conservan con su contenido (solo aviso genérico de
    «objectes incrustats»). Comprobado. Arreglo: eliminarlos y avisar.
-8. [ ] **Apellidos de 3 letras** (Mas, Pi, Pou, Gil, Sol...) no generan variante: «el Sr.
+8. [x] **Apellidos de 3 letras** (Mas, Pi, Pou, Gil, Sol...) no generan variante: «el Sr.
    Mas» queda sin sustituir. Comprobado. Arreglo: aceptarlos tras tratamiento (Sr., Sra.,
    senyor, en, na...).
-9. [ ] **Teléfonos andorranos en parejas** («81 23 45», «+376 81 23 45») no se detectan;
+9. [x] **Teléfonos andorranos en parejas** («81 23 45», «+376 81 23 45») no se detectan;
    «376 612 345» (sin +) se detecta a medias y dejaría «345». Comprobado.
-10. [ ] **DNI/NIE con letra minúscula** («12345678z») no se detectan. Comprobado.
-11. [ ] **Fechas de nacimiento** no se detectan; «03/04/1980» sale como procedimiento a
+10. [x] **DNI/NIE con letra minúscula** («12345678z») no se detectan. Comprobado.
+11. [x] **Fechas de nacimiento** no se detectan; «03/04/1980» sale como procedimiento a
     medias («04/1980»). Arreglo: fecha tras «naixement/nascut/nacimiento/nacido» y no
     tomar fechas por números de procedimiento.
 

@@ -26,7 +26,7 @@ from anonimizador.ui.widgets import FlowLayout, NoticeList, ReplacementCombo, bu
 GROUPS = {
     "group_people": ("PERSONA",),
     "group_companies": ("EMPRESA",),
-    "group_ids": ("DNI", "NIE", "CIF", "NRT", "PASAPORTE", "CASS", "RESIDENCIA"),
+    "group_ids": ("DNI", "NIE", "CIF", "NRT", "PASAPORTE", "CASS", "RESIDENCIA", "NACIMIENTO"),
     "group_contact": ("TELEFONO", "EMAIL"),
     "group_addresses": ("DIRECCION",),
     "group_other": ("IBAN", "MATRICULA", "PROCEDIMIENTO"),

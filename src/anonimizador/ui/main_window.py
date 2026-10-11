@@ -2,6 +2,7 @@
 guardar) con barra lateral, más las pantallas de progreso y de resultado."""
 
 import json
+import re
 from pathlib import Path
 
 from PySide6.QtCore import QSettings, QStandardPaths, QUrl
@@ -18,7 +19,7 @@ from PySide6.QtWidgets import (
 from anonimizador.core import keep_list
 from anonimizador.core.guide import default_path as default_guide_path
 from anonimizador.core.lang import DEFAULT_LANGUAGE, LANGUAGES, Language
-from anonimizador.core.matcher import Term, keep_term
+from anonimizador.core.matcher import Matcher, Term, keep_term
 from anonimizador.core.pipeline import (
     SUPPORTED_INPUTS,
     Analysis,
@@ -371,12 +372,24 @@ class MainWindow(QMainWindow):
         return True
 
     def start_anonymize(self) -> None:
-        if self.input_path is None or not self._validate_output():
+        if self.input_path is None:
             return
         terms = self._user_terms()
         if terms is None:
             return
         terms += self._extra_terms
+        # El nombre del fichero también llega a la IA: «Demanda Joan Puig» -> «Demanda
+        # [CLIENT_1]». Se cambia a la vista del usuario antes de guardar.
+        name = self.name_edit.text().strip()
+        safe = name
+        # En los nombres de fichero "_" separa palabras ("Joan_Puig"): se busca como espacio.
+        for m in reversed(Matcher(terms).find(name.replace("_", " "))):
+            safe = safe[: m.start] + m.replacement + safe[m.end :]
+        safe = re.sub(r'[<>:"/\\|?*]', "_", safe)
+        if safe != name:
+            self.name_edit.setText(safe)
+        if not self._validate_output():
+            return
         src, dst, language = self.input_path, self.output_path(), self.language
         guide = (
             default_guide_path(dst, language) if self.save_page.guide_check.isChecked() else None

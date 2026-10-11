@@ -185,7 +185,7 @@ def _next_alias(label: str, used: set[str]) -> str:
 # Orden de las sugerencias en la ventana: primero lo más identificativo.
 LABEL_ORDER = [
     "PERSONA", "EMPRESA", "DIRECCION", "PASAPORTE", "DNI", "NIE", "NRT", "CASS", "RESIDENCIA",
-    "CIF", "TELEFONO", "EMAIL", "IBAN", "MATRICULA", "PROCEDIMIENTO",
+    "NACIMIENTO", "CIF", "TELEFONO", "EMAIL", "IBAN", "MATRICULA", "PROCEDIMIENTO",
 ]  # fmt: skip
 NAMED_LABELS = {"PERSONA", "EMPRESA"}
 
@@ -392,6 +392,8 @@ def anonymize(
         notices.append(Notice("leftovers", detail=detail, count=len(leftovers)))
     if result.images:
         notices.append(Notice("images", count=result.images))
+    if result.attachments_removed:
+        notices.append(Notice("attachments_removed", count=result.attachments_removed))
 
     replaced = Counter(m.replacement for m in result.matches)
     entries = build_entries([t for t in terms if not t.keep], result.matches)

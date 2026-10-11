@@ -16,3 +16,4 @@ class ProcessResult:
     ocr_doubts: dict[int, int] = field(default_factory=dict)
     # páginas que fallaron y se sustituyeron por una página en blanco con un aviso
     failed_pages: set[int] = field(default_factory=set)
+    attachments_removed: int = 0  # ficheros adjuntos quitados (PDF)

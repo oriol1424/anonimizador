@@ -71,10 +71,29 @@ RESIDENCE_PERMIT = _number_after(
     r"\s+(?:de\s+)?(?:resid[èe]ncia|residencia|treball|trabajo)"
     r"(?:\s+(?:i|y)\s+(?:treball|trabajo))?"
 )
-# Andorra: 6 cifras (fijos 7/8, móviles 3/6). Sin prefijo no se aceptan puntos:
-# "600.000" es un importe, no un teléfono.
+# Andorra: 6 cifras (fijos 7/8, móviles 3/6), en tríos ("812 345") o en parejas
+# ("81 23 45"), con prefijo opcional (+376, 00376, (+376) o 376). Sin prefijo no se aceptan
+# puntos en los tríos: "600.000" es un importe, no un teléfono.
+_AD_PREFIX = r"(?:\(?(?:\+|00)376\)?|376)[ .-]?"
 PHONE_AD = re.compile(
-    r"(?<![\w+.,])(?:(?:\+|00)376[ .-]?[3678]\d{2}[ .-]?\d{3}|[3678]\d{2} ?\d{3})(?![.,]?\d)"
+    r"(?<![\w+.,])(?:"
+    rf"{_AD_PREFIX}[3678]\d{{2}}[ .-]?\d{{3}}"  # +376 812 345
+    rf"|(?:{_AD_PREFIX})?[3678]\d(?:[ .-]\d{{2}}){{2}}"  # (+376) 81 23 45
+    r"|[3678]\d{2} ?\d{3}"  # 812345 / 812 345
+    r")(?![.,]?\d)"
+)
+
+# Fecha de nacimiento: la fecha que sigue a "naixement", "nascut", "nacimiento"...
+_MONTHS = (
+    r"gener|febrer|març|abril|maig|juny|juliol|agost|setembre|octubre|novembre|desembre|"
+    r"enero|febrero|marzo|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|"
+    r"diciembre"
+)
+BIRTH_DATE = re.compile(
+    r"(?i:naixement|nascu[td]a?|nacimiento|nacid[oa])"
+    r"(?:\s+(?i:el|la|en|a|al|del|de|:))*\s*:?\s*"
+    rf"(?P<v>\d{{1,2}}[/.-]\d{{1,2}}[/.-](?:19|20)?\d{{2}}"
+    rf"|\d{{1,2}}(?:\s+(?i:de|d'|d’))?\s*(?i:{_MONTHS})(?:\s+(?i:de|del))?\s+(?:19|20)\d{{2}})"
 )
 
 
@@ -86,8 +105,10 @@ RULES: list[tuple[str, re.Pattern[str], object]] = [
         re.compile(r"\b[A-Z]{2}\d{2}(?:[ ]?[A-Z0-9]{4}){3,7}(?:[ ]?[A-Z0-9]{1,4})?\b"),
         _iban_valid,
     ),
-    ("DNI", re.compile(r"\b\d{1,2}\.?\d{3}\.?\d{3}[- ]?[A-Z]\b"), None),
-    ("NIE", re.compile(r"\b[XYZ][- ]?\d{7}[- ]?[A-Z]\b"), None),
+    # Letra en mayúscula (con o sin separador) o en minúscula pegada: "12345678z" sí,
+    # "pagar 12345678 a" no.
+    ("DNI", re.compile(r"\b\d{1,2}\.?\d{3}\.?\d{3}(?:[- ]?[A-Z]|-?[a-z])\b"), None),
+    ("NIE", re.compile(r"\b(?:[XYZ][- ]?\d{7}[- ]?[A-Z]|[xyzXYZ]-?\d{7}-?[a-zA-Z])\b"), None),
     ("CIF", re.compile(r"\b[ABCDEFGHJNPQRSUVW][- ]?\d{7}[- ]?[0-9A-J]\b"), None),
     # Andorra: NRT (letra + 6 cifras + letra de control, "F-123456-X") y pasaporte
     # andorrano ("O" + 7 cifras).
@@ -100,7 +121,9 @@ RULES: list[tuple[str, re.Pattern[str], object]] = [
     ("TELEFONO", PHONE_AD, None),
     ("MATRICULA", re.compile(r"\b\d{4}[- ]?[BCDFGHJKLMNPRSTVWXYZ]{3}\b"), None),
     ("MATRICULA", re.compile(r"\b(?:AND|[A-Z])[- ]?\d{4}\b"), None),  # Andorra: "A 1234"
-    ("PROCEDIMIENTO", re.compile(r"\b\d{1,6}/(?:19|20)\d{2}\b"), None),
+    ("NACIMIENTO", BIRTH_DATE, None),
+    # Sin cifra ni "/" delante: "03/04/1980" es una fecha, no el procedimiento "04/1980".
+    ("PROCEDIMIENTO", re.compile(r"(?<![\d/])\d{1,7}/(?:19|20)\d{2}\b"), None),
     ("DIRECCION", ADDRESS, None),
 ]
 

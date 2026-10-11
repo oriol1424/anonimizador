@@ -136,6 +136,12 @@ STRINGS: dict[str, dict[str, str]] = {
         "es": "El documento contiene {count} imágenes u objetos incrustados. Su contenido no "
         "se anonimiza: revísalos manualmente.",
     },
+    "notice_attachments_removed": {
+        "ca": "S'han tret {count} fitxers adjunts del PDF: el seu contingut no es pot revisar. "
+        "Si els necessites, anonimitza'ls a part.",
+        "es": "Se han quitado {count} ficheros adjuntos del PDF: su contenido no se puede "
+        "revisar. Si los necesitas, anonimízalos aparte.",
+    },
     "notice_ocr": {
         "ca": "{count} pàgines escanejades s'han llegit amb reconeixement de text (OCR). "
         "Revisa-les: amb lletra manuscrita, segells o mala qualitat d'imatge pot fallar.",
@@ -173,6 +179,7 @@ STRINGS: dict[str, dict[str, str]] = {
     "label_PASAPORTE": {"ca": "Passaport", "es": "Pasaporte"},
     "label_CASS": {"ca": "Núm. CASS", "es": "Nº CASS"},
     "label_RESIDENCIA": {"ca": "Permís de residència", "es": "Permiso de residencia"},
+    "label_NACIMIENTO": {"ca": "Data de naixement", "es": "Fecha de nacimiento"},
     "label_IBAN": {"ca": "Compte bancari", "es": "Cuenta bancaria"},
     "label_TELEFONO": {"ca": "Telèfon", "es": "Teléfono"},
     "label_EMAIL": {"ca": "Correu electrònic", "es": "Correo electrónico"},

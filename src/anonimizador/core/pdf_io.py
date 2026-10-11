@@ -68,7 +68,35 @@ def _open(path: Path) -> pymupdf.Document:
     if doc.needs_pass:
         doc.close()
         raise EncryptedPdfError(str(path))
+    _uncrop(doc)
     return doc
+
+
+def _uncrop(doc: pymupdf.Document) -> None:
+    """Texto fuera del recorte visible (CropBox): no se ve en pantalla, pero sigue en el
+    fichero y otras herramientas lo leen. Se trabaja con la página entera (MediaBox) para
+    encontrarlo, borrarlo y verificarlo como el resto."""
+    for page in doc:
+        try:
+            if page.cropbox != page.mediabox:
+                page.set_cropbox(page.mediabox)
+        except Exception:  # noqa: BLE001 - recorte raro: se deja (el resto sigue igual)
+            continue
+
+
+def _remove_attachments(doc: pymupdf.Document) -> int:
+    """Ficheros adjuntos (del documento y de anotaciones): su contenido no se revisa, así
+    que se quitan. Devuelve cuántos."""
+    removed = 0
+    for name in doc.embfile_names():
+        doc.embfile_del(name)
+        removed += 1
+    for page in doc:
+        attached = [a for a in page.annots() if a.type[0] == pymupdf.PDF_ANNOT_FILE_ATTACHMENT]
+        for annot in attached:
+            page.delete_annot(annot)
+            removed += 1
+    return removed
 
 
 def is_image_page(page: pymupdf.Page) -> bool:
@@ -426,7 +454,8 @@ def anonymize(
     leftovers: list[tuple[int, Match]] = []
     doubts: dict[int, int] = {}
     failed: set[int] = set()
-    images = doc.embfile_count()
+    images = 0
+    attachments = _remove_attachments(doc)
     try:
         steps = Steps(progress, doc.page_count)
         prefetch = _Prefetch(doc)
@@ -473,7 +502,7 @@ def anonymize(
         doc.save(str(dst), garbage=4, deflate=True, clean=True)
     finally:
         doc.close()
-    return ProcessResult(all_matches, images, scanned, leftovers, doubts, failed)
+    return ProcessResult(all_matches, images, scanned, leftovers, doubts, failed, attachments)
 
 
 def extract_text(

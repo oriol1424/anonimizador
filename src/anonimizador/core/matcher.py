@@ -22,6 +22,14 @@ LEGAL_FORMS = {
     "sociedad", "societat", "limitada", "anonima", "anònima", "cooperativa",
 }  # fmt: skip
 
+# Apellidos de 2-3 letras (Mas, Pi, Pou, Gil): solos son palabras corrientes ("mas", "pi"),
+# así que como variante solo se aceptan tras un tratamiento: "el Sr. Mas", "na Pi".
+SHORT_SURNAME = (2, 3)
+_TITLE_BEFORE = re.compile(
+    r"(?:^|[^\w·])(?:sr|sra|srta|senyor|senyora|señor|señora|sres|sras|dr|dra|don|dona|doña"
+    r"|en|na|mn|mossèn)\.?\s+$"
+)
+
 # Límites de palabra: el punto volado forma parte de la palabra (Marcel·lí), el apóstrofo no
 # (d'Orriols -> "Orriols" es una palabra).
 _WORD = r"[\w·]"
@@ -100,6 +108,18 @@ def variants(name: str) -> list[str]:
     return sorted(found)
 
 
+def short_surnames(name: str) -> list[str]:
+    """Apellidos de 2-3 letras de un nombre ("Pere Mas i Pons" -> ["Mas"])."""
+    tokens = name.split()
+    if len(tokens) < 2:
+        return []
+    return sorted({
+        t for t in tokens[1:]
+        if SHORT_SURNAME[0] <= len(t) <= SHORT_SURNAME[1] and t.isalpha() and t[0].isupper()
+        and fold(t) not in CONNECTORS and fold(t) not in LEGAL_FORMS
+    })  # fmt: skip
+
+
 def _key(text: str) -> str:
     folded = re.sub(r"\s+(?:i|y)(?=\s)", " ", fold(text))
     return re.sub(r"\s+", "", folded)
@@ -135,29 +155,35 @@ class Matcher:
 
     def __init__(self, terms: list[Term]):
         self.ambiguous: set[str] = set()
-        entries: dict[str, tuple[Term, bool, str]] = {}
-        derived: dict[str, list[tuple[Term, str]]] = {}
+        # clave -> (término, modo, texto). Modo: "exact" (lo que escribió el usuario),
+        # "upper" (variante: debe empezar en mayúscula), "titled" (apellido corto: además
+        # debe ir tras un tratamiento).
+        entries: dict[str, tuple[Term, str, str]] = {}
+        derived: dict[str, list[tuple[Term, str, str]]] = {}
 
         ordered = [t for t in terms if not t.keep] + [t for t in terms if t.keep]
         for term in ordered:
             if not term.original.strip():
                 continue
-            entries.setdefault(_key(term.original), (term, False, term.original))
+            entries.setdefault(_key(term.original), (term, "exact", term.original))
         for term in ordered:
             if not term.expand:
                 continue
             for variant in variants(term.original):
                 if term.keep and len(variant.split()) < 2:
                     continue
-                derived.setdefault(_key(variant), []).append((term, variant))
+                derived.setdefault(_key(variant), []).append((term, variant, "upper"))
+            if not term.keep:
+                for surname in short_surnames(term.original):
+                    derived.setdefault(_key(surname), []).append((term, surname, "titled"))
         for key, options in derived.items():
             if key in entries:
                 continue
-            if len({t.replacement for t, _ in options}) > 1:
+            if len({t.replacement for t, _, _ in options}) > 1:
                 self.ambiguous.add(options[0][1])
                 continue
-            term, variant = options[0]
-            entries[key] = (term, True, variant)
+            term, variant, mode = options[0]
+            entries[key] = (term, mode, variant)
 
         self._entries = entries
         self._regex = None
@@ -175,9 +201,13 @@ class Matcher:
             entry = self._entries.get(_key(m.group()))
             if entry is None:
                 continue
-            term, strict_case, _ = entry
+            term, mode, _ = entry
             original = text[m.start() : m.end()]
-            if strict_case and not _starts_upper(original):
+            if mode != "exact" and not _starts_upper(original):
+                continue
+            if mode == "titled" and not _TITLE_BEFORE.search(
+                fold(text[max(0, m.start() - 12) : m.start()])
+            ):
                 continue
             if term.keep and not include_kept:
                 continue

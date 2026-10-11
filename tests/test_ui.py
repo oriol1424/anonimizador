@@ -406,3 +406,20 @@ def test_editing_keep_list_requires_new_analysis(window, demanda_ca: Path):
     assert window._reachable()[STEP_SUGGESTIONS]
     window._save_keep(["Anna Vila"])  # como si se hubiera editado en el diálogo
     assert not window._reachable()[STEP_SUGGESTIONS]
+
+
+def test_output_name_is_anonymized_too(window, qtbot, tmp_path: Path):
+    from docx import Document as NewDocument
+
+    src = tmp_path / "Demanda Joan Puig.docx"
+    doc = NewDocument()
+    doc.add_paragraph("En Joan Puig i Ferrer compareix.")
+    doc.save(str(src))
+    window.set_input(src)
+    _fill_list(window, [("Joan Puig i Ferrer", "[CLIENT_1]")])
+    terms = window._user_terms()
+    window._analysis_done(analyze(src, terms, CATALAN), window._current_key(), terms)
+    window.suggestions_page.apply_button.click()
+    window.run_button.click()
+    qtbot.waitUntil(lambda: window.pages.currentWidget() is window.result_page, timeout=20000)
+    assert window.result_page.report.output.name == "Demanda [CLIENT_1]_anonimitzat.docx"

@@ -35,6 +35,10 @@ TEXT_CONTENT_TYPES = {
     _WP + "comments+xml",
 }
 PEOPLE_CONTENT_TYPE = _WP + "people+xml"
+CUSTOM_PROPS = "/docProps/custom.xml"  # propiedades personalizadas ("Client = ...")
+THUMBNAIL_REL = "/metadata/thumbnail"  # miniatura de la 1ª página (imagen con nombres)
+# Texto alternativo de imágenes y formas: `descr`/`title` (DrawingML) y `alt` (VML).
+ALT_TEXT_ATTRS = {"descr", "title", "alt"}
 CORE_TEXT_FIELDS = ("title", "subject", "keywords", "comments", "category", "content_status")
 
 
@@ -128,6 +132,27 @@ def _anonymize_authors(root: etree._Element) -> None:
                 el.set(attr, "")
 
 
+def _alt_texts(root: etree._Element) -> Iterator[tuple[etree._Element, str]]:
+    for el in root.iter(tag=etree.Element):
+        for attr in el.attrib:
+            if etree.QName(attr).localname in ALT_TEXT_ATTRS and el.get(attr):
+                yield el, attr
+
+
+def _custom_props(doc: DocxDocument) -> _XmlRoot | None:
+    for part in doc.part.package.iter_parts():
+        if str(part.partname) == CUSTOM_PROPS:
+            return _XmlRoot(part)
+    return None
+
+
+def _remove_thumbnail(doc: DocxDocument) -> None:
+    """La miniatura es una imagen de la portada: se quita del paquete."""
+    rels = doc.part.package.rels
+    for r_id in [k for k, rel in rels.items() if rel.reltype.endswith(THUMBNAIL_REL)]:
+        rels.pop(r_id)
+
+
 def _anonymize_metadata(doc: DocxDocument, matcher: Matcher) -> None:
     props = doc.core_properties
     props.author = ""
@@ -143,6 +168,13 @@ def _anonymize_metadata(doc: DocxDocument, matcher: Matcher) -> None:
                 if etree.QName(el).localname in ("Company", "Manager", "HyperlinkBase"):
                     el.text = ""
             handle.commit()
+    custom = _custom_props(doc)
+    if custom is not None:
+        for el in custom.root.iter(tag=etree.Element):
+            if el.text and el.text.strip():
+                el.text = matcher.replace(el.text)
+        custom.commit()
+    _remove_thumbnail(doc)
 
 
 def _anonymize_links(doc: DocxDocument, matcher: Matcher) -> None:
@@ -168,6 +200,8 @@ def anonymize(src: Path, dst: Path, matcher: Matcher) -> ProcessResult:
         for instr in handle.root.iter(INSTR_T):
             if instr.text:
                 instr.text = matcher.replace(instr.text)
+        for el, attr in _alt_texts(handle.root):
+            el.set(attr, matcher.replace(el.get(attr)))
         _anonymize_authors(handle.root)
         handle.commit()
 
@@ -199,6 +233,11 @@ def extract_text(path: Path) -> str:
             if text.strip():
                 lines.append(text)
         lines.extend(i.text for i in handle.root.iter(INSTR_T) if i.text and i.text.strip())
+        lines.extend(el.get(attr) for el, attr in _alt_texts(handle.root))
+    custom = _custom_props(doc)
+    if custom is not None:
+        lines.extend(el.text for el in custom.root.iter(tag=etree.Element)
+                     if el.text and el.text.strip())  # fmt: skip
     props = doc.core_properties
     lines.extend(
         v for f in ("author", "last_modified_by", *CORE_TEXT_FIELDS) if (v := getattr(props, f))

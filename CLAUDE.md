@@ -30,6 +30,8 @@ Plataformas: **macOS y Windows**. Repo: https://github.com/oriol1424/anonimizado
 3. Los logs **nunca** contienen texto del documento ni nombres detectados.
 4. El fichero de correspondencias (original ↔ sustituto) es un dato personal:
    siempre cifrado y local.
+   Excepción decidida por el usuario (2026-10-11): la *guía de correspondencias* .docx
+   no se cifra y se guarda junto al documento anonimizado (ver DECISIONES).
 5. **Coste cero en licencias**: solo dependencias y modelos gratuitos para uso
    profesional (nada "no comercial", nada de pago). Comprobar la licencia antes de
    añadir algo y anotarla en `docs/LICENCIAS.md`.

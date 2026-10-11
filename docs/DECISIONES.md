@@ -62,3 +62,7 @@
 | 2026-10-11 | Lista «No anonimitzar» (abogados, despacho) como términos `keep` dentro del matcher, no como filtro aparte | Así ocupan su sitio y ninguna variante de otro término los sustituye a medias; sustitución, verificación y guía los respetan sin código extra |
 | 2026-10-11 | De la lista «No anonimitzar» solo se protegen el nombre completo y variantes de 2+ palabras; la lista del caso gana si hay conflicto | Un apellido suelto puede ser de un cliente: ante la duda se anonimiza (regla 7) |
 | 2026-10-11 | La lista «No anonimitzar» se guarda sin cifrar en la configuración del usuario | Son datos del propio despacho (no de clientes) que el bufete quiere justamente mostrar a la IA; nunca sale del equipo |
+| 2026-10-11 | La guía de correspondencias no se cifra y se guarda en la misma carpeta que el documento anonimizado | Decisión del usuario tras la auditoría (excepción a la regla 4) |
+| 2026-10-11 | El nombre del fichero de salida se anonimiza con la misma lista | El nombre llega a la IA junto con el documento |
+| 2026-10-11 | Word: se quitan la miniatura y se anonimizan propiedades personalizadas y texto alternativo; PDF: se trabaja con la página entera (sin recorte) y se quitan los adjuntos | Fugas comprobadas en la auditoría; los adjuntos no se pueden revisar |
+| 2026-10-11 | Apellidos de 2-3 letras (Mas, Pi, Pou) solo como variante tras un tratamiento (Sr., Sra., en, na...) | Solos son palabras corrientes («mas», «pi»); tras un tratamiento son el apellido |
