@@ -102,3 +102,17 @@ def test_without_model_the_app_still_works(demanda_ca: Path, monkeypatch):
     analysis = analyze(demanda_ca, [], CATALAN)
     assert any(n.kind == "ner_unavailable" for n in analysis.notices)
     assert any(s.label == "DNI" for s in analysis.suggestions)
+
+
+@needs_model
+def test_repeated_chunks_are_found_everywhere(monkeypatch):
+    """Los trozos repetidos (cabeceras, pies) se analizan una vez pero se marcan todos."""
+    monkeypatch.setattr(ner, "CHUNK_CHARS", 60)
+    header = "Despatx Casals · Lletrat Jordi Casals i Pons\n"
+    body = "La senyora Laura Fontanals Pujol va signar el contracte.\n"
+    text = (header + body) * 3
+    found = [(e.start, e.text) for e in ner.detect(text)]
+    for k in range(3):
+        offset = k * len(header + body)
+        assert (offset + header.index("Jordi"), "Jordi Casals i Pons") in found
+        assert (offset + len(header) + body.index("Laura"), "Laura Fontanals Pujol") in found

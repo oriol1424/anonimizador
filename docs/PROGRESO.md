@@ -1,7 +1,7 @@
 # Progreso
 
 ## ▶ DÓNDE NOS QUEDAMOS (2026-10-11) — empezar por aquí
-Todo hecho, probado (**243 tests**) y publicado. No hay código a medias.
+Todo hecho, probado (**244 tests**) y publicado. No hay código a medias.
 
 ### Hecho el 2026-10-11 (tarde)
 - `docs/PENDIENTES_BUFETE.md` enlazado desde `CLAUDE.md`.
@@ -15,6 +15,12 @@ Todo hecho, probado (**243 tests**) y publicado. No hay código a medias.
   - El detector sugería **"CASS", "D'ANDORRA", "la Vella"** y "Advocats" como empresas:
     nueva lista `ner.PUBLIC_NAMES` (solo entidad entera) y "advocats" en papeles
     procesales; se quita una " i" suelta al final de un nombre cortado.
+- **Detector de nombres más rápido** (análisis Word 80 págs 23 → 14 s; PDF 23 → 17 s):
+  listas del filtro normalizadas una sola vez, caché en `text._fold_char` (también acelera
+  el matcher: anonimizar PDF 16 → 13 s), trozos en paralelo (`ner.WORKERS` = núcleos,
+  máx. 8, 1 hilo de onnxruntime cada uno) y trozos repetidos analizados una vez.
+  Resultado idéntico al de antes (1.920/1.920 entidades). Probado sin éxito: lotes de
+  varios trozos (no mejora) — el modelo int8 va al límite de la CPU (~0,48 ms/token).
 
 ### Hecho el 2026-10-11
 - **Fuga en escaneados arreglada**: OCR sin clasificador de orientación (`use_cls: False`).
@@ -32,17 +38,21 @@ Todo hecho, probado (**243 tests**) y publicado. No hay código a medias.
   (formatos CASS/residencia/causas Batllia, países de los pasaportes, equipos Windows...).
 
 ### Siguiente (en este orden)
-1. Punto 5 del plan: acelerar el **detector de nombres** (~23 s en un Word de 80 págs).
-2. Puntos 7–12 del plan de abajo (página que falla, botón Cancel·la, progreso por fases,
+1. Puntos 7–12 del plan de abajo (página que falla, botón Cancel·la, progreso por fases,
    que no se duerma el ordenador, buscador de sugerencias, test de documento largo,
    `samefile`).
+2. **Interfaz más profesional y moderna** (petición del usuario, 2026-10-11): que siga
+   siendo simple (una ventana, pocos botones) pero con aspecto cuidado: tipografía,
+   espaciado, colores sobrios, iconos, estados claros (vacío / analizando / listo),
+   tema claro/oscuro del sistema. Encaja con el punto 8 (Cancel·la + progreso por fases)
+   y el 10 (buscador de sugerencias): hacerlos juntos.
 3. Después: empaquetado USB (paso 10) y alternativas sencillas a la IA (9b).
 
 ### Medición (`scripts/bench_documents_grans.py <carpeta> <págs_escaneadas>`)
 | Documento | Análisis | Anonimizar + verificar |
 |---|---|---|
-| Word 80 págs | 23 s | 5 s |
-| PDF texto 80 págs | 23 s | 16 s |
+| Word 80 págs | 14 s (antes 23) | 5 s |
+| PDF texto 80 págs | 17 s (antes 23) | 13 s (antes 16) |
 | PDF escaneado 10 págs | 40 s | 38 s (sin datos sin borrar) |
 
 80 págs escaneadas ≈ 10 min en este PC (i7-1065G7, 4 núcleos). En el Mac M2 probablemente
@@ -74,8 +84,8 @@ menos; falta medirlo allí y probar CoreML.
    pocas letras. Sale en el análisis (antes de anonimizar) y en el resultado. Sin falsas
    alarmas en escaneados limpios; salta en todas las líneas de un escaneado muy malo.
    Arreglado de paso: una **página escaneada en blanco** rompía el proceso.
-5. `ner.py`: precalcular conjuntos, trozos en paralelo, no repetir líneas idénticas
-   (cabeceras/pies de cada página).
+5. [x] `ner.py`: precalcular conjuntos, trozos en paralelo, trozos repetidos una vez
+   (2026-10-11). Pendiente: medir en el Mac M2 (8 núcleos, debería ganar más).
 6. [x] Acelerar escaneados (2026-10-11):
    - `pix.set_rect` iba píxel a píxel desde Python (~2,4 s/pág) → numpy (`ocr.pixels`).
    - Imagen al OCR en memoria (sin PNG).

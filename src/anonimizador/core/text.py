@@ -1,6 +1,7 @@
 """Normalización de texto que conserva las posiciones de cada carácter."""
 
 import unicodedata
+from functools import lru_cache
 
 # Apóstrofos tipográficos (Word los pone solos: d’Orriols) -> apóstrofo simple.
 _APOSTROPHES = {"’": "'", "‘": "'", "ʼ": "'", "´": "'"}
@@ -8,6 +9,7 @@ _APOSTROPHES = {"’": "'", "‘": "'", "ʼ": "'", "´": "'"}
 _MIDDLE_DOTS = {"‧": "·", "⋅": "·", "∙": "·"}
 
 
+@lru_cache(maxsize=4096)
 def _fold_char(char: str) -> str:
     if char in _APOSTROPHES:
         return _APOSTROPHES[char]

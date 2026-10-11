@@ -13,6 +13,7 @@ import os
 import re
 import sys
 import threading
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -22,6 +23,9 @@ MODEL_NAME = "ner-ca"
 CHUNK_CHARS = 1500  # ~400 tokens: por debajo del máximo del modelo (512)
 MAX_TOKENS = 510
 STRIDE = 64
+# Trozos analizados a la vez, cada uno con un solo hilo de onnxruntime. Medido en un i7 de
+# 4 núcleos (2026-10-11): 16,2 s -> 13,2 s en 80 págs; en equipos con más núcleos, más.
+WORKERS = min(8, os.cpu_count() or 1)
 
 # Tipos del modelo -> tipos de la app. LOC (ciudades sueltas) y MISC no se sugieren:
 # las direcciones completas las detectan las reglas.
@@ -72,6 +76,12 @@ LEGAL_ROLES = {
     "fundamentos", "suplico", "supliquem",
 }  # fmt: skip
 ELISIONS = {"d'", "l'"}
+
+# Las mismas listas ya normalizadas: se calculan una vez, no en cada entidad.
+_HONORIFICS = frozenset(fold(h).rstrip("'") for h in HONORIFICS)
+_HONORIFICS_FULL = frozenset(fold(h) for h in HONORIFICS)
+_PUBLIC_BODIES = tuple(fold(p) for p in PUBLIC_BODIES)
+_PUBLIC_NAMES = frozenset(fold(n) for n in PUBLIC_NAMES)
 _APOSTROPHES = str.maketrans({"’": "'", "‘": "'", "ʼ": "'"})
 
 
@@ -107,8 +117,10 @@ class _Model:
         import onnxruntime
         from tokenizers import Tokenizer
 
+        options = onnxruntime.SessionOptions()
+        options.intra_op_num_threads = 1 if WORKERS > 1 else 0  # el paralelismo va por trozos
         self.session = onnxruntime.InferenceSession(
-            str(folder / "model.onnx"), providers=["CPUExecutionProvider"]
+            str(folder / "model.onnx"), options, providers=["CPUExecutionProvider"]
         )
         self.inputs = {i.name for i in self.session.get_inputs()}
         self.tokenizer = Tokenizer.from_file(str(folder / "tokenizer.json"))
@@ -190,22 +202,23 @@ def _clean(text: str, start: int, end: int, label: str) -> Entity | None:
     span = text[start:end]
     while True:
         m = re.match(r"\s*([\w']+)\.?\s+", span)
-        if m and fold(m.group(1)).rstrip("'") in {fold(h).rstrip("'") for h in HONORIFICS}:
+        if m and fold(m.group(1)).rstrip("'") in _HONORIFICS:
             start += m.end()
             span = text[start:end]
             continue
         break
     span = re.sub(r"\s+[iy]$", "", span.rstrip(" .,;:"))  # "Jordi Casals i" (cortado)
     end = start + len(span)
-    if len(span) < 2 or fold(span) in {fold(h) for h in HONORIFICS}:
+    folded = fold(span)
+    if len(span) < 2 or folded in _HONORIFICS_FULL:
         return None
     if not any(c.isupper() for c in span):
         return None  # "el jutge", "deutor"...
-    if label == "EMPRESA" and fold(span).startswith(tuple(fold(p) for p in PUBLIC_BODIES)):
+    if label == "EMPRESA" and folded.startswith(_PUBLIC_BODIES):
         return None
-    if fold(span) in {fold(n) for n in PUBLIC_NAMES}:
+    if folded in _PUBLIC_NAMES:
         return None
-    if fold(span) in LEGAL_ROLES:
+    if folded in LEGAL_ROLES:
         return None  # "Demandat" en una celda de tabla, "ACTORA"...
     return Entity(start, end, span, label)
 
@@ -235,9 +248,14 @@ def detect(text: str) -> list[Entity]:
     # Mismo largo que el original: los offsets siguen sirviendo. Word usa ’ y el modelo
     # se entrenó con '.
     normalized = text.translate(_APOSTROPHES)
+    chunks = _chunks(normalized)
+    # Trozos repetidos (cabeceras, pies, cláusulas tipo) se analizan una sola vez.
+    unique = list(dict.fromkeys(chunk for _, chunk in chunks))
+    with ThreadPoolExecutor(max(1, min(WORKERS, len(unique)))) as pool:
+        predictions = dict(zip(unique, pool.map(model.predict, unique), strict=True))
     entities: list[Entity] = []
-    for offset, chunk in _chunks(normalized):
-        spans = _join_elisions(model.predict(chunk), chunk)
+    for offset, chunk in chunks:
+        spans = _join_elisions(predictions[chunk], chunk)
         for start, end, kind in spans:
             if kind not in LABELS:
                 continue

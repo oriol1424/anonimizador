@@ -49,3 +49,4 @@
 | 2026-10-11 | Organismos andorranos en el filtro del detector, sin prefijos cortos ("comú d", no "comú") | El filtro compara el inicio sin acentos: "comú" descartaría "Comunicacions... SL" |
 | 2026-10-11 | PDF: las ligaduras ("ﬁ", "ﬂ") se separan en letras al leer el texto (sin `TEXT_PRESERVE_LIGATURES`) | Con ligaduras "Oﬁcial" o "Griﬃn" no coincidían con la lista ni con los filtros; la 1ª letra se queda la caja del glifo y el borrado lo cubre entero |
 | 2026-10-11 | Lista aparte de nombres públicos que solo se descartan si son la entidad entera (CASS, BOPA, Andorra, parroquias) | Como prefijo quitarían empresas reales ("Cassany SL"); el modelo tomaba "CASS" o "la Vella" por empresas |
+| 2026-10-11 | Detector de nombres: trozos en paralelo (hilos = núcleos, máx. 8) con 1 hilo de onnxruntime por trozo, en vez de un trozo cada vez con todos los hilos | Medido 16,2 → 13,2 s en 4 núcleos; los lotes no mejoran. Mismo resultado exacto |
