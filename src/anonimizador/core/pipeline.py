@@ -61,14 +61,23 @@ class AnonymizerError(ValueError):
 
 @dataclass(frozen=True)
 class Notice:
-    """Aviso para el usuario: "ambiguous", "leftovers", "images" u "ocr"."""
+    """Aviso para el usuario: "ambiguous", "leftovers", "leftovers_scan", "images" u "ocr"."""
 
     kind: str
     detail: str = ""
     count: int = 0
+    pages: str = ""  # páginas afectadas ("3, 12"), si se conocen
+
+    @property
+    def is_leak(self) -> bool:
+        """Quedan datos sin borrar: el aviso debe destacarse."""
+        return self.kind in ("leftovers", "leftovers_scan")
 
     def message(self, language: Language) -> str:
-        return tr(language.code, f"notice_{self.kind}", detail=self.detail, count=self.count)
+        return tr(
+            language.code, f"notice_{self.kind}",
+            detail=self.detail, count=self.count, pages=self.pages,
+        )  # fmt: skip
 
 
 @dataclass
@@ -250,7 +259,12 @@ def anonymize(
     try:
         with _friendly_errors():
             result = backend.anonymize(src, work, matcher, progress)
-            leftovers = matcher.find(backend.extract_text(work, progress))
+            if backend is pdf_io:
+                # Las páginas imagen ya se verificaron con OCR al anonimizarlas: aquí se
+                # revisa su capa de texto y el resto del documento.
+                leftovers = matcher.find(pdf_io.extract_text(work, use_ocr=False))
+            else:
+                leftovers = matcher.find(backend.extract_text(work, progress))
             if work != dst:
                 text = (
                     pdf_io.anonymized_text(src, matcher, progress)
@@ -263,6 +277,16 @@ def anonymize(
             work.unlink(missing_ok=True)
 
     notices: list[Notice] = []
+    if result.scan_leftovers:
+        pages = sorted({page for page, _ in result.scan_leftovers})
+        notices.append(
+            Notice(
+                "leftovers_scan",
+                detail=", ".join(sorted({m.text for _, m in result.scan_leftovers})),
+                count=len(result.scan_leftovers),
+                pages=", ".join(map(str, pages)),
+            )
+        )
     if result.scanned_pages:
         notices.append(Notice("ocr", count=result.scanned_pages))
     if leftovers:

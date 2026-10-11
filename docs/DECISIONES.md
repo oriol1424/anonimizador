@@ -37,3 +37,7 @@
 | 2026-10-10 | "i"/"y" entre apellidos opcional; `·` forma parte de la palabra; `’` = `'` | Particularidades de los nombres catalanes y del autocorrector de Word |
 | 2026-10-10 | LLM local aplazado (opcional a futuro); en su lugar historial de nombres anonimizados + revisión final resaltada | OCR y NER ya cubren lo importante; el LLM cuesta 2–5 GB, mucha memoria, minutos por documento y no es determinista |
 | 2026-10-10 | El original nunca se modifica: siempre se escribe un fichero nuevo | Seguridad: no perder el documento original |
+| 2026-10-11 | OCR sin clasificador de orientación (`Global.use_cls: False`) | Giraba 180° líneas correctas y las leía mal: un nombre + DNI quedaban sin borrar |
+| 2026-10-11 | Páginas escaneadas: verificar con OCR dentro de `anonymize` y volver a borrar lo encontrado (máx. 2 vueltas); si aún queda algo, aviso destacado con nº de página | Corregir en vez de solo avisar; el aviso indica dónde mirar |
+| 2026-10-11 | No se repite el OCR de páginas escaneadas sin datos ni en la verificación final (se revisa su capa de texto) | La imagen no cambia: otro OCR no aporta y duplica el tiempo |
+| 2026-10-11 | Equipo de referencia: MacBook Air 2022, M2, 8 GB RAM; debe funcionar en otros equipos | Es el equipo del bufete; puede cambiar |

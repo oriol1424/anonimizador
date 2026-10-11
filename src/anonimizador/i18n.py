@@ -101,6 +101,14 @@ STRINGS: dict[str, dict[str, str]] = {
         "es": "Verificación: quedan {count} apariciones sin sustituir ({detail}). "
         "Revisa el documento.",
     },
+    "notice_leftovers_scan": {
+        "ca": "ATENCIÓ: a les pàgines escanejades {pages} encara es llegeixen {count} dades "
+        "que no s'han pogut esborrar ({detail}). Revisa aquestes pàgines abans de fer "
+        "servir el document.",
+        "es": "ATENCIÓN: en las páginas escaneadas {pages} todavía se leen {count} datos "
+        "que no se han podido borrar ({detail}). Revisa esas páginas antes de usar el "
+        "documento.",
+    },
     "notice_images": {
         "ca": "El document conté {count} imatges o objectes incrustats. El seu contingut no "
         "s'anonimitza: revisa'ls manualment.",

@@ -1,9 +1,8 @@
 # Progreso
 
-## ▶ DÓNDE NOS QUEDAMOS (2026-10-10) — empezar por aquí
+## ▶ DÓNDE NOS QUEDAMOS (2026-10-11) — empezar por aquí
 Estábamos haciendo **robustez con documentos largos (80+ páginas)**. Todo lo anterior está
-hecho, probado (141 tests) y publicado. No hay código a medias: lo de abajo es lo medido
-y el plan, aún SIN implementar.
+hecho, probado (143 tests) y publicado. Hechos los puntos 1–3 del plan; sigue el 4.
 
 ### Medición (`scripts/bench_documents_grans.py <carpeta> <págs_escaneadas>`)
 | Documento | Análisis | Anonimizar + verificar | Problema |
@@ -11,6 +10,10 @@ y el plan, aún SIN implementar.
 | Word 80 págs | 39 s | 6,5 s | detector de nombres lento |
 | PDF texto 80 págs | 43 s | 34 s | ídem |
 | PDF escaneado 10 págs | 74 s | 178 s | ~35 min a 80 págs **y quedó un nombre sin borrar** |
+
+Tras los puntos 1–3 (2026-10-11): Word 30 s / 6,9 s; PDF texto 31 s / 35 s; escaneado
+10 págs 52 s / **149 s y sin datos sin borrar**. En el bench todas las páginas tienen datos,
+así que la verificación sigue haciéndose en todas; el ahorro grande vendrá del punto 6.
 
 ### Causas encontradas
 1. **Fuga en escaneados (GRAVE):** el OCR leyó mal una línea entera ("2 a 02s") porque el
@@ -27,11 +30,11 @@ y el plan, aún SIN implementar.
 ### Plan para la próxima sesión (en este orden)
 1. [x] `ocr.py`: `Global.use_cls: False` + test (`tests/test_ocr.py`, párrafo 24 del bench
    que antes perdía nombre + DNI). Hecho 2026-10-11.
-2. **Verificación que se autocorrige** en escaneados: si el OCR de la página resultante
-   encuentra datos, borrar esas cajas en la imagen de salida y volver a verificar
-   (máx. 2 vueltas). Si aún quedan → aviso destacado con nº de página.
-3. Verificar solo las páginas escaneadas que han cambiado (las que no tenían datos quedan
-   idénticas: un 2º OCR no aporta) → casi la mitad de tiempo.
+2. [x] **Verificación que se autocorrige** en escaneados (`pdf_io._anonymize_image_page`):
+   OCR de la página rehecha, se borra lo encontrado y se repite (máx. 2 vueltas); si aún
+   queda algo → aviso `leftovers_scan` con nº de página, primero y con icono de error.
+3. [x] Las páginas escaneadas sin datos no se vuelven a pasar por OCR; la verificación
+   final del pipeline ya no repite el OCR (revisa la capa de texto invisible).
 4. Aviso de **líneas con baja confianza del OCR** (score bajo / texto raro) con nº de página.
 5. `ner.py`: precalcular conjuntos, trozos en paralelo, no repetir líneas idénticas
    (cabeceras/pies de cada página).
@@ -83,8 +86,9 @@ python -m venv .venv
 ```
 
 ## Pendiente de confirmar con el bufete
-- [~] Mac del bufete: **Apple M2** (arm64, Metal). Falta saber la RAM (8/16/24 GB) y los
-      PCs Windows. Build de Mac: runner `macos-14` (Apple Silicon) en GitHub Actions.
+- [x] Mac del bufete: **MacBook Air 2022, Apple M2, 8 GB RAM** (arm64, Metal). Equipo de
+      referencia que tiene que funcionar sí o sí; debe ir también en otros equipos.
+- [ ] PCs Windows del bufete (modelo/RAM). Build de Mac: runner `macos-14` (Apple Silicon) en GitHub Actions.
 - [x] Presupuesto: **coste cero** → sin firma de código (en Mac: clic derecho → Abrir la
       primera vez; en Windows: "Más información → Ejecutar igualmente"). PyMuPDF bajo AGPL.
 - [ ] Tipos de documento habituales para ampliar el corpus sintético (en catalán).

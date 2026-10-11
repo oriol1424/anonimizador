@@ -159,3 +159,53 @@ def test_encrypted_pdf_gives_clear_error(demanda_pdf, tmp_path):
     with pytest.raises(AnonymizerError) as err:
         analyze(locked, USER_TERMS)
     assert err.value.kind == "encrypted"
+
+
+def _misread_first_ocr(monkeypatch):
+    """El primer OCR lee mal la línea de la firma (como pasaba con el clasificador de
+    orientación); los siguientes OCR la leen bien."""
+    real = ocr.recognize
+    calls = []
+
+    def fake(pix):
+        page = real(pix)
+        calls.append(1)
+        if len(calls) > 1:
+            return page
+        garbled = tuple(
+            tuple(ocr.OcrWord(w.text.replace("u", "v").replace("e", "c"), w.rect) for w in line)
+            if any(w.text.startswith("Signat") for w in line)
+            else line
+            for line in page.lines
+        )
+        return ocr.OcrPage(garbled)
+
+    monkeypatch.setattr(ocr, "recognize", fake)
+
+
+def test_scanned_verification_fixes_what_first_ocr_missed(demanda_pdf, tmp_path, monkeypatch):
+    _misread_first_ocr(monkeypatch)
+    out = tmp_path / "sortida.pdf"
+    report = anonymize(demanda_pdf, out, USER_TERMS)
+    monkeypatch.undo()
+    ocr_text, _ = ocr.recognize(ocr.render(pymupdf.open(str(out))[1])).text_and_boxes()
+    assert "Signat" in ocr_text
+    assert "Puig" not in ocr_text and "Ferrer" not in ocr_text
+    assert not [n for n in report.notices if n.is_leak]
+
+
+def test_scanned_leftovers_are_reported_with_page(demanda_pdf, tmp_path, monkeypatch):
+    _misread_first_ocr(monkeypatch)
+    real_erase = pdf_io._erase
+    erase_calls = []
+
+    def erase_only_first(pix, boxes, matches):
+        erase_calls.append(1)
+        return real_erase(pix, boxes, matches) if len(erase_calls) == 1 else []
+
+    monkeypatch.setattr(pdf_io, "_erase", erase_only_first)
+    report = anonymize(demanda_pdf, tmp_path / "sortida.pdf", USER_TERMS)
+    leak = next(n for n in report.notices if n.kind == "leftovers_scan")
+    assert leak.pages == "2"
+    assert "pàgines escanejades 2" in leak.message(CATALAN)
+    assert len(erase_calls) == 1 + pdf_io.MAX_FIX_ROUNDS

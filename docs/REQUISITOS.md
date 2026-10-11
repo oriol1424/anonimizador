@@ -48,4 +48,9 @@ Nada más: sin menús complejos ni configuración visible.
 ## No funcionales
 - 100% offline.
 - Objetivo: funcionar con 8 GB de RAM sin GPU; en Mac Apple Silicon usar Metal.
+- **Equipo de referencia obligatorio**: MacBook Air 2022, chip Apple M2, **8 GB de RAM**
+  (macOS, arm64). Tiene que funcionar sí o sí en él: es el límite para memoria y tiempos
+  (las mediciones y pruebas de USB deben hacerse pensando en este equipo).
+- Debe funcionar también en otros equipos (otros Mac Apple Silicon/Intel y PCs Windows)
+  por si el bufete cambia de ordenador: nada atado a este modelo concreto.
 - Paquete portable para cada sistema (carpeta / .app en USB).

@@ -423,9 +423,11 @@ class MainWindow(QMainWindow):
         if report.guide:
             text += "\n\n" + tr(lang, "guide_saved", path=report.guide)
         if report.notices:
-            box.setIcon(QMessageBox.Icon.Warning)
+            leak = any(n.is_leak for n in report.notices)
+            box.setIcon(QMessageBox.Icon.Critical if leak else QMessageBox.Icon.Warning)
+            notices = sorted(report.notices, key=lambda n: not n.is_leak)  # fugas primero
             text += f"\n\n{tr(lang, 'warnings')}:\n" + "\n".join(
-                f"• {n.message(self.language)}" for n in report.notices
+                f"• {n.message(self.language)}" for n in notices
             )
         else:
             box.setIcon(QMessageBox.Icon.Information)

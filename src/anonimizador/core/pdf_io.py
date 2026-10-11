@@ -28,6 +28,7 @@ MIN_HORIZONTAL_SCALE = 0.55  # por debajo, además de estrechar se reduce el tam
 MIN_FONT_SIZE = 5.0
 PIXEL_PADDING = 3  # margen al borrar píxeles alrededor de cada dato
 JPEG_QUALITY = 80
+MAX_FIX_ROUNDS = 2  # vueltas de "verificar y volver a borrar" en páginas imagen
 
 Progress = Callable[[int, int], None]  # (páginas leídas con OCR, total)
 
@@ -205,30 +206,38 @@ def _lines_with_replacements(text: str, matches: list[Match]) -> list[str]:
     return lines
 
 
-def _anonymize_image_page(page: pymupdf.Page, matcher: Matcher) -> list[Match]:
-    if page.rotation:
-        page.remove_rotation()
-    pix = ocr.render(page)
-    result = ocr.recognize(pix)
-    text, boxes = result.text_and_boxes()
-    matches = matcher.find(text)
-    to_points = pymupdf.Matrix(72 / ocr.OCR_DPI, 72 / ocr.OCR_DPI)
+def _pad(rect: pymupdf.Rect) -> pymupdf.Rect:
+    return pymupdf.Rect(rect.x0 - PIXEL_PADDING, rect.y0 - PIXEL_PADDING,
+                        rect.x1 + PIXEL_PADDING, rect.y1 + PIXEL_PADDING)  # fmt: skip
 
+
+def _erase(
+    pix: pymupdf.Pixmap, boxes: list[tuple[pymupdf.Rect, int] | None], matches: list[Match]
+) -> list[_Replacement]:
+    """Pinta de blanco los píxeles de cada dato y devuelve dónde escribir su alias."""
+    to_points = pymupdf.Matrix(72 / ocr.OCR_DPI, 72 / ocr.OCR_DPI)
     aliases: list[_Replacement] = []
     for match in matches:
         rects = _rects_by_line(boxes[match.start : match.end])
         if not rects:
             continue
         for rect in rects:
-            pad = pymupdf.Rect(rect.x0 - PIXEL_PADDING, rect.y0 - PIXEL_PADDING,
-                               rect.x1 + PIXEL_PADDING, rect.y1 + PIXEL_PADDING)  # fmt: skip
-            pix.set_rect((pad & pymupdf.Rect(pix.irect)).irect, (255, 255, 255))
+            pix.set_rect((_pad(rect) & pymupdf.Rect(pix.irect)).irect, (255, 255, 255))
         first = rects[0] * to_points
         origin = (first.x0, first.y1 - first.height * 0.2)
         aliases.append(
             _Replacement([first], origin, first.height * 0.75, first.width, match.replacement)
         )
+    return aliases
 
+
+def _rebuild_image_page(
+    page: pymupdf.Page,
+    pix: pymupdf.Pixmap,
+    aliases: list[_Replacement],
+    result: ocr.OcrPage,
+    line_texts: list[str],
+) -> None:
     # Se vacía la página por completo (texto, imágenes y dibujos originales)...
     page.add_redact_annot(page.rect)
     page.apply_redactions(
@@ -240,9 +249,8 @@ def _anonymize_image_page(page: pymupdf.Page, matcher: Matcher) -> list[Match]:
     page.insert_image(page.rect, stream=pix.tobytes("jpeg", jpg_quality=JPEG_QUALITY))
     for alias in aliases:
         _write_text(page, alias.text, alias.origin, alias.size, alias.width)
-    for words, line_text in zip(
-        result.lines, _lines_with_replacements(text, matches), strict=False
-    ):
+    to_points = pymupdf.Matrix(72 / ocr.OCR_DPI, 72 / ocr.OCR_DPI)
+    for words, line_text in zip(result.lines, line_texts, strict=False):
         if not line_text.strip():
             continue
         rect = pymupdf.Rect(words[0].rect)
@@ -251,11 +259,45 @@ def _anonymize_image_page(page: pymupdf.Page, matcher: Matcher) -> list[Match]:
         rect = rect * to_points
         origin = (rect.x0, rect.y1 - rect.height * 0.2)
         _write_text(page, line_text, origin, rect.height * 0.75, rect.width, invisible=True)
-    return matches
 
 
-def _page_text(page: pymupdf.Page, counter: _OcrCounter) -> str:
-    if is_image_page(page):
+def _anonymize_image_page(page: pymupdf.Page, matcher: Matcher) -> tuple[list[Match], list[Match]]:
+    """Anonimiza una página imagen y la verifica con un nuevo OCR.
+
+    Si el OCR de la página resultante aún encuentra datos (p. ej. el primer OCR leyó mal
+    una línea), se borran también en la imagen y se vuelve a verificar, hasta
+    `MAX_FIX_ROUNDS` veces. Devuelve (sustituciones hechas, datos que siguen visibles).
+    Las páginas sin datos no se verifican: su imagen no cambia y otro OCR no aportaría.
+    """
+    if page.rotation:
+        page.remove_rotation()
+    pix = ocr.render(page)
+    result = ocr.recognize(pix)
+    text, boxes = result.text_and_boxes()
+    matches = matcher.find(text)
+    aliases = _erase(pix, boxes, matches)
+    line_texts = _lines_with_replacements(text, matches)
+    _rebuild_image_page(page, pix, aliases, result, line_texts)
+    if not matches:
+        return [], []
+
+    done = list(matches)
+    for _ in range(MAX_FIX_ROUNDS):
+        check_text, check_boxes = ocr.recognize(ocr.render(page)).text_and_boxes()
+        leftovers = matcher.find(check_text)
+        if not leftovers:
+            return done, []
+        aliases += _erase(pix, check_boxes, leftovers)
+        done += leftovers
+        _rebuild_image_page(page, pix, aliases, result, line_texts)
+    check_text, _ = ocr.recognize(ocr.render(page)).text_and_boxes()
+    return done, matcher.find(check_text)
+
+
+def _page_text(page: pymupdf.Page, counter: _OcrCounter | None) -> str:
+    """Texto de la página; las páginas imagen se leen con OCR salvo si `counter` es None
+    (entonces se devuelve su capa de texto, p. ej. la invisible ya anonimizada)."""
+    if counter is not None and is_image_page(page):
         text, _ = ocr.recognize(ocr.render(page)).text_and_boxes()
         counter.tick()
         return text
@@ -310,13 +352,16 @@ def anonymize(
 ) -> ProcessResult:
     doc = _open(src)
     all_matches: list[Match] = []
+    leftovers: list[tuple[int, Match]] = []
     images = doc.embfile_count()
     try:
         counter = _OcrCounter(doc, progress)
         for page in doc:
             _anonymize_page_extras(page, matcher)
             if is_image_page(page):
-                all_matches.extend(_anonymize_image_page(page, matcher))
+                done, remaining = _anonymize_image_page(page, matcher)
+                all_matches.extend(done)
+                leftovers.extend((page.number + 1, m) for m in remaining)
                 counter.tick()
             else:
                 images += len(page.get_images(full=True))
@@ -326,18 +371,19 @@ def anonymize(
         doc.save(str(dst), garbage=4, deflate=True, clean=True)
     finally:
         doc.close()
-    return ProcessResult(all_matches, images, counter.total)
+    return ProcessResult(all_matches, images, counter.total, leftovers)
 
 
-def extract_text(path: Path, progress: Progress | None = None) -> str:
+def extract_text(path: Path, progress: Progress | None = None, use_ocr: bool = True) -> str:
     """Todo el texto susceptible de contener datos (páginas, metadatos, notas, enlaces...).
 
-    Las páginas imagen se leen con OCR: así también se verifica el resultado final.
+    Las páginas imagen se leen con OCR. Con `use_ocr=False` se toma su capa de texto: lo
+    usa la verificación final, porque `anonymize` ya verificó su imagen con OCR.
     """
     doc = _open(path)
     lines: list[str] = []
     try:
-        counter = _OcrCounter(doc, progress)
+        counter = _OcrCounter(doc, progress) if use_ocr else None
         for page in doc:
             lines.append(_page_text(page, counter))
             for annot in page.annots():
