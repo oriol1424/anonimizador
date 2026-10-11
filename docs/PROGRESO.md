@@ -2,7 +2,7 @@
 
 ## ▶ DÓNDE NOS QUEDAMOS (2026-10-10) — empezar por aquí
 Estábamos haciendo **robustez con documentos largos (80+ páginas)**. Todo lo anterior está
-hecho, probado (140 tests) y publicado. No hay código a medias: lo de abajo es lo medido
+hecho, probado (141 tests) y publicado. No hay código a medias: lo de abajo es lo medido
 y el plan, aún SIN implementar.
 
 ### Medición (`scripts/bench_documents_grans.py <carpeta> <págs_escaneadas>`)
@@ -25,7 +25,8 @@ y el plan, aún SIN implementar.
    (pendiente de perfilar: sospechosos `pix.set_rect`, capa invisible `insert_text`, JPEG).
 
 ### Plan para la próxima sesión (en este orden)
-1. `ocr.py`: `Global.use_cls: False` + test con una línea que antes fallaba.
+1. [x] `ocr.py`: `Global.use_cls: False` + test (`tests/test_ocr.py`, párrafo 24 del bench
+   que antes perdía nombre + DNI). Hecho 2026-10-11.
 2. **Verificación que se autocorrige** en escaneados: si el OCR de la página resultante
    encuentra datos, borrar esas cajas en la imagen de salida y volver a verificar
    (máx. 2 vueltas). Si aún quedan → aviso destacado con nº de página.

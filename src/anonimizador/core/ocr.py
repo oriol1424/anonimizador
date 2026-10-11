@@ -61,7 +61,16 @@ def _get_engine():
     if _engine is None:
         from rapidocr import RapidOCR  # import diferido: tarda en cargar
 
-        _engine = RapidOCR(params={"Global.log_level": "warning", "Global.return_word_box": True})
+        _engine = RapidOCR(
+            params={
+                "Global.log_level": "warning",
+                "Global.return_word_box": True,
+                # El clasificador de orientación giraba 180° líneas correctas y las leía
+                # mal ("2 a 02s"): un nombre quedaba sin borrar. Las páginas giradas ya se
+                # corrigen con /Rotate, así que no aporta nada.
+                "Global.use_cls": False,
+            }
+        )
     return _engine
 
 
