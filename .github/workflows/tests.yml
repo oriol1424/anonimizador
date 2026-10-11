@@ -1,0 +1,32 @@
+# Tests en Windows y macOS (Apple Silicon) en cada cambio.
+# Sin el modelo de nombres (no está en git): sus tests se saltan; el resto se ejecuta entero.
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-14]
+    runs-on: ${{ matrix.os }}
+    env:
+      QT_QPA_PLATFORM: offscreen
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Instal·lar
+        run: python -m pip install -e ".[dev]"
+      - name: Estil
+        run: |
+          ruff check src tests
+          ruff format --check src tests
+      - name: Tests
+        run: python -m pytest -q

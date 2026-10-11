@@ -21,7 +21,7 @@ from pathlib import Path
 
 import pymupdf
 
-from anonimizador.core import ocr
+from anonimizador.core import images, ocr
 from anonimizador.core.matcher import Match, Matcher
 from anonimizador.core.progress import PageProgress, Steps
 from anonimizador.core.result import ProcessResult
@@ -187,6 +187,74 @@ def _write_text(
         origin, text, fontsize=size, fontname="helv", render_mode=3 if invisible else 0,
         morph=(origin, pymupdf.Matrix(scale, 1)),
     )  # fmt: skip
+
+
+def _page_images(page: pymupdf.Page):
+    """Imágenes de una página con texto que vale la pena leer: (pixmap, colocaciones)."""
+    for xref in dict.fromkeys(info[0] for info in page.get_images(full=True)):
+        try:
+            pix = images.rgb(pymupdf.Pixmap(page.parent, xref))
+        except Exception:  # noqa: BLE001 - imagen dañada o en un formato raro
+            continue
+        rects = [r for r in page.get_image_rects(xref) if not r.is_empty]
+        if rects and images.worth_reading(pix):
+            yield pix, rects
+
+
+def _anonymize_page_images(page: pymupdf.Page, matcher: Matcher):
+    """Datos dentro de imágenes de una página con texto (un DNI pegado, un sello): se
+    borran los píxeles de esa zona, se escribe el alias y se verifica con otro OCR.
+
+    Devuelve (sustituciones, datos que aún se leen, imágenes leídas)."""
+    matches: list[Match] = []
+    plans: list[_Replacement] = []
+    checked: list[pymupdf.Rect] = []
+    read = 0
+    for pix, placements in list(_page_images(page)):
+        read += 1
+        work = images.for_ocr(pix)
+        text, boxes = images.read(work)
+        found = matcher.find(text)
+        if not found:
+            continue
+        matches += found
+        for placement in placements:
+            sx, sy = placement.width / work.width, placement.height / work.height
+            checked.append(placement)
+            for match in found:
+                rects = []
+                for box in images.rects_by_line(boxes[match.start : match.end]):
+                    rect = pymupdf.Rect(
+                        placement.x0 + box.x0 * sx,
+                        placement.y0 + box.y0 * sy,
+                        placement.x0 + box.x1 * sx,
+                        placement.y0 + box.y1 * sy,
+                    )
+                    rects.append(rect)
+                    page.add_redact_annot(_pad_points(rect), fill=(1, 1, 1))
+                if rects:
+                    first = rects[0]
+                    origin = (first.x0, first.y1 - first.height * 0.2)
+                    plans.append(_Replacement([first], origin, first.height * 0.75,
+                                              first.width, match.replacement))  # fmt: skip
+    if not plans:
+        return [], [], read
+    page.apply_redactions(
+        images=pymupdf.PDF_REDACT_IMAGE_PIXELS,
+        graphics=pymupdf.PDF_REDACT_LINE_ART_NONE,
+        text=pymupdf.PDF_REDACT_TEXT_NONE,  # el texto de la página ya se trató aparte
+    )
+    for plan in plans:
+        _write_text(page, plan.text, plan.origin, plan.size, plan.width)
+    leftovers: list[Match] = []
+    for placement in checked:  # verificación: se vuelve a leer la zona ya borrada
+        pix = page.get_pixmap(dpi=ocr.OCR_DPI, clip=placement, alpha=False)
+        leftovers += matcher.find(images.read(pix)[0])
+    return matches, leftovers, read
+
+
+def _pad_points(rect: pymupdf.Rect) -> pymupdf.Rect:
+    return pymupdf.Rect(rect.x0 - 1, rect.y0 - 1, rect.x1 + 1, rect.y1 + 1)
 
 
 def _anonymize_text_page(page: pymupdf.Page, matcher: Matcher) -> list[Match]:
@@ -468,6 +536,8 @@ def anonymize(
     doubts: dict[int, int] = {}
     failed: set[int] = set()
     images = 0
+    images_ocr = 0
+    image_leftovers: list[Match] = []
     attachments = _remove_attachments(doc)
     try:
         steps = Steps(progress, doc.page_count)
@@ -500,9 +570,11 @@ def anonymize(
                     if state is not None:
                         checks.append(state)
                 else:
-                    page_images = len(page.get_images(full=True))
                     all_matches.extend(_anonymize_text_page(page, matcher))
-                    images += page_images
+                    found, remaining, read = _anonymize_page_images(page, matcher)
+                    all_matches.extend(found)
+                    image_leftovers.extend(remaining)
+                    images_ocr += read
             except Exception:  # noqa: BLE001 - cualquier fallo de una página
                 fail(number)
             while len(checks) > ocr.WORKERS:
@@ -515,7 +587,10 @@ def anonymize(
         doc.save(str(dst), garbage=4, deflate=True, clean=True)
     finally:
         doc.close()
-    return ProcessResult(all_matches, images, scanned, leftovers, doubts, failed, attachments)
+    return ProcessResult(
+        all_matches, images, scanned, leftovers, doubts, failed, attachments, images_ocr,
+        image_leftovers,
+    )  # fmt: skip
 
 
 def extract_text(
@@ -562,6 +637,8 @@ def _page_lines(
     if prefetch:
         prefetch.upto(page.number)
     lines = [_page_text(page, use_ocr, doubts)]
+    if use_ocr and not is_image_page(page):
+        lines += [images.read(images.for_ocr(pix))[0] for pix, _ in _page_images(page)]
     for annot in page.annots():
         lines.extend(v for v in (annot.info.get("content"), annot.info.get("title")) if v)
     lines.extend(w.field_value for w in page.widgets() if isinstance(w.field_value, str))

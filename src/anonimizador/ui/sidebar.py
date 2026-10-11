@@ -52,6 +52,7 @@ class Sidebar(QFrame):
         on_step: Callable[[int], None],
         on_language: Callable[[str], None],
         on_keep: Callable[[], None],
+        on_about: Callable[[], None] = lambda: None,
     ):
         super().__init__()
         self.setObjectName("sidebar")
@@ -95,6 +96,17 @@ class Sidebar(QFrame):
         self.keep_button.setStyleSheet("text-align: left; padding-left: 10px;")
         self.keep_button.clicked.connect(on_keep)
         layout.addWidget(self.keep_button)
+        self.about_button = button("", "flat")
+        self.about_button.setIcon(style.icon("info", style.SUBTLE, 18))
+        self.about_button.setStyleSheet("text-align: left; padding-left: 10px;")
+        self.about_button.clicked.connect(on_about)
+        index = layout.indexOf(self.keep_button)
+        layout.removeWidget(self.keep_button)
+        links = QVBoxLayout()
+        links.setSpacing(2)
+        links.addWidget(self.keep_button)
+        links.addWidget(self.about_button)
+        layout.insertLayout(index, links)
 
         self.language = Segmented([(lang.name, code) for code, lang in LANGUAGES.items()],
                                   on_language)  # fmt: skip
@@ -113,6 +125,7 @@ class Sidebar(QFrame):
         for key, b in zip(STEPS, self.steps, strict=True):
             b.text_label.setText(tr(lang, key))
         self.local_badge.setText(tr(lang, "local_badge"))
+        self.about_button.setText(tr(lang, "about_button"))
 
     def set_file(self, name: str) -> None:
         metrics = self.file_name.fontMetrics()

@@ -15,7 +15,9 @@ from docx.document import Document as DocxDocument
 from docx.opc.part import Part, XmlPart
 from lxml import etree
 
+from anonimizador.core import images
 from anonimizador.core.matcher import Match, Matcher
+from anonimizador.core.progress import PageProgress, Steps
 from anonimizador.core.result import ProcessResult
 
 W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
@@ -259,7 +261,38 @@ def _anonymize_links(doc: DocxDocument, matcher: Matcher) -> None:
                     rel._target = new_target
 
 
-def anonymize(src: Path, dst: Path, matcher: Matcher) -> ProcessResult:
+def _media(doc: DocxDocument) -> list[Part]:
+    return [p for p in doc.part.package.iter_parts() if str(p.partname).startswith("/word/media/")]
+
+
+def _anonymize_images(doc: DocxDocument, matcher: Matcher, progress: PageProgress | None):
+    """Imágenes del documento (fotos de DNI, escaneados pegados): OCR y borrado.
+
+    Devuelve (sustituciones, datos que aún se leen, imágenes leídas, imágenes ilegibles)."""
+    matches: list[Match] = []
+    leftovers: list[Match] = []
+    read = unreadable = 0
+    media = _media(doc)
+    steps = Steps(progress, len(media))
+    for part in media:
+        pix = images.load(part.blob)
+        if pix is None:
+            unreadable += 1  # EMF, WMF, SVG...: no se puede leer
+        elif images.worth_reading(pix):
+            read += 1
+            result = images.anonymize(part.blob, part.partname.ext, matcher)
+            if result.data is not None:
+                part._blob = result.data
+            matches += result.matches
+            leftovers += result.leftovers
+        steps.tick()
+    return matches, leftovers, read, unreadable
+
+
+def anonymize(
+    src: Path, dst: Path, matcher: Matcher, progress: PageProgress | None = None
+) -> ProcessResult:
+    """`progress` cuenta las imágenes leídas con OCR (lo único lento)."""
     doc = Document(str(src))
     all_matches: list[Match] = []
 
@@ -288,24 +321,36 @@ def anonymize(src: Path, dst: Path, matcher: Matcher) -> ProcessResult:
     for handle in changed.values():
         handle.commit()
 
+    image_matches, image_leftovers, read, unreadable = _anonymize_images(doc, matcher, progress)
+    all_matches.extend(image_matches)
+
     _anonymize_metadata(doc, matcher)
     _anonymize_links(doc, matcher)
     doc.save(str(dst))
-    return ProcessResult(all_matches, count_images(doc))
+    return ProcessResult(
+        all_matches, unreadable + count_embedded(doc), images_ocr=read,
+        image_leftovers=image_leftovers,
+    )  # fmt: skip
 
 
-def count_images(doc: DocxDocument) -> int:
+def count_embedded(doc: DocxDocument) -> int:
+    """Objetos incrustados (hojas de cálculo, otros documentos): no se revisan."""
     return sum(
-        1
-        for part in doc.part.package.iter_parts()
-        if str(part.partname).startswith(("/word/media/", "/word/embeddings/"))
-    )
+        1 for part in doc.part.package.iter_parts()
+        if str(part.partname).startswith("/word/embeddings/")
+    )  # fmt: skip
 
 
-def extract_text(path: Path) -> str:
-    """Todo el texto susceptible de contener datos, un párrafo por línea."""
+def extract_text(path: Path, progress: PageProgress | None = None) -> str:
+    """Todo el texto susceptible de contener datos, un párrafo por línea (también el de
+    las imágenes, leído con OCR; `progress` cuenta las imágenes)."""
     doc = Document(str(path))
     lines: list[str] = []
+    media = _media(doc)
+    steps = Steps(progress, len(media))
+    for part in media:
+        lines.append(images.text_of(part.blob))
+        steps.tick()
     for handle in _xml_roots(doc, TEXT_CONTENT_TYPES | DRAWING_CONTENT_TYPES):
         lines.extend(text for text, _ in _segmented(handle.root) if text.strip())
         lines.extend(el.get(attr) for el, attr in _alt_texts(handle.root))
@@ -320,6 +365,16 @@ def extract_text(path: Path) -> str:
     )
     for part in doc.part.package.iter_parts():
         lines.extend(r.target_ref for r in part.rels.values() if r.is_external)
+    return "\n".join(lines)
+
+
+def visible_text(path: Path) -> str:
+    """Texto de todas las partes con párrafos (cuerpo, cabeceras, notas, comentarios,
+    gráficos), sin OCR de imágenes: para la revisión final."""
+    doc = Document(str(path))
+    lines: list[str] = []
+    for handle in _xml_roots(doc, TEXT_CONTENT_TYPES | DRAWING_CONTENT_TYPES):
+        lines.extend(text for text, _ in _segmented(handle.root) if text.strip())
     return "\n".join(lines)
 
 

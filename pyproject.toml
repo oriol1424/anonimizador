@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "anonimizador"
-version = "0.1.0"
+version = "0.2.0"
 description = "Anonimización local de documentos Word y PDF para bufetes"
 requires-python = ">=3.11"
 dependencies = [

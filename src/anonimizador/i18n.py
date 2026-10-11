@@ -131,10 +131,23 @@ STRINGS: dict[str, dict[str, str]] = {
         "{pages}). Compruébalas en el original: si hay nombres o datos, añádelos a la lista.",
     },
     "notice_images": {
-        "ca": "El document conté {count} imatges o objectes incrustats. El seu contingut no "
-        "s'anonimitza: revisa'ls manualment.",
-        "es": "El documento contiene {count} imágenes u objetos incrustados. Su contenido no "
-        "se anonimiza: revísalos manualmente.",
+        "ca": "El document conté {count} imatges o objectes que no es poden llegir (dibuixos "
+        "EMF/WMF, fulls de càlcul o documents incrustats). No s'anonimitzen: revisa'ls.",
+        "es": "El documento contiene {count} imágenes u objetos que no se pueden leer "
+        "(dibujos EMF/WMF, hojas de cálculo o documentos incrustados). No se anonimizan: "
+        "revísalos.",
+    },
+    "notice_images_ocr": {
+        "ca": "S'han llegit {count} imatges amb reconeixement de text (OCR) i s'hi han esborrat "
+        "les dades trobades. Revisa-les: amb lletra manuscrita o mala qualitat pot fallar.",
+        "es": "Se han leído {count} imágenes con reconocimiento de texto (OCR) y se han borrado "
+        "los datos encontrados. Revísalas: con letra manuscrita o mala calidad puede fallar.",
+    },
+    "notice_leftovers_images": {
+        "ca": "ATENCIÓ: en algunes imatges encara es llegeixen {count} dades que no s'han pogut "
+        "esborrar ({detail}). Revisa les imatges abans de fer servir el document.",
+        "es": "ATENCIÓN: en algunas imágenes todavía se leen {count} datos que no se han podido "
+        "borrar ({detail}). Revisa las imágenes antes de usar el documento.",
     },
     "notice_attachments_removed": {
         "ca": "S'han tret {count} fitxers adjunts del PDF: el seu contingut no es pot revisar. "
@@ -292,6 +305,7 @@ STRINGS: dict[str, dict[str, str]] = {
     "phase_verify": {"ca": "Comprovació final", "es": "Comprobación final"},
     "phase_export": {"ca": "Exportació a text", "es": "Exportación a texto"},
     "phase_pages": {"ca": "pàgina {done} de {total}", "es": "página {done} de {total}"},
+    "phase_images": {"ca": "imatge {done} de {total}", "es": "imagen {done} de {total}"},
     "phase_percent": {"ca": "{percent}%", "es": "{percent}%"},
     "phase_pending": {"ca": "pendent", "es": "pendiente"},
     "phase_done": {"ca": "fet", "es": "hecho"},
@@ -345,6 +359,51 @@ STRINGS: dict[str, dict[str, str]] = {
         "documents).",
         "es": "Añade las filas seleccionadas a la lista «No anonimizar» (para todos los "
         "documentos).",
+    },
+    # Revisión final
+    "review_title": {"ca": "Revisió final", "es": "Revisión final"},
+    "review_found": {
+        "ca": "Queden {count} paraules amb majúscula que no s'han substituït. Fes-hi una ullada "
+        "per si alguna és un nom o una dada.",
+        "es": "Quedan {count} palabras con mayúscula que no se han sustituido. Échales un vistazo "
+        "por si alguna es un nombre o un dato.",
+    },
+    "review_none": {
+        "ca": "No queda cap paraula amb majúscula sense substituir que sembli un nom.",
+        "es": "No queda ninguna palabra con mayúscula sin sustituir que parezca un nombre.",
+    },
+    "review_button": {"ca": "Revisa", "es": "Revisar"},
+    "review_intro": {
+        "ca": "En groc, les paraules amb majúscula que no s'han substituït. Si alguna és un nom o "
+        "una dada, marca-la a la dreta i torna a anonimitzar el document.",
+        "es": "En amarillo, las palabras con mayúscula que no se han sustituido. Si alguna es un "
+        "nombre o un dato, márcala a la derecha y vuelve a anonimizar el documento.",
+    },
+    "review_apply": {"ca": "Anonimitza les marcades", "es": "Anonimizar las marcadas"},
+    "label_REVISIO": {"ca": "Revisió final", "es": "Revisión final"},
+    # Quant a
+    "about_button": {"ca": "Quant a", "es": "Acerca de"},
+    "about_version": {"ca": "Versió {version}", "es": "Versión {version}"},
+    "about_text": {
+        "ca": "Anonimitza documents Word i PDF abans de passar-los a una IA. Tot es fa en "
+        "aquest ordinador: no es connecta a internet, no envia dades i no desa còpies dels "
+        "documents.",
+        "es": "Anonimiza documentos Word y PDF antes de pasarlos a una IA. Todo se hace en "
+        "este ordenador: no se conecta a internet, no envía datos y no guarda copias de los "
+        "documentos.",
+    },
+    "about_licenses": {"ca": "Components de tercers", "es": "Componentes de terceros"},
+    "about_component": {"ca": "Component", "es": "Componente"},
+    "about_license": {"ca": "Llicència", "es": "Licencia"},
+    "about_source": {
+        "ca": "Fa servir Qt (LGPL-3.0) i PyMuPDF (AGPL-3.0). El codi font complet i el text de "
+        "les llicències són a la carpeta «codi_font» del USB i a {url}.",
+        "es": "Usa Qt (LGPL-3.0) y PyMuPDF (AGPL-3.0). El código fuente completo y el texto de "
+        "las licencias están en la carpeta «codi_font» del USB y en {url}.",
+    },
+    "error_logged": {
+        "ca": "S'ha desat un informe tècnic (sense cap dada del document) a:\n{path}",
+        "es": "Se ha guardado un informe técnico (sin ningún dato del documento) en:\n{path}",
     },
     # Resultado
     "done_title": {"ca": "Fet", "es": "Hecho"},

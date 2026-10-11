@@ -17,3 +17,5 @@ class ProcessResult:
     # páginas que fallaron y se sustituyeron por una página en blanco con un aviso
     failed_pages: set[int] = field(default_factory=set)
     attachments_removed: int = 0  # ficheros adjuntos quitados (PDF)
+    images_ocr: int = 0  # imágenes sueltas leídas con OCR (y anonimizadas si hacía falta)
+    image_leftovers: list[Match] = field(default_factory=list)  # datos que aún se leen

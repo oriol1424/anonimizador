@@ -28,6 +28,7 @@ from anonimizador.ui.worker import run_in_background
 def window(qtbot, tmp_path):
     w = MainWindow(
         keep_path=tmp_path / "no_anonimitzar.json",  # nunca la configuración real
+        log_path=tmp_path / "errors.log",
     )
     qtbot.addWidget(w)
     return w
@@ -450,3 +451,29 @@ def test_last_folder_is_not_saved_in_system_settings():
     import anonimizador.ui.main_window as module
 
     assert "QSettings" not in inspect.getsource(module)
+
+
+def test_final_review_reanonymizes_selected_words(window, qtbot, tmp_path, monkeypatch):
+    from docx import Document as NewDocument
+
+    from anonimizador.ui.review_dialog import ReviewDialog
+
+    src = tmp_path / "demanda.docx"
+    doc = NewDocument()
+    doc.add_paragraph("En Joan Puig i Ferrer compareix. El testimoni Ernest Bosch ho confirma.")
+    doc.save(str(src))
+    window.set_input(src)
+    _fill_list(window, [("Joan Puig i Ferrer", "[CLIENT_1]")])
+    window._analysis_done(Analysis([]), window._current_key(), window._user_terms())
+    window.suggestions_page.apply_button.click()
+    window.run_button.click()
+    qtbot.waitUntil(lambda: window.pages.currentWidget() is window.result_page, timeout=20000)
+    report = window.result_page.report
+    assert ("Bosch", 1) in report.review_words and not window.result_page.review_button.isHidden()
+
+    monkeypatch.setattr(ReviewDialog, "exec", lambda self: ReviewDialog.DialogCode.Accepted)
+    monkeypatch.setattr(ReviewDialog, "selected", lambda self: ["Ernest", "Bosch"])
+    window.review_output()
+    qtbot.waitUntil(lambda: window.result_page.report is not report, timeout=20000)
+    text = "\n".join(p.text for p in NewDocument(str(report.output)).paragraphs)
+    assert "Bosch" not in text and "Ernest" not in text and "[CLIENT_1]" in text

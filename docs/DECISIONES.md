@@ -70,3 +70,7 @@
 | 2026-10-11 | PDF sin texto con ≥150 curvas se trata como escaneado (OCR) | Texto convertido en trazos: si no, no se detectaría nada. Las tablas son rectas y no cuentan |
 | 2026-10-11 | Un apellido suelto que encaja con varias personas queda como sugerencia aparte | No se puede saber de quién es: unirlo a una daría a la IA una identidad equivocada |
 | 2026-10-11 | Aviso (no bloqueo) si la carpeta de salida está en OneDrive/Dropbox/iCloud y la guía está marcada | La guía va sin cifrar por decisión del usuario; que sepa que subirá a la nube |
+| 2026-10-11 | Imágenes sueltas en Word/PDF se leen con OCR y se borran (antes solo se avisaba) | Un DNI escaneado pegado en un Word es habitual en los escritos; el aviso genérico no protegía |
+| 2026-10-11 | Revisión final por reglas (mayúsculas no sustituidas), sin IA | Red de seguridad rápida y explicable contra los falsos negativos del detector |
+| 2026-10-11 | Registro de errores local sin el mensaje de la excepción | Permite diagnosticar en el bufete sin incumplir la regla 3 (el mensaje puede llevar texto) |
+| 2026-10-11 | Tests en GitHub Actions (Windows + macOS) | Detectar fallos de una plataforma antes de empaquetar; mismo sistema que el build del USB |

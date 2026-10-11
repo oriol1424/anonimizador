@@ -172,6 +172,7 @@ _SVG = {
     "check": '<path d="M5 12l5 5 9-10"/>',
     "shield": '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
     "alert": '<path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17h.01"/>',
+    "info": '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5h.01"/>',
     "clock": '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
 }
 
@@ -194,6 +195,31 @@ def icon_pixmap(name: str, color: str, size: int = 20, stroke: float = 2.0) -> Q
 
 def icon(name: str, color: str = MUTED, size: int = 20) -> QIcon:
     return QIcon(icon_pixmap(name, color, size))
+
+
+def app_icon_pixmap(size: int = 64) -> QPixmap:
+    """Icono de la app: cuadrado verde azulado redondeado con las líneas del logotipo."""
+    ratio = 2
+    pixmap = QPixmap(QSize(size * ratio, size * ratio))
+    pixmap.fill(Qt.GlobalColor.transparent)
+    pixmap.setDevicePixelRatio(ratio)
+    painter = QPainter(pixmap)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+    painter.setPen(Qt.PenStyle.NoPen)
+    painter.setBrush(QColor(ACCENT))
+    painter.drawRoundedRect(QRectF(0, 0, size, size), size * 0.22, size * 0.22)
+    inner = int(size * 0.62)
+    offset = (size - inner) / 2
+    painter.drawPixmap(QPointF(offset, offset), icon_pixmap("logo", "#FFFFFF", inner, 2.2))
+    painter.end()
+    return pixmap
+
+
+def app_icon() -> QIcon:
+    icon_ = QIcon()
+    for size in (16, 24, 32, 48, 64, 128, 256):
+        icon_.addPixmap(app_icon_pixmap(size))
+    return icon_
 
 
 def step_marker(state: str, number: int, size: int = 24) -> QPixmap:

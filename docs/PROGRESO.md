@@ -1,7 +1,24 @@
 # Progreso
 
 ## ▶ DÓNDE NOS QUEDAMOS (2026-10-11) — empezar por aquí
-Todo hecho, probado (**319 tests** + 2 lentos con `pytest -m slow`) y publicado. No hay código a medias.
+Todo hecho, probado (**331 tests** + 2 lentos con `pytest -m slow`) y publicado. No hay código a medias.
+
+### Hecho el 2026-10-11 (noche): versión 0.2.0 — profesionalización antes del USB
+- **Imágenes dentro de Word y PDF** (`core/images.py`): fotos de DNI, escaneados pegados,
+  sellos. OCR (ampliando las pequeñas), borrado de píxeles, alias escrito en la imagen y
+  verificación con otro OCR. En PDF, solo la zona del dato en páginas con texto. El análisis
+  también las lee (sugiere nombres que solo están en una foto). Iconos (<40 px) se ignoran;
+  EMF/WMF y objetos incrustados siguen con aviso.
+- **Revisió final** (`core/review.py`, `ui/review_dialog.py`): tras anonimizar, palabras
+  con mayúscula que siguen en el resultado (sin inicios de frase, alias ni palabras
+  habituales de los escritos). Se ven resaltadas; las marcadas se anonimizan volviendo a
+  procesar el documento (alias [PERSONA_n], origen «Revisió final» en la guía).
+- **Quant a** (versión, licencias de terceros, código fuente) e icono propio de la app.
+- **Registro local de errores** (`core/errlog.py`, `errors.log` en la carpeta de
+  configuración): tipo de error, versión, sistema, paso y cadena de llamadas; nunca el
+  mensaje (podría llevar texto del documento).
+- **GitHub Actions** (`.github/workflows/tests.yml`): estilo + tests en Windows y macOS
+  (M1) en cada cambio. Sin `gh` en este PC: ver el resultado en la web del repo.
 
 ### Hecho el 2026-10-11 (noche): lista «No anonimitzar» (petición del usuario)
 - Nombres y datos que **no se anonimizan nunca** (la abogada, el despacho, su dirección,

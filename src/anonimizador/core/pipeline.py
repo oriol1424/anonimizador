@@ -92,7 +92,7 @@ class Notice:
     @property
     def is_leak(self) -> bool:
         """Quedan datos sin borrar."""
-        return self.kind in ("leftovers", "leftovers_scan")
+        return self.kind in ("leftovers", "leftovers_scan", "leftovers_images")
 
     @property
     def is_serious(self) -> bool:
@@ -119,6 +119,9 @@ class Report:
     notices: list[Notice] = field(default_factory=list)
     entries: list[GuideEntry] = field(default_factory=list)
     guide: Path | None = None
+    # Revisión final: texto resultante y palabras con mayúscula que siguen ahí.
+    review_text: str = ""
+    review_words: list[tuple[str, int]] = field(default_factory=list)
 
     @property
     def total(self) -> int:
@@ -231,7 +234,7 @@ def analyze(
                 path, phase(progress, "read"), doubts=doubts, failed=unreadable
             )
         else:
-            text = backend.extract_text(path)
+            text = backend.extract_text(path, phase(progress, "read"))
     # Lo que el usuario ya puso en su lista y lo que no se anonimiza nunca (la abogada,
     # el despacho): no se sugiere.
     matcher = Matcher(user_terms)
@@ -351,7 +354,7 @@ def anonymize(
                 )
                 failed |= result.failed_pages
             else:
-                result = backend.anonymize(src, work, matcher)
+                result = backend.anonymize(src, work, matcher, phase(progress, "anonymize"))
             if backend is pdf_io:
                 # Las páginas imagen ya se verificaron con OCR al anonimizarlas: aquí se
                 # revisa su capa de texto y el resto del documento.
@@ -359,7 +362,7 @@ def anonymize(
                     pdf_io.extract_text(work, phase(progress, "verify"), use_ocr=False)
                 )
             else:
-                leftovers = matcher.find(backend.extract_text(work))
+                leftovers = matcher.find(backend.extract_text(work, phase(progress, "verify")))
             if work != dst:
                 text = (
                     pdf_io.anonymized_text(
@@ -396,6 +399,11 @@ def anonymize(
     if leftovers:
         detail = ", ".join(sorted({m.text for m in leftovers}))
         notices.append(Notice("leftovers", detail=detail, count=len(leftovers)))
+    if result.image_leftovers:
+        detail = ", ".join(sorted({m.text for m in result.image_leftovers}))
+        notices.append(Notice("leftovers_images", detail=detail, count=len(result.image_leftovers)))
+    if result.images_ocr:
+        notices.append(Notice("images_ocr", count=result.images_ocr))
     if result.images:
         notices.append(Notice("images", count=result.images))
     if result.attachments_removed:

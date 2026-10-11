@@ -85,7 +85,10 @@ class ProgressPage(Page):
         self._on_cancel = on_cancel
         self.footer.addWidget(self.cancel_button)
 
-    def start(self, title_key: str, phases: list[str], lang: str) -> None:
+    def start(self, title_key: str, phases: list[str], lang: str, unit: str = "pages") -> None:
+        """`unit`: qué se cuenta en las fases por elementos ("pages" en PDF, "images" en
+        Word, donde lo lento es leer las imágenes)."""
+        self._unit = unit
         self._lang = lang
         self._title_key = title_key
         self._phases = phases
@@ -138,7 +141,7 @@ class ProgressPage(Page):
         percent = round(100 * done / total) if total else 0
         self.percent.setText(tr(lang, "phase_percent", percent=percent))
         if phase in PAGE_PHASES:
-            detail = tr(lang, "phase_pages", done=done, total=total)
+            detail = tr(lang, f"phase_{getattr(self, '_unit', 'pages')}", done=done, total=total)
         else:
             detail = tr(lang, "phase_percent", percent=percent)
         self.position.setText(detail[:1].upper() + detail[1:])
@@ -163,7 +166,7 @@ class ProgressPage(Page):
 
 
 class ResultPage(Page):
-    def __init__(self, on_open_folder, on_open_file, on_new):
+    def __init__(self, on_open_folder, on_open_file, on_new, on_review=lambda: None):
         super().__init__()
         box, layout = card()
         layout.setContentsMargins(24, 22, 24, 22)
@@ -193,6 +196,24 @@ class ResultPage(Page):
         buttons.addStretch()
         layout.addLayout(buttons)
         self.body.addWidget(box)
+
+        # Revisión final: palabras con mayúscula que siguen en el documento.
+        self.review_box, review_layout = card()
+        review_row = QHBoxLayout()
+        review_row.setSpacing(14)
+        self.review_label = label("", "muted", wrap=True)
+        self.review_button = button("", "primary")
+        self.review_button.clicked.connect(on_review)
+        review_head = QVBoxLayout()
+        review_head.setSpacing(4)
+        self.review_title = label("", "h2")
+        review_head.addWidget(self.review_title)
+        review_head.addWidget(self.review_label)
+        review_row.addLayout(review_head, 1)
+        review_row.addWidget(self.review_button)
+        review_layout.addLayout(review_row)
+        self.body.addWidget(self.review_box)
+
         self.notices = NoticeList()
         self.body.addWidget(self.notices)
         self.body.addStretch()
@@ -234,3 +255,10 @@ class ResultPage(Page):
         if report.guide is not None:
             self.guide.setText(tr(lang, "guide_saved", path=Path(report.guide)))
         self.notices.show_notices(report.notices, language)
+        count = len(report.review_words)
+        self.review_title.setText(tr(lang, "review_title"))
+        self.review_label.setText(
+            tr(lang, "review_found", count=count) if count else tr(lang, "review_none")
+        )
+        self.review_button.setText(tr(lang, "review_button"))
+        self.review_button.setVisible(bool(count))

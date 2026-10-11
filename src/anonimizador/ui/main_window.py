@@ -16,9 +16,9 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from anonimizador.core import keep_list
+from anonimizador.core import errlog, keep_list, review
 from anonimizador.core.guide import default_path as default_guide_path
-from anonimizador.core.lang import DEFAULT_LANGUAGE, LANGUAGES, Language
+from anonimizador.core.lang import DEFAULT_LANGUAGE, LANGUAGES, Language, fill_preset
 from anonimizador.core.matcher import Matcher, Term, keep_term
 from anonimizador.core.pipeline import (
     SUPPORTED_INPUTS,
@@ -34,8 +34,11 @@ from anonimizador.core.pipeline import (
     read_ahead,
 )
 from anonimizador.i18n import tr
+from anonimizador.ui import style
+from anonimizador.ui.about_dialog import AboutDialog
 from anonimizador.ui.keep_dialog import KeepDialog
 from anonimizador.ui.pages import DocumentPage, SavePage, TermsPage
+from anonimizador.ui.review_dialog import ReviewDialog
 from anonimizador.ui.sidebar import Sidebar
 from anonimizador.ui.status_pages import ProgressPage, ResultPage
 from anonimizador.ui.suggestions import SuggestionsPage
@@ -43,18 +46,26 @@ from anonimizador.ui.worker import Task, run_in_background
 
 STEP_DOCUMENT, STEP_TERMS, STEP_SUGGESTIONS, STEP_SAVE = range(4)
 KEEP_FILE = "no_anonimitzar.json"
+LOG_FILE = "errors.log"
 
 
-def default_keep_path() -> Path:
+def config_dir() -> Path:
     """Carpeta de configuración del usuario en este ordenador (%APPDATA% en Windows,
     ~/Library/Application Support en macOS)."""
     folder = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.AppConfigLocation)
-    return Path(folder or Path.home() / ".anonimitzador") / KEEP_FILE
+    return Path(folder or Path.home() / ".anonimitzador")
+
+
+def default_keep_path() -> Path:
+    return config_dir() / KEEP_FILE
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, keep_path: Path | None = None):
+    def __init__(self, keep_path: Path | None = None, log_path: Path | None = None):
         super().__init__()
+        # Registro de errores sin texto del documento (core/errlog.py).
+        self.log_path = log_path or config_dir() / LOG_FILE
+        self._step = ""  # qué se estaba haciendo, para el registro
         # Nombres y datos que no se anonimizan nunca (la abogada, el despacho...).
         self.keep_path = keep_path or default_keep_path()
         self.keep: list[str] = keep_list.load(self.keep_path)
@@ -72,6 +83,7 @@ class MainWindow(QMainWindow):
         self._task: Task | None = None
         self._saved = False  # se llegó al resultado con el documento actual
         self.setAcceptDrops(True)
+        self.setWindowIcon(style.app_icon())
         self.resize(1100, 760)
         self.setMinimumSize(920, 640)
         self._build()
@@ -85,7 +97,8 @@ class MainWindow(QMainWindow):
         row = QHBoxLayout(central)
         row.setContentsMargins(0, 0, 0, 0)
         row.setSpacing(0)
-        self.sidebar = Sidebar(self.go_to, self.set_language, self.edit_keep_list)
+        self.sidebar = Sidebar(self.go_to, self.set_language, self.edit_keep_list,
+                               self.show_about)  # fmt: skip
         self.sidebar.language.set_value(self.language.code)
         row.addWidget(self.sidebar)
 
@@ -103,7 +116,9 @@ class MainWindow(QMainWindow):
         )
         self.save_page = SavePage(lambda: self.go_to(STEP_SUGGESTIONS), self.start_anonymize)
         self.progress_page = ProgressPage(self.cancel_task)
-        self.result_page = ResultPage(self.open_folder, self.open_output, self.new_document)
+        self.result_page = ResultPage(
+            self.open_folder, self.open_output, self.new_document, self.review_output
+        )
         for page in (self.document_page, self.terms_page, self.suggestions_page,
                      self.save_page, self.progress_page, self.result_page):  # fmt: skip
             self.pages.addWidget(page)
@@ -191,6 +206,7 @@ class MainWindow(QMainWindow):
 
     def set_input(self, path: Path) -> None:
         self._stop_read_ahead()
+        self._step = "open_document"
         try:
             info = document_info(path)  # antes del OCR anticipado: PyMuPDF, un hilo
         except Exception as error:  # noqa: BLE001 - PDF protegido, dañado...
@@ -324,7 +340,7 @@ class MainWindow(QMainWindow):
             return
         self._stop_read_ahead()  # el análisis aprovecha lo ya leído
         src, language, key = self.input_path, self.language, self._current_key()
-        phases = ["read", "detect"] if self.info and self.info.kind == "pdf" else ["detect"]
+        phases = ["read", "detect"]  # Word: "read" son sus imágenes (OCR)
         self._run(
             "progress_analyzing", phases,
             lambda progress: analyze(src, terms, language, progress),
@@ -399,20 +415,47 @@ class MainWindow(QMainWindow):
             return
         src, dst, language = self.input_path, self.output_path(), self.language
         guide = self._guide_path(dst)
+        self._run_anonymize(src, dst, terms, guide, language)
+
+    def _run_anonymize(self, src, dst, terms, guide, language) -> None:
+        self._last_run = (src, dst, terms, guide, language)
+        keep = set(self.keep)
         pdf = self.info is not None and self.info.kind == "pdf"
-        phases = ["anonymize", "verify"] if pdf else ["anonymize"]
+        phases = ["anonymize", "verify"]
         if pdf and dst.suffix == ".txt":
             phases.append("export")
-        self._run(
-            "progress_anonymizing", phases,
-            lambda progress: anonymize(src, dst, terms, progress, guide, language),
-            self._finished, back_to=STEP_SAVE,
-        )  # fmt: skip
+
+        def task(progress):
+            report = anonymize(src, dst, terms, progress, guide, language)
+            report.review_text = review.review_text(report.output)
+            report.review_words = review.suspicious(report.review_text, keep)
+            return report
+
+        self._run("progress_anonymizing", phases, task, self._finished, back_to=STEP_SAVE)
+
+    def review_output(self) -> None:
+        """Revisión final: si el usuario marca palabras, se vuelve a anonimizar con ellas."""
+        report = self.result_page.report
+        if report is None or not report.review_words:
+            return
+        dialog = ReviewDialog(report.review_text, report.review_words, self.language.code, self)
+        if dialog.exec() != ReviewDialog.DialogCode.Accepted or not dialog.selected():
+            return
+        src, dst, terms, guide, language = self._last_run
+        used = {t.replacement for t in terms}
+        extra = []
+        for word in dialog.selected():
+            alias = fill_preset(language.presets[0], used)
+            used.add(alias)
+            extra.append(Term(word, alias, expand=False, source="REVISIO"))
+        self._run_anonymize(src, dst, terms + extra, guide, language)
 
     # --- Tareas en segundo plano ---------------------------------------------------------
 
     def _run(self, title_key: str, phases: list[str], fn, on_done, back_to: int) -> None:
-        self.progress_page.start(title_key, phases, self.language.code)
+        self._step = title_key
+        unit = "pages" if self.info is not None and self.info.kind == "pdf" else "images"
+        self.progress_page.start(title_key, phases, self.language.code, unit)
         self._show(self.progress_page)
 
         def finished(result: object) -> None:
@@ -450,7 +493,13 @@ class MainWindow(QMainWindow):
             message = error.message(self.language)
         else:
             message = tr(lang, "error_unexpected", detail=str(error))
+            logged = errlog.write(self.log_path, error, self._step)
+            if logged:
+                message += "\n\n" + tr(lang, "error_logged", path=logged)
         QMessageBox.critical(self, tr(lang, "error_title"), message)
+
+    def show_about(self) -> None:
+        AboutDialog(self.language.code, self).exec()
 
     def open_folder(self) -> None:
         if self.result_page.report:
