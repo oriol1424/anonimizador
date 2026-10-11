@@ -45,3 +45,5 @@
 | 2026-10-11 | OCR anticipado al elegir un PDF, detenido antes de analizar | El tiempo de rellenar la lista se aprovecha; PyMuPDF no es seguro con dos hilos |
 | 2026-10-11 | Se mantiene la verificación con OCR de la página entera | Es más lenta que releer solo lo modificado, pero puede detectar líneas mal leídas la primera vez |
 | 2026-10-11 | Aviso de líneas dudosas del OCR por confianza de línea (< 0,90) y densidad de letras, no por palabra | La confianza por palabra es ruidosa (palabras correctas con 0,53); la de línea separa bien |
+| 2026-10-11 | Reglas andorranas: NRT, pasaporte (andorrano y cualquier número tras "passaport/pasaporte/passeport/passport"), teléfono +376, matrícula, CP AD500 | El bufete es de Andorra: allí se usa sobre todo el pasaporte. Formatos de fuentes no oficiales (python-stdnum, Wikipedia, MoraBanc 2017): confirmar con el bufete |
+| 2026-10-11 | Organismos andorranos en el filtro del detector, sin prefijos cortos ("comú d", no "comú") | El filtro compara el inicio sin acentos: "comú" descartaría "Comunicacions... SL" |

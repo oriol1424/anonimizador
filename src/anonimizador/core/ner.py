@@ -43,6 +43,10 @@ PUBLIC_BODIES = (
     "diputación", "consell", "consejo", "parlament", "departament", "servei català",
     "institut català", "síndic", "defensor del", "hisenda", "hacienda", "boe", "dogc",
     "unió europea", "unión europea", "estat espanyol", "estado español",
+    # Andorra. Se compara el inicio sin acentos: nada de prefijos cortos como "comú" o
+    # "cass", que descartarían empresas como "Comunicacions Andorra SL" o "Cassany SL".
+    "batllia", "comú d", "caixa andorrana de seguretat social", "butlletí oficial del",
+    "principat d'andorra", "cos de policia", "raonador del ciutadà",
 )  # fmt: skip
 
 

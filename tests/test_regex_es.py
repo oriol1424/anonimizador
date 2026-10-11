@@ -63,3 +63,49 @@ def test_invalid_iban_is_ignored():
 
 def test_no_false_positives_in_plain_text():
     assert detect("El artículo 24 de la Constitución, año 2025, página 12.") == []
+
+
+# --- Andorra ----------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("text", "label", "value"),
+    [
+        ("amb NRT F-123456-X, resident", "NRT", "F-123456-X"),
+        ("societat amb NRT L-712345-B.", "NRT", "L-712345-B"),
+        ("NRT E123456Z", "NRT", "E123456Z"),
+        ("passaport andorrà O1234567", "PASAPORTE", "O1234567"),
+        ("amb passaport núm. PAA123456, de", "PASAPORTE", "PAA123456"),
+        ("pasaporte n.º 12AB34567", "PASAPORTE", "12AB34567"),
+        ("titular del passeport: 19FV12345", "PASAPORTE", "19FV12345"),
+        ("passaport CB1234567 expedit", "PASAPORTE", "CB1234567"),
+        ("telèfon +376 812 345", "TELEFONO", "+376 812 345"),
+        ("telèfon 00376 812345", "TELEFONO", "00376 812345"),
+        ("mòbil 361 234.", "TELEFONO", "361 234"),
+        ("mòbil 612345,", "TELEFONO", "612345"),
+        ("vehicle matrícula A 1234", "MATRICULA", "A 1234"),
+        ("vehicle AND 1234", "MATRICULA", "AND 1234"),
+        ("compte AD12 0001 2030 2003 5910 0100.", "IBAN", "AD12 0001 2030 2003 5910 0100"),
+    ],
+)
+def test_detects_andorran_data(text, label, value):
+    found = [(d.label, d.text) for d in detect(text)]
+    assert (label, value) in found
+
+
+def test_andorran_address_keeps_postcode_and_parish():
+    text = "viu a l'Avinguda Meritxell, 25, 3r 2a, AD500 Andorra la Vella."
+    found = [d.text for d in detect(text)]
+    assert "Avinguda Meritxell, 25, 3r 2a, AD500 Andorra la Vella" in found
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "un import de 600.000 euros",  # importe, no teléfono
+        "el passaport caducat el 2019",  # sin número de pasaporte
+        "en total 345.678,50 euros",
+    ],
+)
+def test_no_false_andorran_data(text):
+    assert [d.label for d in detect(text)] == []

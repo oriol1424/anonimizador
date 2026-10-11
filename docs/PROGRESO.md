@@ -2,7 +2,10 @@
 
 ## ▶ DÓNDE NOS QUEDAMOS (2026-10-11) — empezar por aquí
 Estábamos haciendo **robustez con documentos largos (80+ páginas)**. Todo lo anterior está
-hecho, probado (151 tests) y publicado. Hechos los puntos 1–4 y 6 del plan; sigue el 5.
+hecho, probado (170 tests) y publicado. Hechos los puntos 1–4 y 6 del plan; sigue el 5.
+**El bufete es de Andorra** (2026-10-11): añadidas reglas de NRT, pasaporte, teléfono
++376, matrícula y CP AD; organismos andorranos en el filtro. Falta un documento
+andorrano sintético en `tests/corpus/` y confirmar formatos con el bufete.
 
 ### Medición (`scripts/bench_documents_grans.py <carpeta> <págs_escaneadas>`)
 | Documento | Análisis | Anonimizar + verificar | Problema |
@@ -106,7 +109,9 @@ python -m venv .venv
 - [ ] PCs Windows del bufete (modelo/RAM). Build de Mac: runner `macos-14` (Apple Silicon) en GitHub Actions.
 - [x] Presupuesto: **coste cero** → sin firma de código (en Mac: clic derecho → Abrir la
       primera vez; en Windows: "Más información → Ejecutar igualmente"). PyMuPDF bajo AGPL.
-- [ ] Tipos de documento habituales para ampliar el corpus sintético (en catalán).
+- [ ] Tipos de documento habituales para ampliar el corpus sintético (en catalán, Andorra).
+- [ ] Otros números andorranos que aparezcan (CASS, permiso de residencia, cens) y formato
+      de los números de causa de la Batllia; ¿pasaportes de qué países son habituales?
 
 ## Siguientes pasos
 1. [x] Estructura del proyecto: `pyproject.toml`, `src/`, venv, ruff, pytest.

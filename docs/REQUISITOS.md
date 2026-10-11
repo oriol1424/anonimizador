@@ -45,6 +45,14 @@ Nada más: sin menús complejos ni configuración visible.
   documento anonimizado, activada por defecto.
 - Fase 2: guardar mapa cifrado y "des-anonimizar" la respuesta de la IA.
 
+## Contexto: Andorra
+- El bufete trabaja en **Andorra**. Identificación habitual: **pasaporte** (andorrano
+  "O" + 7 cifras, o de otros países) y **NRT** ("F-123456-X"), más que el DNI; también
+  puede haber DNI/NIE españoles. Teléfonos de 6 cifras (+376), códigos postales AD100–AD700,
+  parroquias (Andorra la Vella, Escaldes-Engordany...), IBAN AD, matrículas "A 1234".
+- Pendiente de confirmar con el bufete: otros números que aparezcan (CASS, permiso de
+  residencia, nº de cens...) y formato de los números de causa de la Batllia.
+
 ## No funcionales
 - 100% offline.
 - Objetivo: funcionar con 8 GB de RAM sin GPU; en Mac Apple Silicon usar Metal.

@@ -3,7 +3,10 @@
 App de escritorio **100% local** (Windows) para que un bufete anonimice documentos
 Word/PDF antes de pasarlos a una IA. Se entrega por USB a un usuario NO técnico.
 
-**Idioma de los documentos: catalán (~99,99%)**, con opción de castellano. Todo lo que
+**Idioma de los documentos: catalán (~99,99%)**, con opción de castellano.
+**País: Andorra** (el bufete trabaja con documentos andorranos): datos como el NRT, el
+pasaporte (más habitual que el DNI), teléfonos +376, códigos postales AD500, organismos
+andorranos (Batllia, Comú, CASS...). Puede haber también datos españoles (DNI, NIE...). Todo lo que
 toque texto (variantes de nombres, reglas, NER, LLM, corpus de pruebas) debe funcionar
 primero en catalán.
 Plataformas: **macOS y Windows**. Repo: https://github.com/oriol1424/anonimizador (rama `main`).

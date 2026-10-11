@@ -41,7 +41,20 @@ _FLOOR = (
 _CITY = rf"[{_UPPER}][\w'’·-]+(?:\s+(?:(?:de|del|la|les|i|d'|d’)\s*)?[{_UPPER}][\w'’·-]+){{0,3}}"
 ADDRESS = re.compile(
     rf"(?<!\w)(?i:{_STREET})(?:(?<=[./])|\b)\s*{_PARTICLES}(?:{_ABBR}|[{_UPPER}]){_NAME_CHAR}{{0,60}}?"
-    rf"{_NUMBER}{_FLOOR}(?:,?\s*\d{{5}})?(?:,?\s*(?:de\s+|d'|d’)?{_CITY})?"
+    rf"{_NUMBER}{_FLOOR}(?:,?\s*(?:\d{{5}}|AD[- ]?\d{{3}}))?(?:,?\s*(?:de\s+|d'|d’)?{_CITY})?"
+)
+
+# Pasaportes de cualquier país: el número que sigue a la palabra "passaport", "pasaporte",
+# "passeport" o "passport". Solo se marca el número (grupo "v"), no la palabra.
+PASSPORT = re.compile(
+    r"(?i:passaports?|pasaportes?|passeports?|passports?)"
+    r"(?:\s+(?i:n[úu]m(?:ero|\.)?|n\.?º|no\.?|nr\.?|number))?\s*:?\s*"
+    r"(?P<v>(?=[A-Z]*\d)[A-Z0-9]{6,9})\b"
+)
+# Andorra: 6 cifras (fijos 7/8, móviles 3/6). Sin prefijo no se aceptan puntos:
+# "600.000" es un importe, no un teléfono.
+PHONE_AD = re.compile(
+    r"(?<![\w+.,])(?:(?:\+|00)376[ .-]?[3678]\d{2}[ .-]?\d{3}|[3678]\d{2} ?\d{3})(?![.,]?\d)"
 )
 
 
@@ -56,8 +69,15 @@ RULES: list[tuple[str, re.Pattern[str], object]] = [
     ("DNI", re.compile(r"\b\d{1,2}\.?\d{3}\.?\d{3}[- ]?[A-Z]\b"), None),
     ("NIE", re.compile(r"\b[XYZ][- ]?\d{7}[- ]?[A-Z]\b"), None),
     ("CIF", re.compile(r"\b[ABCDEFGHJNPQRSUVW][- ]?\d{7}[- ]?[0-9A-J]\b"), None),
+    # Andorra: NRT (letra + 6 cifras + letra de control, "F-123456-X") y pasaporte
+    # andorrano ("O" + 7 cifras).
+    ("NRT", re.compile(r"\b[A-Z][- ]?\d{6}[- ]?[A-Z]\b"), None),
+    ("PASAPORTE", re.compile(r"\bO\d{7}\b"), None),
+    ("PASAPORTE", PASSPORT, None),
     ("TELEFONO", re.compile(r"(?<![\w+])(?:(?:\+|00)34[ .-]?)?[6789](?:[ .-]?\d){8}(?!\d)"), None),
+    ("TELEFONO", PHONE_AD, None),
     ("MATRICULA", re.compile(r"\b\d{4}[- ]?[BCDFGHJKLMNPRSTVWXYZ]{3}\b"), None),
+    ("MATRICULA", re.compile(r"\b(?:AND|[A-Z])[- ]?\d{4}\b"), None),  # Andorra: "A 1234"
     ("PROCEDIMIENTO", re.compile(r"\b\d{1,6}/(?:19|20)\d{2}\b"), None),
     ("DIRECCION", ADDRESS, None),
 ]
@@ -66,10 +86,11 @@ RULES: list[tuple[str, re.Pattern[str], object]] = [
 def detect(text: str) -> list[Detection]:
     found: list[Detection] = []
     for label, regex, validator in RULES:
+        group = "v" if "v" in regex.groupindex else 0
         for m in regex.finditer(text):
-            if validator is not None and not validator(m.group()):
+            if validator is not None and not validator(m.group(group)):
                 continue
-            found.append(Detection(m.start(), m.end(), m.group(), label))
+            found.append(Detection(m.start(group), m.end(group), m.group(group), label))
     return remove_overlaps(found)
 
 

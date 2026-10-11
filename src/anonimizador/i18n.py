@@ -154,6 +154,8 @@ STRINGS: dict[str, dict[str, str]] = {
     "label_DNI": {"ca": "DNI", "es": "DNI"},
     "label_NIE": {"ca": "NIE", "es": "NIE"},
     "label_CIF": {"ca": "NIF empresa", "es": "CIF"},
+    "label_NRT": {"ca": "NRT (Andorra)", "es": "NRT (Andorra)"},
+    "label_PASAPORTE": {"ca": "Passaport", "es": "Pasaporte"},
     "label_IBAN": {"ca": "Compte bancari", "es": "Cuenta bancaria"},
     "label_TELEFONO": {"ca": "Telèfon", "es": "Teléfono"},
     "label_EMAIL": {"ca": "Correu electrònic", "es": "Correo electrónico"},
