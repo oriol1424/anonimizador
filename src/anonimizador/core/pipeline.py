@@ -290,23 +290,29 @@ def merge_variants(suggestions: list[Suggestion]) -> list[Suggestion]:
     formas. Sin IA: se usan las mismas variantes con las que se sustituye.
     """
     named = sorted((s for s in suggestions if s.expand), key=lambda s: len(s.text), reverse=True)
+    matchers = [Matcher([Term(s.text, "x")]) for s in named]
+
+    def covers(i: int, j: int) -> bool:
+        found = matchers[i].find(named[j].text)
+        return bool(found) and found[0].start == 0 and found[0].end == len(named[j].text)
+
+    # Cada forma corta se une a la persona que la contiene, solo si es UNA: con "Joan Puig"
+    # y "Pere Puig", "Puig" queda aparte (no se sabe de quién es).
+    owner: dict[int, int] = {}
+    for j in range(len(named)):
+        roots = {owner.get(i, i) for i in range(j) if covers(i, j)}
+        if len(roots) == 1:
+            owner[j] = roots.pop()
     merged: dict[int, Suggestion] = {}
     _origin: dict[Suggestion, Suggestion] = {}
-    absorbed: set[int] = set()
     for i, longer in enumerate(named):
-        if i in absorbed:
+        if i in owner:
             continue
-        matcher = Matcher([Term(longer.text, "x")])
         forms, count = list(longer.forms), longer.count
         for j in range(i + 1, len(named)):
-            shorter = named[j]
-            if j in absorbed:
-                continue
-            found = matcher.find(shorter.text)
-            if found and found[0].start == 0 and found[0].end == len(shorter.text):
-                forms += [f for f in shorter.forms if f not in forms]
-                count += shorter.count
-                absorbed.add(j)
+            if owner.get(j) == i:
+                forms += [f for f in named[j].forms if f not in forms]
+                count += named[j].count
         result = Suggestion(longer.label, longer.replacement, tuple(forms), count, True)
         merged[i] = result
         _origin[result] = longer

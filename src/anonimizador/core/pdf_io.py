@@ -63,6 +63,11 @@ class _Replacement:
     text: str
 
 
+# Página sin texto pero con muchas curvas: texto convertido en trazos (medido: una sola
+# línea de 46 letras = 233 curvas). Las tablas son rectas (0 curvas) y un logotipo, pocas.
+OUTLINED_MIN_CURVES = 150
+
+
 def _open(path: Path) -> pymupdf.Document:
     doc = pymupdf.open(str(path))
     if doc.needs_pass:
@@ -100,11 +105,19 @@ def _remove_attachments(doc: pymupdf.Document) -> int:
 
 
 def is_image_page(page: pymupdf.Page) -> bool:
+    """Página que hay que leer con OCR: escaneada (una imagen la cubre casi entera) o con
+    el texto convertido en trazos (muchos dibujos y ningún texto), que de otro modo no se
+    vería."""
     page_area = abs(page.rect)
     if page_area == 0:
         return False
     covered = sum(abs(pymupdf.Rect(i["bbox"]) & page.rect) for i in page.get_image_info())
-    return covered / page_area >= MIN_IMAGE_COVERAGE
+    if covered / page_area >= MIN_IMAGE_COVERAGE:
+        return True
+    if page.get_text("text").strip():
+        return False
+    curves = sum(1 for d in page.get_drawings() for item in d["items"] if item[0] == "c")
+    return curves >= OUTLINED_MIN_CURVES
 
 
 def _scanned_count(doc: pymupdf.Document) -> int:

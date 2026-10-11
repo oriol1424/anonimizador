@@ -70,6 +70,8 @@ QFrame#notice {{ border-radius: 8px; }}
 QFrame#notice[level="serious"] {{ background: {DANGER_SOFT}; border: 1px solid #F3C5C7; }}
 QFrame#notice[level="warning"] {{ background: {WARNING_SOFT}; border: 1px solid #F0DFA8; }}
 QFrame#notice[level="info"] {{ background: #EEF0EE; border: 1px solid {BORDER}; }}
+QLabel#inlineWarning {{ background: {WARNING_SOFT}; color: {WARNING};
+    border: 1px solid #F0DFA8; border-radius: 8px; padding: 10px 12px; }}
 QLabel#noticeText[level="serious"] {{ color: {DANGER}; }}
 QLabel#noticeText[level="warning"] {{ color: {WARNING}; }}
 

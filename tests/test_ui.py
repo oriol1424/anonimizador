@@ -7,7 +7,6 @@ from pathlib import Path
 
 import pytest
 from docx import Document
-from PySide6.QtCore import QSettings
 from PySide6.QtWidgets import QMessageBox
 
 from anonimizador.core.lang import CATALAN, fill_preset
@@ -28,7 +27,6 @@ from anonimizador.ui.worker import run_in_background
 @pytest.fixture
 def window(qtbot, tmp_path):
     w = MainWindow(
-        QSettings(str(tmp_path / "settings.ini"), QSettings.Format.IniFormat),
         keep_path=tmp_path / "no_anonimitzar.json",  # nunca la configuración real
     )
     qtbot.addWidget(w)
@@ -345,7 +343,6 @@ def test_keep_list_is_saved_and_shown(window, qtbot, tmp_path):
     window.add_to_keep_list(["Montserrat Soler i Vidal", "Montserrat Soler i Vidal"])
     assert window.sidebar.keep_button.text() == "No anonimitzar · 1"
     other = MainWindow(
-        QSettings(str(tmp_path / "s2.ini"), QSettings.Format.IniFormat),
         keep_path=tmp_path / "no_anonimitzar.json",
     )
     qtbot.addWidget(other)
@@ -423,3 +420,33 @@ def test_output_name_is_anonymized_too(window, qtbot, tmp_path: Path):
     window.run_button.click()
     qtbot.waitUntil(lambda: window.pages.currentWidget() is window.result_page, timeout=20000)
     assert window.result_page.report.output.name == "Demanda [CLIENT_1]_anonimitzat.docx"
+
+
+def test_guide_overwrite_is_asked_and_cloud_folder_warns(window, demanda_ca, monkeypatch):
+    from anonimizador.core.guide import default_path
+
+    window.set_input(demanda_ca)
+    guide = default_path(window.output_path(), window.language)
+    guide.write_text("antiga")
+    asked = []
+    monkeypatch.setattr(QMessageBox, "question",
+                        lambda *a: asked.append(a[2]) or QMessageBox.StandardButton.No)  # fmt: skip
+    assert not window._validate_output()
+    assert guide.name in asked[0]
+
+    page = window.save_page
+    page.folder_edit.setText("C:/Users/despatx/OneDrive/Casos")
+    assert not page.cloud_warning.isHidden() and "núvol" in page.cloud_warning.text()
+    page.guide_check.setChecked(False)
+    assert page.cloud_warning.isHidden()
+    page.guide_check.setChecked(True)
+    page.folder_edit.setText("D:/Casos")
+    assert page.cloud_warning.isHidden()
+
+
+def test_last_folder_is_not_saved_in_system_settings():
+    import inspect
+
+    import anonimizador.ui.main_window as module
+
+    assert "QSettings" not in inspect.getsource(module)

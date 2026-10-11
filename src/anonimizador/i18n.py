@@ -274,6 +274,14 @@ STRINGS: dict[str, dict[str, str]] = {
         "ca": "Per enganxar-lo a una IA, el format de text és el més net.",
         "es": "Para pegarlo en una IA, el formato de texto es el más limpio.",
     },
+    "cloud_warning": {
+        "ca": "Aquesta carpeta es sincronitza amb el núvol (OneDrive, Dropbox, iCloud...): la "
+        "guia de correspondències, amb els noms reals, s'hi pujarà. Si no ho vols, tria una "
+        "altra carpeta o desmarca la guia.",
+        "es": "Esta carpeta se sincroniza con la nube (OneDrive, Dropbox, iCloud...): la guía "
+        "de correspondencias, con los nombres reales, se subirá. Si no quieres, elige otra "
+        "carpeta o desmarca la guía.",
+    },
     "format_text_short": {"ca": "Text per a la IA (.txt)", "es": "Texto para la IA (.txt)"},
     # Progreso
     "progress_analyzing": {"ca": "Analitzant el document…", "es": "Analizando el documento…"},

@@ -27,6 +27,24 @@ from anonimizador.ui import style
 from anonimizador.ui.widgets import ReplacementCombo, Segmented, button, card, label, set_prop
 
 FORMAT_LABELS = {".docx": "format_docx", ".pdf": "format_pdf", ".txt": "format_text_short"}
+# Carpetas que se sincronizan con la nube (por nombre de la ruta).
+CLOUD_MARKERS = ("onedrive", "dropbox", "google drive", "googledrive", "icloud",
+                 "mobile documents", "nextcloud", "pcloud", "box sync")  # fmt: skip
+
+
+def is_cloud_folder(folder: str) -> bool:
+    lowered = folder.replace("\\", "/").lower()
+    return any(marker in lowered for marker in CLOUD_MARKERS)
+
+
+class NoticeLabel(QLabel):
+    """Aviso amarillo de una línea (o varias) dentro de una pantalla."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.setObjectName("inlineWarning")
+        self.setWordWrap(True)
+        self.hide()
 
 
 class Page(QWidget):
@@ -303,6 +321,11 @@ class SavePage(Page):
         self.guide_check.setChecked(True)
         layout.addWidget(self.guide_check)
         self.body.addWidget(box)
+        # Carpeta sincronizada con la nube: la guía (con los nombres reales) se subiría.
+        self.cloud_warning = NoticeLabel()
+        self.body.addWidget(self.cloud_warning)
+        self.folder_edit.textChanged.connect(lambda _: self._update_cloud_warning())
+        self.guide_check.toggled.connect(lambda _: self._update_cloud_warning())
         self.body.addStretch()
 
         self.back_button = button("")
@@ -325,6 +348,11 @@ class SavePage(Page):
         self._formats_row.insertWidget(0, self.formats)
         self.formats.set_value(current if current in formats else formats[0])
 
+    def _update_cloud_warning(self) -> None:
+        show = self.guide_check.isChecked() and is_cloud_folder(self.folder_edit.text())
+        self.cloud_warning.setText(tr(self._lang, "cloud_warning"))
+        self.cloud_warning.setVisible(show)
+
     def choose_folder(self) -> None:
         start = self.folder_edit.text() or str(Path.home())
         folder = QFileDialog.getExistingDirectory(self, tr(self._lang, "choose_folder"), start)
@@ -344,3 +372,4 @@ class SavePage(Page):
             b.setText(tr(lang, FORMAT_LABELS[suffix]))
         self.back_button.setText(tr(lang, "back"))
         self.run_button.setText(tr(lang, "anonymize"))
+        self._update_cloud_warning()

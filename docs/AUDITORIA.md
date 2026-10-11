@@ -21,6 +21,13 @@ Puntos 1-3 y 5-11 corregidos con tests en `tests/test_auditoria.py` (y el nombre
 fichero en `tests/test_ui.py`). El nombre de salida se anonimiza en el paso 4 (los "_"
 cuentan como separador). El punto 4 queda así por decisión del usuario.
 
+Menores 12-18 resueltos también el 2026-10-11: gráficos/SmartArt, bloques de creación,
+customXml, docVars y códigos de campo partidos (Word); páginas con texto en trazos se leen
+con OCR (PDF); apellido ambiguo aparte; la guía existente se pregunta antes de
+sobrescribirla; la última carpeta ya no se guarda en la configuración del sistema (solo
+mientras la app está abierta); licencias indirectas documentadas; aviso si la carpeta de
+salida se sincroniza con la nube.
+
 ## Hallazgos
 
 ### Graves (posible fuga hacia la IA)
@@ -53,20 +60,20 @@ cuentan como separador). El punto 4 queda así por decisión del usuario.
     tomar fechas por números de procedimiento.
 
 ### Menores / por revisar (lectura del código, sin prueba)
-12. [ ] Word: texto de gráficos y SmartArt (`a:t` en partes chart/diagram), bloques de
+12. [x] Word: texto de gráficos y SmartArt (`a:t` en partes chart/diagram), bloques de
     creación (glossary), datos de controles de contenido vinculados (`customXml`) y
     variables de documento (`docVars`) no se tratan.
-13. [ ] Word: códigos de campo partidos en varios fragmentos (`instrText`) se tratan por
+13. [x] Word: códigos de campo partidos en varios fragmentos (`instrText`) se tratan por
     separado; un dato partido no se encontraría.
-14. [ ] PDF con el texto convertido en trazos (sin texto ni imagen): no se detecta nada.
+14. [x] PDF con el texto convertido en trazos (sin texto ni imagen): no se detecta nada.
     Posible arreglo: tratar como escaneada una página con dibujos y sin texto.
-15. [ ] Dos personas con el mismo apellido: el «Puig» suelto se une a la primera
+15. [x] Dos personas con el mismo apellido: el «Puig» suelto se une a la primera
     sugerencia («Joan Puig») en vez de quedar aparte. No es fuga, pero confunde a la IA.
-16. [ ] La guía se sobrescribe sin preguntar si ya existe; `QSettings` guarda la última
+16. [x] La guía se sobrescribe sin preguntar si ya existe; `QSettings` guarda la última
     carpeta, cuyo nombre puede ser el del cliente.
-17. [ ] Licencias: faltan en `docs/LICENCIAS.md` las dependencias indirectas (OpenCV,
+17. [x] Licencias: faltan en `docs/LICENCIAS.md` las dependencias indirectas (OpenCV,
     Shapely, Pillow, requests, protobuf, omegaconf, pyclipper, tqdm, certifi...; todas
     gratuitas para uso profesional). El entorno de desarrollo tiene PySide6 completo (con
     WebEngine/Chromium): el paquete debe llevar solo PySide6-Essentials.
-18. [ ] Si la carpeta de salida está sincronizada (OneDrive...), la guía sube a la nube.
+18. [x] Si la carpeta de salida está sincronizada (OneDrive...), la guía sube a la nube.
     Avisar o proponer otra carpeta por defecto para la guía.

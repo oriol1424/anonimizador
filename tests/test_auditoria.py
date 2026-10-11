@@ -144,3 +144,95 @@ def test_formats_found_in_the_audit(text, label, value):
 )
 def test_no_false_positives_from_new_rules(text):
     assert [d.label for d in detect(text)] == []
+
+
+# --- Menores (12-15) ----------------------------------------------------------------------
+
+_CHART = (
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    '<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" '
+    'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:chart><c:title><c:tx>'
+    f"<c:rich><a:p><a:r><a:t>Pagaments de Joan </a:t></a:r><a:r><a:t>Puig i Ferrer</a:t></a:r>"
+    "</a:p></c:rich></c:tx></c:title><c:plotArea><c:barChart><c:ser><c:tx><c:strRef><c:strCache>"
+    f'<c:pt idx="0"><c:v>{NAME}</c:v></c:pt></c:strCache></c:strRef></c:tx></c:ser>'
+    "</c:barChart></c:plotArea></c:chart></c:chartSpace>"
+)
+_CUSTOM_XML = f'<?xml version="1.0"?><dades><client>{NAME}</client></dades>'
+_REL = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/"
+
+
+def _word_with_hidden_places(path: Path) -> Path:
+    from docx.oxml import parse_xml
+
+    base = path.with_name("base_menors.docx")
+    doc = Document()
+    p = doc.add_paragraph("Enllaç: ")
+    for piece in ('HYPERLINK "mailto:joan.pu', 'ig@correu.example"'):
+        run = p.add_run()
+        run._r.append(parse_xml(
+            '<w:instrText xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"'
+            f' xml:space="preserve">{piece}</w:instrText>'
+        ))  # fmt: skip
+    doc.settings.element.append(parse_xml(
+        '<w:docVars xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+        f'<w:docVar w:name="Client" w:val="{NAME}"/></w:docVars>'
+    ))  # fmt: skip
+    doc.save(str(base))
+    with zipfile.ZipFile(base) as zin, zipfile.ZipFile(path, "w") as zout:
+        for item in zin.infolist():
+            data = zin.read(item.filename)
+            if item.filename == "[Content_Types].xml":
+                data = data.replace(b"</Types>", b'<Override PartName="/word/charts/chart1.xml" '
+                                    b'ContentType="application/vnd.openxmlformats-officedocument'
+                                    b'.drawingml.chart+xml"/></Types>')  # fmt: skip
+            if item.filename == "word/_rels/document.xml.rels":
+                data = data.replace(b"</Relationships>", (
+                    f'<Relationship Id="rIdG" Type="{_REL}chart" Target="charts/chart1.xml"/>'
+                    f'<Relationship Id="rIdX" Type="{_REL}customXml" '
+                    'Target="../customXml/item9.xml"/></Relationships>'
+                ).encode())  # fmt: skip
+            zout.writestr(item, data)
+        zout.writestr("word/charts/chart1.xml", _CHART)
+        zout.writestr("customXml/item9.xml", _CUSTOM_XML)
+    return path
+
+
+def test_word_charts_custom_xml_doc_vars_and_split_fields(tmp_path):
+    src = _word_with_hidden_places(tmp_path / "doc.docx")
+    assert _zip_text(src).count("Puig") >= 4
+    out = tmp_path / "out.docx"
+    terms = [*TERMS, Term("joan.puig@correu.example", "[CORREU_1]", expand=False)]
+    report = anonymize(src, out, terms)
+    text = _zip_text(out)
+    assert "Puig" not in text and "joan.pu" not in text
+    assert "[CLIENT_1]" in text and "[CORREU_1]" in text
+    assert not [n for n in report.notices if n.is_leak]
+
+
+def test_pdf_with_text_as_outlines_is_read_with_ocr(tmp_path):
+    from anonimizador.core import pdf_io
+
+    page = pymupdf.open().new_page()
+    page.insert_text((56, 90), f"En {NAME}, DNI 12345678Z, compareix.", fontsize=16)
+    svg = page.get_svg_image(text_as_path=True)
+    outlined = pymupdf.open(stream=svg.encode(), filetype="svg")
+    src = tmp_path / "corbes.pdf"
+    pymupdf.open("pdf", outlined.convert_to_pdf()).save(str(src))
+    check = pymupdf.open(str(src))[0]
+    assert not check.get_text().strip() and pdf_io.is_image_page(check)
+
+    out = tmp_path / "out.pdf"
+    report = anonymize(src, out, TERMS)
+    assert "Puig" not in pdf_io.extract_text(out)  # releído con OCR
+    assert report.replaced.get("[CLIENT_1]")
+
+
+def test_ambiguous_surname_is_not_given_to_one_person():
+    from anonimizador.core.pipeline import Suggestion, merge_variants
+
+    raw = [Suggestion("PERSONA", "", (f,), 1, True) for f in ("Joan Puig", "Pere Puig", "Puig")]
+    assert sorted(s.forms for s in merge_variants(raw)) == [
+        ("Joan Puig",), ("Pere Puig",), ("Puig",),
+    ]  # fmt: skip
+    raw = [Suggestion("PERSONA", "", (f,), 1, True) for f in ("Jordi Casals i Pons", "Casals")]
+    assert [s.forms for s in merge_variants(raw)] == [("Jordi Casals i Pons", "Casals")]

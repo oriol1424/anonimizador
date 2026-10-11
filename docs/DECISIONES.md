@@ -22,7 +22,7 @@
 | 2026-10-10 | Alias sin tildes ni caracteres especiales (`[ADRECA_1]`, `[TELEFON_1]`) | Que sobrevivan intactos a la IA y se puedan revertir después |
 | 2026-10-10 | Interfaz en catalán; cambia a castellano junto con el idioma del documento | Petición del cliente; un solo selector, más sencillo |
 | 2026-10-10 | El núcleo devuelve `Notice`/`AnonymizerError` con código, la UI los traduce | Separar lógica y textos; mensajes siempre en el idioma de la interfaz |
-| 2026-10-10 | Listas de términos por caso en .json elegido por el usuario; QSettings solo guarda la última carpeta | Reutilizar listas sin que la app guarde datos personales por su cuenta |
+| 2026-10-10 | Listas de términos por caso en .json elegido por el usuario; QSettings solo guarda la última carpeta (sustituido el 2026-10-11: ya no se guarda nada) | Reutilizar listas sin que la app guarde datos personales por su cuenta |
 | 2026-10-10 | PyMuPDF para PDF (redacción real) bajo **AGPL-3.0, gratis** (sin licencia comercial) | Es la única librería madura que elimina texto del contenido del PDF; aislada en `pdf_io.py` por si hay que cambiarla |
 | 2026-10-10 | OCR con RapidOCR (PP-OCRv6), no Tesseract | Lee bien el catalán (·, à, ç), los modelos van dentro del paquete pip (sin binarios por plataforma ni descargas), Apache-2.0 |
 | 2026-10-10 | Toda página cuya imagen cubra ≥50% se rehace desde OCR, ignorando su capa de texto | Una capa de texto ajena puede no coincidir con lo que se ve; más lento pero seguro |
@@ -66,3 +66,7 @@
 | 2026-10-11 | El nombre del fichero de salida se anonimiza con la misma lista | El nombre llega a la IA junto con el documento |
 | 2026-10-11 | Word: se quitan la miniatura y se anonimizan propiedades personalizadas y texto alternativo; PDF: se trabaja con la página entera (sin recorte) y se quitan los adjuntos | Fugas comprobadas en la auditoría; los adjuntos no se pueden revisar |
 | 2026-10-11 | Apellidos de 2-3 letras (Mas, Pi, Pou) solo como variante tras un tratamiento (Sr., Sra., en, na...) | Solos son palabras corrientes («mas», «pi»); tras un tratamiento son el apellido |
+| 2026-10-11 | La última carpeta usada solo se recuerda mientras la app está abierta (sin QSettings) | Su nombre suele ser el del cliente y quedaba en el registro / preferencias del sistema |
+| 2026-10-11 | PDF sin texto con ≥150 curvas se trata como escaneado (OCR) | Texto convertido en trazos: si no, no se detectaría nada. Las tablas son rectas y no cuentan |
+| 2026-10-11 | Un apellido suelto que encaja con varias personas queda como sugerencia aparte | No se puede saber de quién es: unirlo a una daría a la IA una identidad equivocada |
+| 2026-10-11 | Aviso (no bloqueo) si la carpeta de salida está en OneDrive/Dropbox/iCloud y la guía está marcada | La guía va sin cifrar por decisión del usuario; que sepa que subirá a la nube |

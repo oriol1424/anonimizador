@@ -24,6 +24,34 @@ Objetivo: **coste cero** y uso profesional en el bufete sin pagar licencias.
 | numpy | BSD-3-Clause | Sí | Conservar aviso de copyright (ya la instalaba rapidocr) |
 | Modelo NER `projecte-aina/roberta-base-ca-v2-cased-ner` (Projecte AINA / BSC) | Apache-2.0 | Sí | Atribución + indicar que se ha convertido a ONNX int8 (`models/ner-ca/LICENSE-MODEL.txt`) |
 
+### Dependencias indirectas (las instalan las anteriores; comprobado 2026-10-11)
+Todas gratuitas para uso profesional. Obligación común: conservar sus avisos de licencia en
+el paquete (carpeta `licencias/`).
+
+| Componente | Lo instala | Licencia |
+|---|---|---|
+| opencv-python-headless | rapidocr | Apache-2.0 |
+| shapely | rapidocr | BSD-3-Clause |
+| pyclipper | rapidocr | MIT |
+| omegaconf, PyYAML | rapidocr | BSD-3-Clause, MIT |
+| pillow | rapidocr | MIT-CMU (HPND) |
+| tqdm, colorlog, six | rapidocr | MPL-2.0 y MIT, MIT, MIT |
+| requests, urllib3, idna, charset-normalizer, certifi | rapidocr | Apache-2.0, MIT, BSD-3, MIT, MPL-2.0 |
+| protobuf, flatbuffers | onnxruntime | BSD-3-Clause, Apache-2.0 |
+| huggingface_hub, hf-xet, httpx2, httpcore2, h11, anyio, fsspec, filelock, click | tokenizers | Apache-2.0, Apache-2.0, BSD-3, BSD-3, MIT, MIT, BSD-3, MIT, BSD-3 |
+| shiboken6 | PySide6 | LGPL-3.0 |
+| typing_extensions | varias | PSF-2.0 |
+
+MPL-2.0 (certifi, tqdm) solo obliga a publicar cambios en esos ficheros: no los modificamos.
+`requests`/`huggingface_hub` traen código de red: la app no lo usa (los modelos van en el
+paquete) y los tests bloquean cualquier conexión (`tests/conftest.py`).
+
+### Para el paquete (paso 10)
+- Solo **PySide6-Essentials** (QtCore, QtGui, QtWidgets, QtSvg: todo lo que usa la app,
+  comprobado). El entorno de desarrollo tiene además PySide6 completo (Addons, WebEngine
+  con Chromium, Pdf), instalado a mano y que nadie necesita: el paquete debe construirse
+  en un entorno limpio con `pip install .` para no llevarlo.
+
 ## PyMuPDF y la AGPL, en claro
 - Usarla **no cuesta nada**. La licencia comercial solo hace falta para vender software
   cerrado, que no es el caso.

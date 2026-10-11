@@ -5,7 +5,7 @@ import json
 import re
 from pathlib import Path
 
-from PySide6.QtCore import QSettings, QStandardPaths, QUrl
+from PySide6.QtCore import QStandardPaths, QUrl
 from PySide6.QtGui import QCloseEvent, QDesktopServices, QDragEnterEvent, QDropEvent
 from PySide6.QtWidgets import (
     QFileDialog,
@@ -53,13 +53,14 @@ def default_keep_path() -> Path:
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, settings: QSettings | None = None, keep_path: Path | None = None):
+    def __init__(self, keep_path: Path | None = None):
         super().__init__()
         # Nombres y datos que no se anonimizan nunca (la abogada, el despacho...).
         self.keep_path = keep_path or default_keep_path()
         self.keep: list[str] = keep_list.load(self.keep_path)
-        # Solo guarda la última carpeta usada; nunca nombres ni contenido de documentos.
-        self.settings = settings or QSettings("Anonimitzador", "Anonimitzador")
+        # Última carpeta usada, solo mientras la app está abierta: su nombre puede ser el
+        # del cliente, así que no se guarda en la configuración del sistema.
+        self._last_dir = str(Path.home())
         self.input_path: Path | None = None
         self.info: DocumentInfo | None = None
         self._read_ahead: ReadAhead | None = None  # OCR anticipado del PDF elegido
@@ -202,12 +203,12 @@ class MainWindow(QMainWindow):
         self.folder_edit.setText(str(path.parent))
         self.name_edit.setText(path.stem + tr(self.language.code, "anonymized_suffix"))
         self.save_page.set_formats(output_formats(path), self.language.code)
-        self.settings.setValue("last_dir", str(path.parent))
+        self._last_dir = str(path.parent)
         self.document_page.retranslate(self.language.code, path, info)
         self._refresh_steps()
 
     def choose_file(self) -> None:
-        start = self.settings.value("last_dir", str(Path.home()))
+        start = self._last_dir
         path, _ = QFileDialog.getOpenFileName(
             self, tr(self.language.code, "choose_file"), start,
             tr(self.language.code, "input_filter"),
@@ -242,7 +243,7 @@ class MainWindow(QMainWindow):
     def save_list(self) -> None:
         lang = self.language.code
         path, _ = QFileDialog.getSaveFileName(
-            self, tr(lang, "save_list"), self.settings.value("last_dir", ""),
+            self, tr(lang, "save_list"), self._last_dir,
             tr(lang, "list_filter"),
         )  # fmt: skip
         if not path:
@@ -256,7 +257,7 @@ class MainWindow(QMainWindow):
     def load_list(self) -> None:
         lang = self.language.code
         path, _ = QFileDialog.getOpenFileName(
-            self, tr(lang, "load_list"), self.settings.value("last_dir", ""),
+            self, tr(lang, "load_list"), self._last_dir,
             tr(lang, "list_filter"),
         )  # fmt: skip
         if path:
@@ -364,12 +365,18 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, tr(lang, "err_title"), problem)
             return False
         out = self.output_path()
-        if out.exists():
+        existing = [p.name for p in (out, self._guide_path(out)) if p and p.exists()]
+        if existing:
             answer = QMessageBox.question(
-                self, tr(lang, "overwrite_title"), tr(lang, "overwrite", name=out.name)
+                self, tr(lang, "overwrite_title"), tr(lang, "overwrite", name="», «".join(existing))
             )
             return answer == QMessageBox.StandardButton.Yes
         return True
+
+    def _guide_path(self, out: Path) -> Path | None:
+        if not self.save_page.guide_check.isChecked():
+            return None
+        return default_guide_path(out, self.language)
 
     def start_anonymize(self) -> None:
         if self.input_path is None:
@@ -391,9 +398,7 @@ class MainWindow(QMainWindow):
         if not self._validate_output():
             return
         src, dst, language = self.input_path, self.output_path(), self.language
-        guide = (
-            default_guide_path(dst, language) if self.save_page.guide_check.isChecked() else None
-        )
+        guide = self._guide_path(dst)
         pdf = self.info is not None and self.info.kind == "pdf"
         phases = ["anonymize", "verify"] if pdf else ["anonymize"]
         if pdf and dst.suffix == ".txt":

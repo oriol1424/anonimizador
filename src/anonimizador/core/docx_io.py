@@ -5,6 +5,7 @@ cuerpo, tablas, cuadros de texto, cabeceras, pies, notas, comentarios, control d
 cambios (texto borrado y autores), códigos de campo, hipervínculos y metadatos.
 """
 
+import re
 from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
@@ -22,6 +23,10 @@ P, R = f"{{{W}}}p", f"{{{W}}}r"
 T, DEL_T, INSTR_T = f"{{{W}}}t", f"{{{W}}}delText", f"{{{W}}}instrText"
 TAB, BR, CR = f"{{{W}}}tab", f"{{{W}}}br", f"{{{W}}}cr"
 XML_SPACE = "{http://www.w3.org/XML/1998/namespace}space"
+A = "http://schemas.openxmlformats.org/drawingml/2006/main"
+A_P, A_T, A_BR = f"{{{A}}}p", f"{{{A}}}t", f"{{{A}}}br"
+C_V = "{http://schemas.openxmlformats.org/drawingml/2006/chart}v"  # textos de gráficos
+DOC_VAR = f"{{{W}}}docVar"
 
 _WP = "application/vnd.openxmlformats-officedocument.wordprocessingml."
 TEXT_CONTENT_TYPES = {
@@ -33,7 +38,16 @@ TEXT_CONTENT_TYPES = {
     _WP + "footnotes+xml",
     _WP + "endnotes+xml",
     _WP + "comments+xml",
+    _WP + "document.glossary+xml",  # bloques de creación (textos reutilizables)
 }
+# Gráficos y SmartArt: texto DrawingML (a:p/a:t) y valores de los gráficos (c:v).
+DRAWING_CONTENT_TYPES = {
+    "application/vnd.openxmlformats-officedocument.drawingml.chart+xml",
+    "application/vnd.openxmlformats-officedocument.drawingml.diagramData+xml",
+    "application/vnd.ms-office.drawingml.diagramDrawing+xml",
+}
+SETTINGS_CONTENT_TYPE = _WP + "settings+xml"  # variables de documento (docVars)
+CUSTOM_XML = re.compile(r"^/customXml/item\d+\.xml$")  # datos de controles de contenido
 PEOPLE_CONTENT_TYPE = _WP + "people+xml"
 CUSTOM_PROPS = "/docProps/custom.xml"  # propiedades personalizadas ("Client = ...")
 THUMBNAIL_REL = "/metadata/thumbnail"  # miniatura de la 1ª página (imagen con nombres)
@@ -99,6 +113,65 @@ def _paragraph_segments(p: etree._Element) -> tuple[str, list[_Segment]]:
         pieces.append(text)
         pos += len(text)
     return "".join(pieces), segments
+
+
+def _drawing_segments(p: etree._Element) -> tuple[str, list[_Segment]]:
+    """Como `_paragraph_segments`, para un párrafo DrawingML (gráficos, SmartArt)."""
+    pieces: list[str] = []
+    segments: list[_Segment] = []
+    pos = 0
+    for el in p.iter(A_T, A_BR):
+        text, node = (el.text or "", el) if el.tag == A_T else (" ", None)
+        segments.append(_Segment(node, pos, pos + len(text)))
+        pieces.append(text)
+        pos += len(text)
+    return "".join(pieces), segments
+
+
+def _field_segments(p: etree._Element) -> tuple[str, list[_Segment]]:
+    """Códigos de campo de un párrafo, unidos: Word los parte a menudo en varios trozos
+    (`HYPERLINK "mailto:joan` + `.puig@..."`)."""
+    pieces: list[str] = []
+    segments: list[_Segment] = []
+    pos = 0
+    for el in p.iter(INSTR_T):
+        if _owner_paragraph(el) is not p:
+            continue
+        text = el.text or ""
+        segments.append(_Segment(el, pos, pos + len(text)))
+        pieces.append(text)
+        pos += len(text)
+    return "".join(pieces), segments
+
+
+def _segmented(root: etree._Element) -> Iterator[tuple[str, list[_Segment]]]:
+    """Todos los textos de una parte que se buscan como un párrafo: párrafos de Word,
+    sus códigos de campo y párrafos DrawingML."""
+    for p in root.iter(P):
+        yield _paragraph_segments(p)
+        yield _field_segments(p)
+    for p in root.iter(A_P):
+        yield _drawing_segments(p)
+
+
+def _loose_texts(doc: DocxDocument) -> Iterator[tuple[etree._Element, str | None, _XmlRoot]]:
+    """Textos sueltos fuera de los párrafos: (elemento, atributo o None = su texto, parte).
+
+    Valores de gráficos, datos de controles de contenido (customXml) y variables de
+    documento."""
+    for part in doc.part.package.iter_parts():
+        is_custom_xml = bool(CUSTOM_XML.match(str(part.partname)))
+        if not (is_custom_xml or part.content_type in DRAWING_CONTENT_TYPES
+                or part.content_type == SETTINGS_CONTENT_TYPE):  # fmt: skip
+            continue
+        handle = _XmlRoot(part)
+        for el in handle.root.iter(tag=etree.Element):
+            if el.tag == DOC_VAR:
+                for attr in el.attrib:
+                    if etree.QName(attr).localname == "val":
+                        yield el, attr, handle
+            elif (el.tag == C_V or is_custom_xml) and el.text and el.text.strip():
+                yield el, None, handle
 
 
 def _apply_matches(segments: list[_Segment], matches: list[Match]) -> None:
@@ -190,16 +263,12 @@ def anonymize(src: Path, dst: Path, matcher: Matcher) -> ProcessResult:
     doc = Document(str(src))
     all_matches: list[Match] = []
 
-    for handle in _xml_roots(doc, TEXT_CONTENT_TYPES):
-        for p in handle.root.iter(P):
-            text, segments = _paragraph_segments(p)
+    for handle in _xml_roots(doc, TEXT_CONTENT_TYPES | DRAWING_CONTENT_TYPES):
+        for text, segments in _segmented(handle.root):
             matches = matcher.find(text)
             if matches:
                 _apply_matches(segments, matches)
                 all_matches.extend(matches)
-        for instr in handle.root.iter(INSTR_T):
-            if instr.text:
-                instr.text = matcher.replace(instr.text)
         for el, attr in _alt_texts(handle.root):
             el.set(attr, matcher.replace(el.get(attr)))
         _anonymize_authors(handle.root)
@@ -207,6 +276,16 @@ def anonymize(src: Path, dst: Path, matcher: Matcher) -> ProcessResult:
 
     for handle in _xml_roots(doc, {PEOPLE_CONTENT_TYPE}):
         _anonymize_authors(handle.root)
+        handle.commit()
+
+    changed: dict[int, _XmlRoot] = {}
+    for el, attr, handle in _loose_texts(doc):
+        value = el.get(attr) if attr else el.text
+        new = matcher.replace(value)
+        if new != value:
+            el.set(attr, new) if attr else setattr(el, "text", new)
+            changed[id(handle.part)] = handle
+    for handle in changed.values():
         handle.commit()
 
     _anonymize_metadata(doc, matcher)
@@ -227,17 +306,14 @@ def extract_text(path: Path) -> str:
     """Todo el texto susceptible de contener datos, un párrafo por línea."""
     doc = Document(str(path))
     lines: list[str] = []
-    for handle in _xml_roots(doc, TEXT_CONTENT_TYPES):
-        for p in handle.root.iter(P):
-            text, _ = _paragraph_segments(p)
-            if text.strip():
-                lines.append(text)
-        lines.extend(i.text for i in handle.root.iter(INSTR_T) if i.text and i.text.strip())
+    for handle in _xml_roots(doc, TEXT_CONTENT_TYPES | DRAWING_CONTENT_TYPES):
+        lines.extend(text for text, _ in _segmented(handle.root) if text.strip())
         lines.extend(el.get(attr) for el, attr in _alt_texts(handle.root))
     custom = _custom_props(doc)
     if custom is not None:
         lines.extend(el.text for el in custom.root.iter(tag=etree.Element)
                      if el.text and el.text.strip())  # fmt: skip
+    lines.extend(el.get(attr) if attr else el.text for el, attr, _ in _loose_texts(doc))
     props = doc.core_properties
     lines.extend(
         v for f in ("author", "last_modified_by", *CORE_TEXT_FIELDS) if (v := getattr(props, f))

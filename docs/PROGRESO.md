@@ -1,7 +1,7 @@
 # Progreso
 
 ## ▶ DÓNDE NOS QUEDAMOS (2026-10-11) — empezar por aquí
-Todo hecho, probado (**314 tests** + 2 lentos con `pytest -m slow`) y publicado. No hay código a medias.
+Todo hecho, probado (**319 tests** + 2 lentos con `pytest -m slow`) y publicado. No hay código a medias.
 
 ### Hecho el 2026-10-11 (noche): lista «No anonimitzar» (petición del usuario)
 - Nombres y datos que **no se anonimizan nunca** (la abogada, el despacho, su dirección,
@@ -90,7 +90,7 @@ Todo hecho, probado (**314 tests** + 2 lentos con `pytest -m slow`) y publicado.
 
 ### Siguiente (en este orden)
 0. [x] Auditoría (`docs/AUDITORIA.md`): graves y medios resueltos el 2026-10-11 (la guía
-   sin cifrar se mantiene por decisión del usuario). Quedan los menores (12-18).
+   sin cifrar se mantiene por decisión del usuario). Menores 12-18 también resueltos.
 1. Que el usuario pruebe la interfaz nueva (`.venv/Scripts/python -m anonimizador.app`)
    y ajustar lo que pida. Pendiente opcional: tema oscuro (colores de la propuesta C).
 2. Empaquetado USB (paso 10) y alternativas sencillas a la IA (9b).
