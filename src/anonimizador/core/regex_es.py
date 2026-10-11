@@ -51,6 +51,26 @@ PASSPORT = re.compile(
     r"(?:\s+(?i:n[úu]m(?:ero|\.)?|n\.?º|no\.?|nr\.?|number))?\s*:?\s*"
     r"(?P<v>(?=[A-Z]*\d)[A-Z0-9]{6,9})\b"
 )
+
+
+def _number_after(keywords: str) -> re.Pattern[str]:
+    """Número (con alguna cifra) que sigue a unas palabras clave, para datos cuyo formato
+    no conocemos (nº de la CASS, permiso de residencia). Solo se marca el número."""
+    filler = r"(?:n[úu]m(?:ero)?\.?|n\.?º|d'|d’|de|del|la|el|amb|con|a|afiliaci[óo]n?)"
+    return re.compile(
+        rf"(?i:{keywords})(?:\s*(?i:{filler})(?![\w]))*\s*:?\s*"
+        r"(?P<v>(?=[\w/-]*\d)[A-Z0-9][A-Z0-9/-]{2,14}[A-Z0-9])\b"
+    )
+
+
+# Andorra: el número de afiliación a la CASS y el del permiso de residencia (formato por
+# confirmar con el bufete: ver docs/PENDIENTES_BUFETE.md).
+CASS_NUMBER = _number_after(r"CASS|afiliaci[óo]n?")
+RESIDENCE_PERMIT = _number_after(
+    r"(?:perm[íi]s|permiso|autoritzaci[óo]|autorizaci[óo]n|targeta|tarjeta)"
+    r"\s+(?:de\s+)?(?:resid[èe]ncia|residencia|treball|trabajo)"
+    r"(?:\s+(?:i|y)\s+(?:treball|trabajo))?"
+)
 # Andorra: 6 cifras (fijos 7/8, móviles 3/6). Sin prefijo no se aceptan puntos:
 # "600.000" es un importe, no un teléfono.
 PHONE_AD = re.compile(
@@ -74,6 +94,8 @@ RULES: list[tuple[str, re.Pattern[str], object]] = [
     ("NRT", re.compile(r"\b[A-Z][- ]?\d{6}[- ]?[A-Z]\b"), None),
     ("PASAPORTE", re.compile(r"\bO\d{7}\b"), None),
     ("PASAPORTE", PASSPORT, None),
+    ("CASS", CASS_NUMBER, None),
+    ("RESIDENCIA", RESIDENCE_PERMIT, None),
     ("TELEFONO", re.compile(r"(?<![\w+])(?:(?:\+|00)34[ .-]?)?[6789](?:[ .-]?\d){8}(?!\d)"), None),
     ("TELEFONO", PHONE_AD, None),
     ("MATRICULA", re.compile(r"\b\d{4}[- ]?[BCDFGHJKLMNPRSTVWXYZ]{3}\b"), None),

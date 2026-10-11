@@ -109,3 +109,29 @@ def test_andorran_address_keeps_postcode_and_parish():
 )
 def test_no_false_andorran_data(text):
     assert [d.label for d in detect(text)] == []
+
+
+@pytest.mark.parametrize(
+    ("text", "label", "value"),
+    [
+        ("afiliat a la CASS amb el número 123456, treballa", "CASS", "123456"),
+        ("núm. CASS: 12345-A", "CASS", "12345-A"),
+        ("número d'afiliació 987654", "CASS", "987654"),
+        ("amb permís de residència núm. 12345/2020 vigent", "RESIDENCIA", "12345/2020"),
+        ("targeta de residència AB-123456", "RESIDENCIA", "AB-123456"),
+        ("autorització de residència i treball núm. 4567", "RESIDENCIA", "4567"),
+        ("autorización de residencia y trabajo n.º 4567", "RESIDENCIA", "4567"),
+        ("permís de treball 778899", "RESIDENCIA", "778899"),
+    ],
+)
+def test_detects_number_after_keyword(text, label, value):
+    """CASS y permiso de residencia: formato desconocido, se toma el número que sigue."""
+    found = [(d.label, d.text) for d in detect(text)]
+    assert (label, value) in found
+
+
+@pytest.mark.parametrize(
+    "text", ["la CASS va informar el 2024 que", "el permís de residència caduca demà"]
+)
+def test_keyword_without_number_is_not_detected(text):
+    assert [d for d in detect(text) if d.label in ("CASS", "RESIDENCIA")] == []

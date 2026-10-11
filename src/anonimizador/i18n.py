@@ -156,6 +156,8 @@ STRINGS: dict[str, dict[str, str]] = {
     "label_CIF": {"ca": "NIF empresa", "es": "CIF"},
     "label_NRT": {"ca": "NRT (Andorra)", "es": "NRT (Andorra)"},
     "label_PASAPORTE": {"ca": "Passaport", "es": "Pasaporte"},
+    "label_CASS": {"ca": "Núm. CASS", "es": "Nº CASS"},
+    "label_RESIDENCIA": {"ca": "Permís de residència", "es": "Permiso de residencia"},
     "label_IBAN": {"ca": "Compte bancari", "es": "Cuenta bancaria"},
     "label_TELEFONO": {"ca": "Telèfon", "es": "Teléfono"},
     "label_EMAIL": {"ca": "Correu electrònic", "es": "Correo electrónico"},

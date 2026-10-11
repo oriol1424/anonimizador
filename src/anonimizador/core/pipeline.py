@@ -159,9 +159,8 @@ def _next_alias(label: str, used: set[str]) -> str:
 
 # Orden de las sugerencias en la ventana: primero lo más identificativo.
 LABEL_ORDER = [
-    "PERSONA", "EMPRESA", "DIRECCION", "PASAPORTE", "DNI", "NIE", "NRT", "CIF", "TELEFONO",
-    "EMAIL", "IBAN",
-    "MATRICULA", "PROCEDIMIENTO",
+    "PERSONA", "EMPRESA", "DIRECCION", "PASAPORTE", "DNI", "NIE", "NRT", "CASS", "RESIDENCIA",
+    "CIF", "TELEFONO", "EMAIL", "IBAN", "MATRICULA", "PROCEDIMIENTO",
 ]  # fmt: skip
 NAMED_LABELS = {"PERSONA", "EMPRESA"}
 

@@ -1,23 +1,42 @@
 # Progreso
 
 ## ▶ DÓNDE NOS QUEDAMOS (2026-10-11) — empezar por aquí
-Estábamos haciendo **robustez con documentos largos (80+ páginas)**. Todo lo anterior está
-hecho, probado (170 tests) y publicado. Hechos los puntos 1–4 y 6 del plan; sigue el 5.
-**El bufete es de Andorra** (2026-10-11): añadidas reglas de NRT, pasaporte, teléfono
-+376, matrícula y CP AD; organismos andorranos en el filtro. Falta un documento
-andorrano sintético en `tests/corpus/` y confirmar formatos con el bufete.
+Todo hecho, probado (**180 tests**) y publicado. No hay código a medias.
+
+### Hecho el 2026-10-11
+- **Fuga en escaneados arreglada**: OCR sin clasificador de orientación (`use_cls: False`).
+- **Verificación que se autocorrige** en escaneados (vuelve a borrar lo que el OCR aún ve,
+  máx. 2 vueltas) + aviso destacado con nº de página si queda algo.
+- **Escaneados más rápidos** (~12 → ~8 s/pág): borrado con numpy, OCR de 2 páginas a la
+  vez, lectura por adelantado y OCR anticipado al elegir el fichero.
+- **Aviso de líneas dudosas del OCR** con nº de página (en el análisis y en el resultado).
+- Arreglado: una **página escaneada en blanco** rompía el proceso.
+- **Andorra**: reglas de NRT, pasaporte (andorrano y de cualquier país tras la palabra
+  "passaport"), nº CASS y permiso de residencia (número tras la palabra clave), teléfono
+  +376, matrícula "A 1234", CP AD500 en direcciones; organismos andorranos en el filtro.
+- Equipo de referencia apuntado: **MacBook Air 2022, M2, 8 GB RAM** (tiene que ir sí o sí).
+- Creado **`docs/PENDIENTES_BUFETE.md`**: todo lo que hay que preguntar al bufete
+  (formatos CASS/residencia/causas Batllia, países de los pasaportes, equipos Windows...).
+
+### Siguiente (en este orden)
+1. Enlazar `docs/PENDIENTES_BUFETE.md` desde `CLAUDE.md` (tabla "Qué leer").
+2. Documento **andorrano inventado** en `tests/corpus/` (pasaporte, NRT, CASS, residencia,
+   +376, AD500, Batllia...) y test de extremo a extremo con él.
+3. Punto 5 del plan: acelerar el **detector de nombres** (~23 s en un Word de 80 págs).
+4. Puntos 7–12 del plan de abajo (página que falla, botón Cancel·la, progreso por fases,
+   que no se duerma el ordenador, buscador de sugerencias, test de documento largo,
+   `samefile`).
+5. Después: empaquetado USB (paso 10) y alternativas sencillas a la IA (9b).
 
 ### Medición (`scripts/bench_documents_grans.py <carpeta> <págs_escaneadas>`)
-| Documento | Análisis | Anonimizar + verificar | Problema |
-|---|---|---|---|
-| Word 80 págs | 39 s | 6,5 s | detector de nombres lento |
-| PDF texto 80 págs | 43 s | 34 s | ídem |
-| PDF escaneado 10 págs | 74 s | 178 s | ~35 min a 80 págs **y quedó un nombre sin borrar** |
+| Documento | Análisis | Anonimizar + verificar |
+|---|---|---|
+| Word 80 págs | 23 s | 5 s |
+| PDF texto 80 págs | 23 s | 16 s |
+| PDF escaneado 10 págs | 40 s | 38 s (sin datos sin borrar) |
 
-Tras los puntos 1–3 y la aceleración del OCR (2026-10-11, ya **sin tracemalloc**, que
-falseaba los tiempos): Word 80 págs 23 s / 5 s; PDF texto 80 págs 23 s / 16 s; escaneado
-10 págs 40 s / 38 s y **sin datos sin borrar** → ~10 min para 80 págs escaneadas en este
-PC (i7-1065G7, 4 núcleos), parte de ellos mientras el usuario rellena la lista.
+80 págs escaneadas ≈ 10 min en este PC (i7-1065G7, 4 núcleos). En el Mac M2 probablemente
+menos; falta medirlo allí y probar CoreML.
 
 ### Causas encontradas
 1. **Fuga en escaneados (GRAVE):** el OCR leyó mal una línea entera ("2 a 02s") porque el
