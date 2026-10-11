@@ -1,7 +1,20 @@
 # Progreso
 
 ## ▶ DÓNDE NOS QUEDAMOS (2026-10-11) — empezar por aquí
-Todo hecho, probado (**180 tests**) y publicado. No hay código a medias.
+Todo hecho, probado (**243 tests**) y publicado. No hay código a medias.
+
+### Hecho el 2026-10-11 (tarde)
+- `docs/PENDIENTES_BUFETE.md` enlazado desde `CLAUDE.md`.
+- **Demanda andorrana inventada** (`generar_corpus.build_demanda_andorra[_pdf]`, Word y
+  PDF) + `tests/test_andorra.py` de extremo a extremo: pasaporte, NRT, CASS, residencia,
+  +376, AD500, IBAN AD, matrícula, causa → todo desaparece; Batllia, Comú, CASS, BOPA y
+  Cos de Policia se quedan.
+- Encontrado con ese test y arreglado:
+  - **PDF con ligaduras** ("aﬁliat", "Oﬁcial"): el texto se leía con el glifo "ﬁ" y no
+    coincidía con la lista ni con los filtros. Ahora se separan las letras (+ test).
+  - El detector sugería **"CASS", "D'ANDORRA", "la Vella"** y "Advocats" como empresas:
+    nueva lista `ner.PUBLIC_NAMES` (solo entidad entera) y "advocats" en papeles
+    procesales; se quita una " i" suelta al final de un nombre cortado.
 
 ### Hecho el 2026-10-11
 - **Fuga en escaneados arreglada**: OCR sin clasificador de orientación (`use_cls: False`).
@@ -19,14 +32,11 @@ Todo hecho, probado (**180 tests**) y publicado. No hay código a medias.
   (formatos CASS/residencia/causas Batllia, países de los pasaportes, equipos Windows...).
 
 ### Siguiente (en este orden)
-1. Enlazar `docs/PENDIENTES_BUFETE.md` desde `CLAUDE.md` (tabla "Qué leer").
-2. Documento **andorrano inventado** en `tests/corpus/` (pasaporte, NRT, CASS, residencia,
-   +376, AD500, Batllia...) y test de extremo a extremo con él.
-3. Punto 5 del plan: acelerar el **detector de nombres** (~23 s en un Word de 80 págs).
-4. Puntos 7–12 del plan de abajo (página que falla, botón Cancel·la, progreso por fases,
+1. Punto 5 del plan: acelerar el **detector de nombres** (~23 s en un Word de 80 págs).
+2. Puntos 7–12 del plan de abajo (página que falla, botón Cancel·la, progreso por fases,
    que no se duerma el ordenador, buscador de sugerencias, test de documento largo,
    `samefile`).
-5. Después: empaquetado USB (paso 10) y alternativas sencillas a la IA (9b).
+3. Después: empaquetado USB (paso 10) y alternativas sencillas a la IA (9b).
 
 ### Medición (`scripts/bench_documents_grans.py <carpeta> <págs_escaneadas>`)
 | Documento | Análisis | Anonimizar + verificar |

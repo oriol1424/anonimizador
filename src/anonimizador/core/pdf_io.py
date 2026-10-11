@@ -41,6 +41,11 @@ class EncryptedPdfError(Exception):
     pass
 
 
+# Ligaduras tipográficas ("ﬁ", "ﬂ") separadas en letras: si no, "Oﬁcial" o "Griﬀ" no
+# coinciden con lo que escribe el usuario. La 1ª letra se queda la caja de la ligadura.
+_TEXT_FLAGS = pymupdf.TEXTFLAGS_RAWDICT & ~pymupdf.TEXT_PRESERVE_LIGATURES
+
+
 @dataclass(frozen=True)
 class _Char:
     rect: pymupdf.Rect
@@ -98,7 +103,7 @@ def _page_chars(page: pymupdf.Page) -> tuple[str, list[_Char | None]]:
     pieces: list[str] = []
     chars: list[_Char | None] = []
     line_id = 0
-    for block in page.get_text("rawdict")["blocks"]:
+    for block in page.get_text("rawdict", flags=_TEXT_FLAGS)["blocks"]:
         if block["type"] != 0:
             continue
         for line in block["lines"]:

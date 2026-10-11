@@ -230,3 +230,18 @@ def test_doubtful_ocr_lines_are_reported_with_page(demanda_pdf, tmp_path, monkey
 def test_clean_scan_has_no_doubtful_notice(run):
     assert not [n for n in run.report.notices if n.kind == "ocr_doubtful"]
     assert not [n for n in run.analysis.notices if n.kind == "ocr_doubtful"]
+
+
+def test_ligatures_are_matched_and_removed(tmp_path):
+    """Las fuentes con ligaduras guardan "ffi" como un solo glifo: debe encontrarse igual."""
+    src = tmp_path / "lligadures.pdf"
+    doc = pymupdf.open()
+    doc.new_page().insert_htmlbox(
+        pymupdf.Rect(56, 72, 540, 200), "<p>La senyora Raffaella Griffin va signar.</p>"
+    )
+    doc.save(str(src))
+    assert "Griffin" in pdf_io.extract_text(src)
+    out = tmp_path / "sortida.pdf"
+    anonymize(src, out, [Term("Raffaella Griffin", "[PERSONA_1]")])
+    text = pymupdf.open(str(out))[0].get_text()
+    assert "[PERSONA_1]" in text and "Gri" not in text and "Raf" not in text

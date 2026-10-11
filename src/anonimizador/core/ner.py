@@ -49,6 +49,15 @@ PUBLIC_BODIES = (
     "principat d'andorra", "cos de policia", "raonador del ciutadà",
 )  # fmt: skip
 
+# Nombres que solo se descartan si son la entidad entera (como prefijo quitarían empresas:
+# "CASS" sí, "Cassany SL" no). Andorra: siglas, el país y las parroquias, que el modelo a
+# veces toma por empresas ("la Vella" de "Comú d'Andorra la Vella").
+PUBLIC_NAMES = {
+    "cass", "bopa", "andorra", "d'andorra", "principat", "la vella", "andorra la vella",
+    "escaldes-engordany", "escaldes", "encamp", "canillo", "ordino", "la massana",
+    "sant julià de lòria", "pas de la casa",
+}  # fmt: skip
+
 
 # Papeles procesales: en tablas y encabezados aparecen solos y el modelo los toma por nombres.
 LEGAL_ROLES = {
@@ -59,7 +68,8 @@ LEGAL_ROLES = {
     "juez", "jueza", "fiscal", "recurrent", "recurrente", "apel·lant", "apelante",
     "apel·lat", "apelado", "querellant", "querellante", "querellat", "querellado",
     "denunciant", "denunciante", "denunciat", "denunciado", "arrendador", "arrendatari",
-    "arrendatario", "fets", "hechos", "fonaments", "fundamentos", "suplico", "supliquem",
+    "arrendatario", "advocats", "advocades", "abogados", "fets", "hechos", "fonaments",
+    "fundamentos", "suplico", "supliquem",
 }  # fmt: skip
 ELISIONS = {"d'", "l'"}
 _APOSTROPHES = str.maketrans({"’": "'", "‘": "'", "ʼ": "'"})
@@ -185,13 +195,15 @@ def _clean(text: str, start: int, end: int, label: str) -> Entity | None:
             span = text[start:end]
             continue
         break
-    span = span.rstrip(" .,;:")
+    span = re.sub(r"\s+[iy]$", "", span.rstrip(" .,;:"))  # "Jordi Casals i" (cortado)
     end = start + len(span)
     if len(span) < 2 or fold(span) in {fold(h) for h in HONORIFICS}:
         return None
     if not any(c.isupper() for c in span):
         return None  # "el jutge", "deutor"...
     if label == "EMPRESA" and fold(span).startswith(tuple(fold(p) for p in PUBLIC_BODIES)):
+        return None
+    if fold(span) in {fold(n) for n in PUBLIC_NAMES}:
         return None
     if fold(span) in LEGAL_ROLES:
         return None  # "Demandat" en una celda de tabla, "ACTORA"...
