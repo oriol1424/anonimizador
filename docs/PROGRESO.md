@@ -2,7 +2,7 @@
 
 ## ▶ DÓNDE NOS QUEDAMOS (2026-10-11) — empezar por aquí
 Estábamos haciendo **robustez con documentos largos (80+ páginas)**. Todo lo anterior está
-hecho, probado (143 tests) y publicado. Hechos los puntos 1–3 del plan; sigue el 4.
+hecho, probado (145 tests) y publicado. Hechos los puntos 1–3 y 6 del plan; sigue el 4.
 
 ### Medición (`scripts/bench_documents_grans.py <carpeta> <págs_escaneadas>`)
 | Documento | Análisis | Anonimizar + verificar | Problema |
@@ -11,9 +11,10 @@ hecho, probado (143 tests) y publicado. Hechos los puntos 1–3 del plan; sigue 
 | PDF texto 80 págs | 43 s | 34 s | ídem |
 | PDF escaneado 10 págs | 74 s | 178 s | ~35 min a 80 págs **y quedó un nombre sin borrar** |
 
-Tras los puntos 1–3 (2026-10-11): Word 30 s / 6,9 s; PDF texto 31 s / 35 s; escaneado
-10 págs 52 s / **149 s y sin datos sin borrar**. En el bench todas las páginas tienen datos,
-así que la verificación sigue haciéndose en todas; el ahorro grande vendrá del punto 6.
+Tras los puntos 1–3 y la aceleración del OCR (2026-10-11, ya **sin tracemalloc**, que
+falseaba los tiempos): Word 80 págs 23 s / 5 s; PDF texto 80 págs 23 s / 16 s; escaneado
+10 págs 40 s / 38 s y **sin datos sin borrar** → ~10 min para 80 págs escaneadas en este
+PC (i7-1065G7, 4 núcleos), parte de ellos mientras el usuario rellena la lista.
 
 ### Causas encontradas
 1. **Fuga en escaneados (GRAVE):** el OCR leyó mal una línea entera ("2 a 02s") porque el
@@ -38,7 +39,16 @@ así que la verificación sigue haciéndose en todas; el ahorro grande vendrá d
 4. Aviso de **líneas con baja confianza del OCR** (score bajo / texto raro) con nº de página.
 5. `ner.py`: precalcular conjuntos, trozos en paralelo, no repetir líneas idénticas
    (cabeceras/pies de cada página).
-6. Perfilar y acelerar `_anonymize_image_page`.
+6. [x] Acelerar escaneados (2026-10-11):
+   - `pix.set_rect` iba píxel a píxel desde Python (~2,4 s/pág) → numpy (`ocr.pixels`).
+   - Imagen al OCR en memoria (sin PNG).
+   - OCR de 2 páginas a la vez (`ocr.WORKERS`, ~0,5 GB por motor; con 4 apenas mejora y
+     gasta 2 GB) + lectura por adelantado de las páginas siguientes (`_Prefetch`) + la
+     verificación de una página se solapa con la siguiente.
+   - OCR anticipado al elegir el fichero (`pipeline.read_ahead`), mientras el usuario
+     rellena la lista; se detiene antes de analizar (PyMuPDF no admite dos hilos).
+   - Pendiente de decidir: verificar solo las franjas modificadas (~-3 s/pág, pero se
+     pierde la "segunda opinión" de releer la página entera). Probar CoreML en el Mac M2.
 7. Si una página falla, no abortar todo: sustituirla por una página "[Pàgina N no
    processada]" + aviso (nunca dejarla sin anonimizar).
 8. Interfaz: **botón Cancel·la**, progreso por fases ("Analitzant… / Anonimitzant… /

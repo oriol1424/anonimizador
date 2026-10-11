@@ -21,6 +21,7 @@ Objetivo: **coste cero** y uso profesional en el bufete sin pagar licencias.
 | rapidocr (OCR) | Apache-2.0 | Sí | Conservar aviso; modelos PP-OCRv6 (PaddleOCR, Apache-2.0) incluidos en el paquete |
 | onnxruntime | MIT | Sí | Conservar aviso de copyright |
 | tokenizers (Hugging Face) | Apache-2.0 | Sí | Conservar aviso |
+| numpy | BSD-3-Clause | Sí | Conservar aviso de copyright (ya la instalaba rapidocr) |
 | Modelo NER `projecte-aina/roberta-base-ca-v2-cased-ner` (Projecte AINA / BSC) | Apache-2.0 | Sí | Atribución + indicar que se ha convertido a ONNX int8 (`models/ner-ca/LICENSE-MODEL.txt`) |
 
 ## PyMuPDF y la AGPL, en claro

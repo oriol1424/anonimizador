@@ -41,3 +41,6 @@
 | 2026-10-11 | Páginas escaneadas: verificar con OCR dentro de `anonymize` y volver a borrar lo encontrado (máx. 2 vueltas); si aún queda algo, aviso destacado con nº de página | Corregir en vez de solo avisar; el aviso indica dónde mirar |
 | 2026-10-11 | No se repite el OCR de páginas escaneadas sin datos ni en la verificación final (se revisa su capa de texto) | La imagen no cambia: otro OCR no aporta y duplica el tiempo |
 | 2026-10-11 | Equipo de referencia: MacBook Air 2022, M2, 8 GB RAM; debe funcionar en otros equipos | Es el equipo del bufete; puede cambiar |
+| 2026-10-11 | OCR de 2 páginas en paralelo (no más) | Medido: 2 → ~1,2× con 1,3 GB; 4 → ~1,3× con 2 GB. Prioridad: que vaya bien en el Mac de 8 GB |
+| 2026-10-11 | OCR anticipado al elegir un PDF, detenido antes de analizar | El tiempo de rellenar la lista se aprovecha; PyMuPDF no es seguro con dos hilos |
+| 2026-10-11 | Se mantiene la verificación con OCR de la página entera | Es más lenta que releer solo lo modificado, pero puede detectar líneas mal leídas la primera vez |

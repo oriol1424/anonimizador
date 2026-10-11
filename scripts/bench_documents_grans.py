@@ -1,9 +1,11 @@
-"""Mide tiempos y memoria con documentos grandes (datos inventados)."""
+"""Mide tiempos con documentos grandes (datos inventados).
+
+Sin tracemalloc: ralentiza mucho el código Python y falseaba los tiempos (2026-10-11).
+"""
 
 import os
 import sys
 import time
-import tracemalloc
 from pathlib import Path
 
 import pymupdf
@@ -62,7 +64,6 @@ def build_scanned(path: Path, pages: int) -> None:
 
 def run(name: str, src: Path, out_suffix: str) -> None:
     terms = [Term("Joan Puig i Ferrer", "[CLIENT_1]")]
-    tracemalloc.start()
     t0 = time.time()
     analysis = analyze(src, terms, CATALAN)
     t1 = time.time()
@@ -71,12 +72,10 @@ def run(name: str, src: Path, out_suffix: str) -> None:
     out = OUT / f"{name}_out{out_suffix}"
     report = anonymize(src, out, terms)
     t2 = time.time()
-    _, peak = tracemalloc.get_traced_memory()
-    tracemalloc.stop()
     print(
         f"{name}: anàlisi {t1 - t0:.1f}s, anonimització+verificació {t2 - t1:.1f}s, "
         f"{len(analysis.suggestions)} suggeriments, {report.total} substitucions, "
-        f"pic Python {peak / 1e6:.0f} MB, sortida {os.path.getsize(out) / 1e6:.1f} MB, "
+        f"sortida {os.path.getsize(out) / 1e6:.1f} MB, "
         f"avisos {[n.kind for n in report.notices]}",
         flush=True,
     )

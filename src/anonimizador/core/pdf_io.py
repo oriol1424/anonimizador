@@ -13,7 +13,10 @@ Dos tipos de página:
 Licencia: PyMuPDF bajo AGPL-3.0 (gratis). Ver docs/LICENCIAS.md.
 """
 
+import threading
+from collections import deque
 from collections.abc import Callable
+from concurrent.futures import Future, wait
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -28,6 +31,7 @@ MIN_HORIZONTAL_SCALE = 0.55  # por debajo, además de estrechar se reduce el tam
 MIN_FONT_SIZE = 5.0
 PIXEL_PADDING = 3  # margen al borrar píxeles alrededor de cada dato
 JPEG_QUALITY = 80
+LOOKAHEAD = 2 * ocr.WORKERS  # páginas imagen cuyo OCR se encola por adelantado
 MAX_FIX_ROUNDS = 2  # vueltas de "verificar y volver a borrar" en páginas imagen
 
 Progress = Callable[[int, int], None]  # (páginas leídas con OCR, total)
@@ -216,13 +220,15 @@ def _erase(
 ) -> list[_Replacement]:
     """Pinta de blanco los píxeles de cada dato y devuelve dónde escribir su alias."""
     to_points = pymupdf.Matrix(72 / ocr.OCR_DPI, 72 / ocr.OCR_DPI)
+    image = ocr.pixels(pix)  # pix.set_rect va píxel a píxel desde Python: muy lento
     aliases: list[_Replacement] = []
     for match in matches:
         rects = _rects_by_line(boxes[match.start : match.end])
         if not rects:
             continue
         for rect in rects:
-            pix.set_rect((_pad(rect) & pymupdf.Rect(pix.irect)).irect, (255, 255, 255))
+            box = (_pad(rect) & pymupdf.Rect(pix.irect)).irect
+            image[box.y0 : box.y1, box.x0 : box.x1] = 255
         first = rects[0] * to_points
         origin = (first.x0, first.y1 - first.height * 0.2)
         aliases.append(
@@ -261,12 +267,22 @@ def _rebuild_image_page(
         _write_text(page, line_text, origin, rect.height * 0.75, rect.width, invisible=True)
 
 
-def _anonymize_image_page(page: pymupdf.Page, matcher: Matcher) -> tuple[list[Match], list[Match]]:
-    """Anonimiza una página imagen y la verifica con un nuevo OCR.
+@dataclass
+class _ScanCheck:
+    """Página imagen ya rehecha, a la espera del OCR que la verifica."""
 
-    Si el OCR de la página resultante aún encuentra datos (p. ej. el primer OCR leyó mal
-    una línea), se borran también en la imagen y se vuelve a verificar, hasta
-    `MAX_FIX_ROUNDS` veces. Devuelve (sustituciones hechas, datos que siguen visibles).
+    number: int
+    pix: pymupdf.Pixmap
+    aliases: list[_Replacement]
+    result: ocr.OcrPage
+    line_texts: list[str]
+    done: list[Match]
+    check: Future
+
+
+def _start_image_page(page: pymupdf.Page, matcher: Matcher) -> _ScanCheck | None:
+    """Borra los datos de una página imagen, la rehace y encola el OCR que la verifica.
+
     Las páginas sin datos no se verifican: su imagen no cambia y otro OCR no aportaría.
     """
     if page.rotation:
@@ -279,19 +295,46 @@ def _anonymize_image_page(page: pymupdf.Page, matcher: Matcher) -> tuple[list[Ma
     line_texts = _lines_with_replacements(text, matches)
     _rebuild_image_page(page, pix, aliases, result, line_texts)
     if not matches:
-        return [], []
+        return None
+    check = ocr.submit(ocr.render(page))
+    return _ScanCheck(page.number, pix, aliases, result, line_texts, list(matches), check)
 
-    done = list(matches)
+
+def _finish_image_page(
+    page: pymupdf.Page, state: _ScanCheck, matcher: Matcher
+) -> tuple[list[Match], list[Match]]:
+    """Si el OCR de la página resultante aún encuentra datos (p. ej. el primer OCR leyó
+    mal una línea), se borran también en la imagen y se vuelve a verificar, hasta
+    `MAX_FIX_ROUNDS` veces. Devuelve (sustituciones hechas, datos que siguen visibles).
+    """
+    check = state.check.result()
     for _ in range(MAX_FIX_ROUNDS):
-        check_text, check_boxes = ocr.recognize(ocr.render(page)).text_and_boxes()
+        check_text, check_boxes = check.text_and_boxes()
         leftovers = matcher.find(check_text)
         if not leftovers:
-            return done, []
-        aliases += _erase(pix, check_boxes, leftovers)
-        done += leftovers
-        _rebuild_image_page(page, pix, aliases, result, line_texts)
-    check_text, _ = ocr.recognize(ocr.render(page)).text_and_boxes()
-    return done, matcher.find(check_text)
+            return state.done, []
+        state.aliases += _erase(state.pix, check_boxes, leftovers)
+        state.done += leftovers
+        _rebuild_image_page(page, state.pix, state.aliases, state.result, state.line_texts)
+        check = ocr.recognize(ocr.render(page))
+    return state.done, matcher.find(check.text_and_boxes()[0])
+
+
+class _Prefetch:
+    """Encola el OCR de las próximas páginas imagen mientras se procesa la actual.
+
+    Solo `LOOKAHEAD` páginas por delante: cada imagen en cola ocupa ~12 MB.
+    """
+
+    def __init__(self, doc: pymupdf.Document):
+        self.doc = doc
+        self.pages = [page.number for page in doc if is_image_page(page)]
+        self.next = 0
+
+    def upto(self, number: int) -> None:
+        while self.next < len(self.pages) and self.pages[self.next] <= number + LOOKAHEAD:
+            ocr.submit(ocr.render(self.doc[self.pages[self.next]]))
+            self.next += 1
 
 
 def _page_text(page: pymupdf.Page, counter: _OcrCounter | None) -> str:
@@ -356,16 +399,30 @@ def anonymize(
     images = doc.embfile_count()
     try:
         counter = _OcrCounter(doc, progress)
+        prefetch = _Prefetch(doc)
+        checks: deque[_ScanCheck] = deque()  # verificaciones en curso (en paralelo)
+
+        def finish_oldest() -> None:
+            state = checks.popleft()
+            done, remaining = _finish_image_page(doc[state.number], state, matcher)
+            all_matches.extend(done)
+            leftovers.extend((state.number + 1, m) for m in remaining)
+
         for page in doc:
+            prefetch.upto(page.number)
             _anonymize_page_extras(page, matcher)
             if is_image_page(page):
-                done, remaining = _anonymize_image_page(page, matcher)
-                all_matches.extend(done)
-                leftovers.extend((page.number + 1, m) for m in remaining)
+                state = _start_image_page(page, matcher)
+                if state is not None:
+                    checks.append(state)
+                while len(checks) > ocr.WORKERS:
+                    finish_oldest()
                 counter.tick()
             else:
                 images += len(page.get_images(full=True))
                 all_matches.extend(_anonymize_text_page(page, matcher))
+        while checks:
+            finish_oldest()
         _anonymize_document_extras(doc, matcher)
         # garbage=4 + clean: no deja copias del contenido antiguo dentro del fichero.
         doc.save(str(dst), garbage=4, deflate=True, clean=True)
@@ -384,7 +441,10 @@ def extract_text(path: Path, progress: Progress | None = None, use_ocr: bool = T
     lines: list[str] = []
     try:
         counter = _OcrCounter(doc, progress) if use_ocr else None
+        prefetch = _Prefetch(doc) if use_ocr else None
         for page in doc:
+            if prefetch:
+                prefetch.upto(page.number)
             lines.append(_page_text(page, counter))
             for annot in page.annots():
                 lines.extend(v for v in (annot.info.get("content"), annot.info.get("title")) if v)
@@ -407,8 +467,36 @@ def anonymized_text(src: Path, matcher: Matcher, progress: Progress | None = Non
     doc = _open(src)
     try:
         counter = _OcrCounter(doc, progress)
-        pages = [matcher.replace(_page_text(page, counter)).strip() for page in doc]
+        prefetch = _Prefetch(doc)
+        pages = []
+        for page in doc:
+            prefetch.upto(page.number)
+            pages.append(matcher.replace(_page_text(page, counter)).strip())
         return "\n\n".join(p for p in pages if p).strip() + "\n"
+    finally:
+        doc.close()
+
+
+def read_ahead(path: Path, stop: threading.Event) -> None:
+    """Lee con OCR las páginas imagen en segundo plano (mientras el usuario rellena la
+    lista); el análisis aprovecha después lo ya leído. Se detiene en cuanto `stop` se
+    activa: PyMuPDF no admite usarse desde dos hilos a la vez.
+    """
+    try:
+        doc = _open(path)
+    except Exception:  # el análisis ya mostrará el error al usuario
+        return
+    try:
+        queued: deque[Future] = deque()
+        for page in doc:
+            if stop.is_set():
+                return
+            if not is_image_page(page):
+                continue
+            queued.append(ocr.submit(ocr.render(page)))
+            while len(queued) > LOOKAHEAD and not stop.is_set():
+                if wait([queued[0]], timeout=0.2).done:
+                    queued.popleft()
     finally:
         doc.close()
 

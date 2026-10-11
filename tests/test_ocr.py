@@ -19,3 +19,27 @@ def test_line_is_not_flipped_by_orientation_classifier():
     text, _ = ocr.recognize(pymupdf.Pixmap(pymupdf.csRGB, pix)).text_and_boxes()
     assert "Marc Puig i Mas" in text
     assert "10000024Z" in text
+
+
+def test_read_ahead_is_reused_by_analysis(demanda_pdf, monkeypatch):
+    """Lo leído mientras el usuario rellena la lista no se vuelve a leer al analizar."""
+    import threading
+
+    from anonimizador.core import pdf_io
+    from anonimizador.core.lang import CATALAN
+    from anonimizador.core.pipeline import analyze
+
+    ocr.clear_cache()
+    pdf_io.read_ahead(demanda_pdf, threading.Event())
+    real_run, calls = ocr._run, []
+    monkeypatch.setattr(ocr, "_run", lambda *a: calls.append(1) or real_run(*a))
+    analyze(demanda_pdf, [], CATALAN)
+    assert calls == []
+
+
+def test_read_ahead_can_be_stopped(demanda_pdf):
+    from anonimizador.core.pipeline import read_ahead
+
+    ahead = read_ahead(demanda_pdf)
+    ahead.stop()  # no se queda colgado
+    assert read_ahead(demanda_pdf.with_suffix(".docx")) is None

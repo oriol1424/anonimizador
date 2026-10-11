@@ -1,6 +1,7 @@
 """Flujo completo: analizar -> sugerir -> anonimizar -> verificar."""
 
 import re
+import threading
 from collections import Counter
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -97,6 +98,27 @@ class Report:
     @property
     def total(self) -> int:
         return sum(self.replaced.values())
+
+
+class ReadAhead:
+    """OCR anticipado de un PDF en un hilo aparte (ver `pdf_io.read_ahead`)."""
+
+    def __init__(self, path: Path):
+        self._stop = threading.Event()
+        self._thread = threading.Thread(
+            target=pdf_io.read_ahead, args=(path, self._stop), name="read-ahead", daemon=True
+        )
+        self._thread.start()
+
+    def stop(self) -> None:
+        """Detiene la lectura; hay que llamarlo antes de analizar o anonimizar."""
+        self._stop.set()
+        self._thread.join()
+
+
+def read_ahead(path: Path) -> ReadAhead | None:
+    """Empieza a leer con OCR las páginas escaneadas en cuanto se elige el fichero."""
+    return ReadAhead(path) if path.suffix.lower() == ".pdf" else None
 
 
 def _backend(path: Path) -> ModuleType:

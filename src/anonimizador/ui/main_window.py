@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from PySide6.QtCore import QSettings, Qt, QUrl
-from PySide6.QtGui import QDesktopServices, QDragEnterEvent, QDropEvent
+from PySide6.QtGui import QCloseEvent, QDesktopServices, QDragEnterEvent, QDropEvent
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QCheckBox,
@@ -32,10 +32,12 @@ from anonimizador.core.pipeline import (
     SUPPORTED_INPUTS,
     Analysis,
     AnonymizerError,
+    ReadAhead,
     Report,
     analyze,
     anonymize,
     output_formats,
+    read_ahead,
 )
 from anonimizador.i18n import tr
 from anonimizador.ui.suggestions import SuggestionsDialog
@@ -108,6 +110,7 @@ class MainWindow(QMainWindow):
         # Solo guarda la última carpeta usada; nunca nombres ni contenido de documentos.
         self.settings = settings or QSettings("Anonimitzador", "Anonimitzador")
         self.input_path: Path | None = None
+        self._read_ahead: ReadAhead | None = None  # OCR anticipado del PDF elegido
         self.language: Language = DEFAULT_LANGUAGE
         self.setAcceptDrops(True)
         self.resize(820, 680)
@@ -240,7 +243,10 @@ class MainWindow(QMainWindow):
     # --- Selección de ficheros --------------------------------------------------------
 
     def set_input(self, path: Path) -> None:
+        self._stop_read_ahead()
         self.input_path = path
+        # Mientras el usuario rellena la lista, se van leyendo las páginas escaneadas.
+        self._read_ahead = read_ahead(path)
         self.file_label.setText(str(path))
         if not self.folder_edit.text():
             self.folder_edit.setText(str(path.parent))
@@ -363,10 +369,20 @@ class MainWindow(QMainWindow):
         else:
             self.unsetCursor()
 
+    def _stop_read_ahead(self) -> None:
+        if self._read_ahead is not None:
+            self._read_ahead.stop()
+            self._read_ahead = None
+
+    def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802 (API de Qt)
+        self._stop_read_ahead()
+        super().closeEvent(event)
+
     def start(self) -> None:
         terms = self._validate()
         if terms is None:
             return
+        self._stop_read_ahead()  # el análisis aprovecha lo ya leído
         src, dst, language = self.input_path, self.output_path(), self.language
         guide = default_guide_path(dst, language) if self.guide_check.isChecked() else None
         self._set_busy(True)

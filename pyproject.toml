@@ -14,6 +14,7 @@ dependencies = [
     "rapidocr>=3.4",
     "onnxruntime>=1.18",
     "tokenizers>=0.15",
+    "numpy>=1.24",
 ]
 
 [project.optional-dependencies]
