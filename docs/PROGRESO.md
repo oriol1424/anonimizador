@@ -23,6 +23,10 @@ Todo hecho, probado (**337 tests** + 2 lentos con `pytest -m slow`) y publicado.
 - [ ] **MacBook Air M2 (8 GB)**: descomprimir, mover a Aplicaciones, abrir con clic derecho >
       Obre; autoprueba (`--prova`); caso completo con un PDF escaneado; medir tiempos;
       comprobar que no entra en reposo durante un proceso largo (`caffeinate`).
+- [ ] **Versión de macOS**: el paquete pide macOS 12+ (`LSMinimumSystemVersion` en el
+      .spec), pero Qt/PySide6 6.12 podría exigir 13+: confirmarlo con el build y con la
+      versión de los Mac del bufete ( > Quant a aquest Mac). Vale para M1 y M2 (arm64);
+      **no para Mac Intel** (haría falta otro build si el bufete tiene alguno).
 - [ ] **Windows sin nada instalado**: aviso de SmartScreen, autoprueba, caso completo.
 - [ ] Revisar en ambos: tipografía, diálogos de abrir/guardar, botones «Sí/No» traducidos.
 
