@@ -1,22 +1,44 @@
 # Progreso
 
-## ▶ DÓNDE NOS QUEDAMOS (2026-10-12) — empezar por aquí
-Todo hecho, probado (**342 tests** + 2 lentos con `pytest -m slow`) y publicado. No hay código a medias.
+## ▶ DÓNDE NOS QUEDAMOS (2026-10-12, mediodía) — empezar por aquí
+Código probado (**342 tests** + 2 lentos con `pytest -m slow`) y publicado. No hay código a
+medias. **Lo primero en la próxima sesión: el punto 0.**
+
+### Resumen de la sesión del 2026-10-12
+- `gh` (GitHub CLI) instalado y con sesión: Claude ya puede ver tests, lanzar builds y
+  descargar los zips (`"C:/Program Files/GitHub CLI/gh.exe"`).
+- Tests de GitHub en verde (fallaba un test en Windows por rutas en dos unidades).
+- El usuario probó la app en el **Mac: funciona**.
+- Sugerencias: «Substituir per» con flecha visible; **el tipo de cada fila se puede
+  corregir** (p. ej. una adreça detectada como empresa); si el mismo texto ya está en otra
+  fila con ese tipo, se reutiliza su sustituto.
+- **Fallo grave encontrado y arreglado**: el detector de nombres no detectaba NADA en
+  procesadores x86 sin VNNI (muchos PCs de oficina). Modelo nuevo con pesos uint8 +
+  comprobación al cargarlo con aviso en rojo. Detalle más abajo y en DECISIONES.
 
 ### ⏳ PENDIENTE — lo que falta para entregar el USB (en este orden)
-**A. GitHub** — hecho el 2026-10-12. `gh` instalado y con sesión (`C:\Program Files\GitHub CLI\gh.exe`).
-- [x] Flujo **tests** en verde en Windows y Mac (fallaba un test en Windows por `relpath`
-      entre unidades C:/D: del runner; arreglado).
-- [x] **Build** en verde (run 38229421358, ~5 min con el modelo en caché): «RESULTAT: OK»
-      en Windows y Mac. Zips en `dist/`.
+**0. Comprobar el arreglo del detector (lo primero)**
+- [ ] Se lanzaron 3 builds con el modelo uint8 (runs 38239526883, 38239539540,
+      38239550062; la 1ª vez convierten el modelo, ~15-20 min). Mirar el resultado:
+      `gh run view <id>` y en el log del paso «Prova del paquet» las líneas
+      «Processador» y «RESULTAT». **Objetivo: RESULTAT: OK en un AMD EPYC 7763** (donde
+      fallaba). Si no salió ese procesador, lanzar más builds hasta que salga.
+- [ ] Si todo OK: bajar los zips (`gh run download <id> -D <carpeta>`), copiarlos a
+      `dist/` y volver a montar el USB (punto B). El `dist/USB/` actual es ANTERIOR a los
+      cambios de hoy (sin desplegable de tipo y con el modelo int8 que falla).
+- [ ] El usuario debe **reenviarse el zip de Mac nuevo** (el que tiene es el antiguo).
+
+**A. GitHub** — hecho el 2026-10-12.
+- [x] Flujo **tests** en verde en Windows y Mac.
+- [x] Build automático de Windows y Mac con autoprueba.
 
 **B. Montar el USB (en este PC)**
-- [x] `fer_usb.py --windows dist/Anonimitzador-Windows.zip --mac dist/Anonimitzador-Mac.zip`
-      → `dist/USB/` (702 MB). Autoprueba del .exe del USB en este PC: OK.
+- [ ] `fer_usb.py --windows dist/Anonimitzador-Windows.zip --mac dist/Anonimitzador-Mac.zip`
+      → `dist/USB/` (~700 MB) con los zips del punto 0; autoprueba del .exe en este PC.
 - [ ] Copiar el contenido de `dist/USB/` al USB (formato exFAT para que vaya en Windows y Mac).
 
 **C. Probar desde el USB**
-- [ ] **MacBook Air M2 (8 GB)**: descomprimir, mover a Aplicaciones, abrir con clic derecho >
+- [ ] **MacBook Air M2 (8 GB)**: (la versión antigua ya se abrió bien) descomprimir, mover a Aplicaciones, abrir con clic derecho >
       Obre; autoprueba (`--prova`); caso completo con un PDF escaneado; medir tiempos;
       comprobar que no entra en reposo durante un proceso largo (`caffeinate`).
 - [ ] **Versión de macOS**: el paquete pide macOS 12+ (`LSMinimumSystemVersion` en el
