@@ -253,6 +253,20 @@ def test_suggestions_change_type(window):
     assert page.combos[1].value() == "[TESTIMONI]"
 
 
+def test_suggestions_change_type_reuses_alias_of_same_text(window):
+    """El mismo texto detectado como adreça en un sitio y como empresa en otro."""
+    page = window.suggestions_page
+    analysis = Analysis([
+        Suggestion("EMPRESA", "[EMPRESA_1]", ("Carrer Major 12",), 1, expand=True),
+        Suggestion("DIRECCION", "[ADRECA_1]", ("carrer Major 12",), 2),
+    ])  # fmt: skip
+    page.show_analysis(analysis, CATALAN, set())
+    company = page.type_combos[0]
+    company.setCurrentIndex(company.findData("DIRECCION"))
+    assert page.combos[0].value() == "[ADRECA_1]"  # no [ADRECA_2]
+    assert {t.replacement for t in page.selected_terms()} == {"[ADRECA_1]"}
+
+
 def test_suggestions_serious_notices_first(window):
     page = window.suggestions_page
     page.show_analysis(_analysis(), CATALAN, set())

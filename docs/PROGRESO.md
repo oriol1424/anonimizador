@@ -1,7 +1,7 @@
 # Progreso
 
 ## ▶ DÓNDE NOS QUEDAMOS (2026-10-12) — empezar por aquí
-Todo hecho, probado (**339 tests** + 2 lentos con `pytest -m slow`) y publicado. No hay código a medias.
+Todo hecho, probado (**340 tests** + 2 lentos con `pytest -m slow`) y publicado. No hay código a medias.
 
 ### ⏳ PENDIENTE — lo que falta para entregar el USB (en este orden)
 **A. GitHub** — hecho el 2026-10-12. `gh` instalado y con sesión (`C:\Program Files\GitHub CLI\gh.exe`).
@@ -47,6 +47,13 @@ Todo hecho, probado (**339 tests** + 2 lentos con `pytest -m slow`) y publicado.
   dirección detectada como empresa. El sustituto automático cambia al del tipo nuevo
   (`[EMPRESA_3]` → `[ADRECA_1]`); uno escrito a mano se respeta. Solo personas y empresas
   sustituyen variantes («Sr. Puig»). Los filtros y la guía usan el tipo corregido.
+  Si el mismo texto está en otra fila con ese tipo (detectado una vez como empresa y otra
+  como adreça), se usa el mismo sustituto que esa fila.
+- **Build de Windows en GitHub falló una vez** (run 38235520510): la autoprueba no encontró
+  ninguna persona; el anterior pasó con el mismo código, modelo y versiones. En este PC el
+  margen del modelo es enorme (logit 4,9 vs −0,1), así que parece que el detector int8 no
+  funciona en algún procesador. La autoprueba muestra ahora el procesador y qué etiquetas
+  ve el detector. **Pendiente: averiguar en qué CPU falla** (importa para los PCs del bufete).
 
 ### Hecho el 2026-10-11 (noche): empaquetado (paso 10)
 - **Licencia AGPL-3.0** para el código propio (`LICENSE`; decisión del usuario).

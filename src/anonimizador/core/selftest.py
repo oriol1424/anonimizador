@@ -6,7 +6,9 @@ Sirve para verificar el paquete en GitHub Actions y en los equipos del bufete. N
 ni documentos reales; no escribe nada fuera de la carpeta temporal (salvo el resultado).
 """
 
+import os
 import platform
+import subprocess
 import tempfile
 import time
 from pathlib import Path
@@ -58,10 +60,43 @@ def _readable(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def _cpu() -> str:
+    """Modelo de procesador (el detector int8 depende de sus instrucciones)."""
+    try:
+        if platform.system() == "Darwin":
+            out = subprocess.run(["sysctl", "-n", "machdep.cpu.brand_string"],
+                                 capture_output=True, text=True, timeout=5)  # fmt: skip
+            return out.stdout.strip() or platform.processor()
+        if platform.system() == "Windows":
+            import winreg
+
+            cpu_key = "HARDWARE/DESCRIPTION/System/CentralProcessor/0".replace("/", "\\")
+            key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, cpu_key)
+            return str(winreg.QueryValueEx(key, "ProcessorNameString")[0]).strip()
+    except (OSError, subprocess.SubprocessError):
+        pass
+    return platform.processor() or "?"
+
+
+def _ner_diagnosis() -> str:
+    """Qué ve el detector en la frase de prueba (texto inventado: se puede mostrar)."""
+    import numpy as np
+
+    model = ner._get_model()
+    enc = model._encodings(LINES[1])[0]
+    feed = {"input_ids": np.array([enc.ids], dtype=np.int64)}
+    if "attention_mask" in model.inputs:
+        feed["attention_mask"] = np.array([enc.attention_mask], dtype=np.int64)
+    logits = model.session.run(None, feed)[0][0]
+    tags = [model.id2label[int(i)] for i in logits.argmax(-1)]
+    return f"etiquetes: {', '.join(sorted(set(tags)))}; màx {float(np.abs(logits).max()):.1f}"
+
+
 def run(window_check=None) -> tuple[bool, list[str]]:
     lines = [
         f"Anonimitzador {__version__} · {platform.system()} {platform.release()} "
         f"({platform.machine()})",
+        f"Processador: {_cpu()} · {os.cpu_count()} nuclis",
     ]
     ok = True
     if not ner.is_available():
@@ -89,7 +124,10 @@ def run(window_check=None) -> tuple[bool, list[str]]:
                 found = {s.label for s in analysis.suggestions}
                 if ner.is_available() and "PERSONA" not in found:
                     ok = False
-                    lines.append(f"ERROR: {src.suffix}: el detector no ha trobat cap persona")
+                    lines.append(
+                        f"ERROR: {src.suffix}: el detector no ha trobat cap persona "
+                        f"({_ner_diagnosis()})"
+                    )
             except Exception as error:  # noqa: BLE001 - es informa i es continua
                 ok = False
                 lines.append(f"ERROR: {src.suffix}: {type(error).__name__}")

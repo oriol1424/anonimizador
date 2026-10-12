@@ -242,7 +242,11 @@ class SuggestionsPage(Page):
         prefixes = {lang.labels[old.label] for lang in LANGUAGES.values()}
         automatic = any(re.fullmatch(rf"\[{re.escape(p)}_\d+\]", combo.value()) for p in prefixes)
         if automatic or not combo.value():
-            combo.choose(template)
+            twin = self._twin_alias(row, new)
+            if twin:
+                combo.setEditText(twin)
+            else:
+                combo.choose(template)
         combo.set_own(template)
         # Solo nombres de personas y empresas sustituyen también variantes ("Sr. Puig").
         self._suggestions[row] = replace(
@@ -250,6 +254,17 @@ class SuggestionsPage(Page):
         )
         self._build_chips(self._language.code)
         self._apply_filter()
+
+    def _twin_alias(self, row: int, label_code: str) -> str | None:
+        """Sustituto de otra fila con el mismo texto y ese tipo: el mismo texto detectado una
+        vez como empresa y otra como adreça debe acabar con un único sustituto."""
+        forms = {fold(f) for f in self._suggestions[row].forms}
+        for other, s in enumerate(self._suggestions):
+            if other == row or other in self._dropped or s.label != label_code:
+                continue
+            if forms & {fold(f) for f in s.forms} and self.combos[other].value():
+                return self.combos[other].value()
+        return None
 
     # --- Selección -------------------------------------------------------------------------
 
