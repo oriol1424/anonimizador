@@ -1,8 +1,9 @@
 # Progreso
 
-## ▶ DÓNDE NOS QUEDAMOS (2026-10-12, mediodía) — empezar por aquí
+## ▶ DÓNDE NOS QUEDAMOS (2026-10-12, tarde) — empezar por aquí
 Código probado (**342 tests** + 2 lentos con `pytest -m slow`) y publicado. No hay código a
-medias. **Lo primero en la próxima sesión: el punto 0.**
+medias. Detector arreglado y comprobado; `dist/USB/` montado con los builds nuevos.
+**Siguiente: copiar `dist/USB/` al USB (punto B) y probar desde el USB (punto C).**
 
 ### Resumen de la sesión del 2026-10-12
 - `gh` (GitHub CLI) instalado y con sesión: Claude ya puede ver tests, lanzar builds y
@@ -17,24 +18,20 @@ medias. **Lo primero en la próxima sesión: el punto 0.**
   comprobación al cargarlo con aviso en rojo. Detalle más abajo y en DECISIONES.
 
 ### ⏳ PENDIENTE — lo que falta para entregar el USB (en este orden)
-**0. Comprobar el arreglo del detector (lo primero)**
-- [ ] Se lanzaron 3 builds con el modelo uint8 (runs 38239526883, 38239539540,
-      38239550062; la 1ª vez convierten el modelo, ~15-20 min). Mirar el resultado:
-      `gh run view <id>` y en el log del paso «Prova del paquet» las líneas
-      «Processador» y «RESULTAT». **Objetivo: RESULTAT: OK en un AMD EPYC 7763** (donde
-      fallaba). Si no salió ese procesador, lanzar más builds hasta que salga.
-- [ ] Si todo OK: bajar los zips (`gh run download <id> -D <carpeta>`), copiarlos a
-      `dist/` y volver a montar el USB (punto B). El `dist/USB/` actual es ANTERIOR a los
-      cambios de hoy (sin desplegable de tipo y con el modelo int8 que falla).
-- [ ] El usuario debe **reenviarse el zip de Mac nuevo** (el que tiene es el antiguo).
+**0. Comprobar el arreglo del detector** — hecho el 2026-10-12 (tarde).
+- [x] Los 3 builds con el modelo uint8 en verde. **RESULTAT: OK en AMD EPYC 7763** (2 de
+      3 builds; donde antes fallaba), Intel Xeon 8573C y Apple M1.
+- [x] Zips del run 38239550062 copiados a `dist/` y USB montado (punto B).
+- [ ] El usuario debe **reenviarse el zip de Mac nuevo** (`dist/Anonimitzador-Mac.zip`;
+      el que tiene es el antiguo).
 
 **A. GitHub** — hecho el 2026-10-12.
 - [x] Flujo **tests** en verde en Windows y Mac.
 - [x] Build automático de Windows y Mac con autoprueba.
 
 **B. Montar el USB (en este PC)**
-- [ ] `fer_usb.py --windows dist/Anonimitzador-Windows.zip --mac dist/Anonimitzador-Mac.zip`
-      → `dist/USB/` (~700 MB) con los zips del punto 0; autoprueba del .exe en este PC.
+- [x] `fer_usb.py --windows dist/Anonimitzador-Windows.zip --mac dist/Anonimitzador-Mac.zip`
+      → `dist/USB/` (705 MB); autoprueba del .exe en este PC: RESULTAT: OK (2026-10-12).
 - [ ] Copiar el contenido de `dist/USB/` al USB (formato exFAT para que vaya en Windows y Mac).
 
 **C. Probar desde el USB**
