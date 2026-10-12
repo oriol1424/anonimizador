@@ -1,7 +1,6 @@
 """Robustez: una página que falla no aborta el proceso ni deja datos; el original nunca se
 sobrescribe; un error no deja una salida a medias."""
 
-import os
 from pathlib import Path
 
 import pymupdf
@@ -139,6 +138,7 @@ def test_guide_cannot_overwrite_the_original(demanda_ca, tmp_path):
 
 
 def test_same_file_through_other_path(demanda_ca):
-    other = Path(os.path.relpath(demanda_ca))  # misma ruta, escrita de otra manera
+    # misma ruta, escrita de otra manera (relpath falla si los temporales están en otra unidad)
+    other = demanda_ca.parent / ".." / demanda_ca.parent.name / demanda_ca.name
     with pytest.raises(AnonymizerError):
         anonymize(demanda_ca, other, TERMS)
