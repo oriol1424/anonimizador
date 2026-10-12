@@ -55,7 +55,7 @@ src/anonimizador/
     result.py         # ProcessResult común a Word y PDF                 [hecho]
     pdf_io.py         # PDF con texto: redacción real (PyMuPDF)          [hecho]
     ocr.py            # OCR local (RapidOCR, catalán) con caché en memoria [hecho]
-    ner.py            # personas/empresas: AINA RoBERTa-ca en ONNX int8   [hecho]
+    ner.py            # personas/empresas: AINA RoBERTa-ca en ONNX int8 (pesos uint8)   [hecho]
     guide.py          # guía de correspondencias (.docx confidencial)    [hecho]
     llm_review.py     # LLM local
     mapping.py        # mapa original<->alias, cifrado
@@ -104,7 +104,7 @@ runs (docx) o rectángulos (pdf). Así los detectores son independientes del for
 - **Direcciones**: reglas (`regex_es.ADDRESS`): tipo de vía + nombre + número/km/s/n +
   piso/puerta + CP + población. 7/7 en la evaluación, sin falsos positivos.
 - **Personas y empresas**: `projecte-aina/roberta-base-ca-v2-cased-ner` convertido a ONNX
-  int8 (125 MB, `models/ner-ca/`, fuera de git; se genera con `scripts/preparar_models.py`).
+  int8 con pesos uint8 (120 MB, `models/ner-ca/`, fuera de git; se genera con `scripts/preparar_models.py`).
   Se ejecuta con onnxruntime + tokenizers (sin PyTorch). Texto en trozos de ~1500
   caracteres; etiqueta por palabra = primer sub-token; esquema BIO.
 - Post-proceso: apóstrofo ’ → ' antes del modelo (mismo largo), unir "d'" + apellido,

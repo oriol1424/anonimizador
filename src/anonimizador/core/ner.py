@@ -113,6 +113,23 @@ def is_available() -> bool:
     return (models_dir() / MODEL_NAME / "model.onnx").exists()
 
 
+# Frase inventada con un nombre evidente. Si el modelo no lo ve, no funciona en este equipo
+# (p. ej. un modelo int8 en un procesador que no lo calcula bien) y hay que avisar en vez
+# de seguir como si no hubiera nombres.
+_CANARY = "El senyor Joan Puig i Ferrer, veí d'Andorra la Vella, ha signat el contracte."
+_working: bool | None = None
+
+
+def is_working() -> bool:
+    """El modelo está instalado y reconoce un nombre evidente (se comprueba una vez)."""
+    global _working
+    if _working is None:
+        _working = is_available() and any(
+            kind == "PER" for _, _, kind in _get_model().predict(_CANARY)
+        )
+    return _working
+
+
 class _Model:
     def __init__(self, folder: Path):
         import onnxruntime
@@ -208,7 +225,7 @@ def _clean(text: str, start: int, end: int, label: str) -> Entity | None:
             span = text[start:end]
             continue
         break
-    span = re.sub(r"\s+[iy]$", "", span.rstrip(" .,;:"))  # "Jordi Casals i" (cortado)
+    span = re.sub(r"\s+[iy]$", "", span.rstrip().rstrip(" .,;:"))  # "Jordi Casals i" (cortado)
     end = start + len(span)
     folded = fold(span)
     if len(span) < 2 or folded in _HONORIFICS_FULL:

@@ -116,3 +116,20 @@ def test_repeated_chunks_are_found_everywhere(monkeypatch):
         offset = k * len(header + body)
         assert (offset + header.index("Jordi"), "Jordi Casals i Pons") in found
         assert (offset + len(header) + body.index("Laura"), "Laura Fontanals Pujol") in found
+
+
+@needs_model
+def test_detector_self_check_passes():
+    ner._working = None
+    assert ner.is_working()
+
+
+def test_broken_detector_is_reported(demanda_ca: Path, monkeypatch):
+    """Si el modelo no reconoce ni un nombre evidente (procesador incompatible), se avisa
+    en rojo en vez de seguir como si el documento no tuviera nombres."""
+    monkeypatch.setattr(ner, "is_available", lambda: True)
+    monkeypatch.setattr(ner, "_working", False)
+    monkeypatch.setattr(ner, "detect", lambda *a, **k: [])
+    notices = analyze(demanda_ca, [], CATALAN).notices
+    broken = [n for n in notices if n.kind == "ner_broken"]
+    assert broken and broken[0].is_serious

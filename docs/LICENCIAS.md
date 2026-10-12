@@ -22,7 +22,7 @@ Objetivo: **coste cero** y uso profesional en el bufete sin pagar licencias.
 | onnxruntime | MIT | Sí | Conservar aviso de copyright |
 | tokenizers (Hugging Face) | Apache-2.0 | Sí | Conservar aviso |
 | numpy | BSD-3-Clause | Sí | Conservar aviso de copyright (ya la instalaba rapidocr) |
-| Modelo NER `projecte-aina/roberta-base-ca-v2-cased-ner` (Projecte AINA / BSC) | Apache-2.0 | Sí | Atribución + indicar que se ha convertido a ONNX int8 (`models/ner-ca/LICENSE-MODEL.txt`) |
+| Modelo NER `projecte-aina/roberta-base-ca-v2-cased-ner` (Projecte AINA / BSC) | Apache-2.0 | Sí | Atribución + indicar que se ha convertido a ONNX int8 (pesos uint8) (`models/ner-ca/LICENSE-MODEL.txt`) |
 
 ### Dependencias indirectas (las instalan las anteriores; comprobado 2026-10-11)
 Todas gratuitas para uso profesional. Obligación común: conservar sus avisos de licencia en

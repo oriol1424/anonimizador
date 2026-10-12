@@ -80,3 +80,5 @@
 | 2026-10-11 | Paquete PyInstaller --onedir; Mac construido en GitHub Actions (macos-14) | Qt enlazado dinámicamente (LGPL); el .app de Mac no se puede compilar desde Windows |
 | 2026-10-11 | En el USB, el Mac va como .zip (no como .app suelto) | Un USB FAT/exFAT pierde permisos y enlaces del .app; descomprimir en el Mac los conserva |
 | 2026-10-11 | Autoprueba integrada (`--prova`) en vez de solo tests | Verifica el paquete real (modelos, Qt, OCR) en GitHub y en los equipos del bufete |
+| 2026-10-12 | Modelo NER cuantizado con pesos uint8 (QUInt8), no int8 con signo | Con QInt8 el detector no encontraba NADA en CPU x86 sin VNNI (AMD EPYC 7763 en GitHub; también Intel de sobremesa hasta 10ª gen. y Ryzen antiguos): desbordamiento u8×s8. uint8 es igual de preciso (más cercano al modelo sin cuantizar) y ~1,7× más lento en la fase de nombres |
+| 2026-10-12 | Comprobación del detector al cargarlo (frase con un nombre evidente) + aviso grave «ner_broken» | Si el modelo falla en un equipo, el usuario lo sabe en vez de recibir cero sugerencias de nombres sin aviso (regla 7) |

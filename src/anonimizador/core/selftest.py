@@ -102,6 +102,10 @@ def run(window_check=None) -> tuple[bool, list[str]]:
     if not ner.is_available():
         ok = False
         lines.append("ERROR: el detector de noms (model) no s'ha trobat")
+    elif not ner.is_working():
+        ok = False
+        lines.append(f"ERROR: el detector de noms no funciona en aquest processador "
+                     f"({_ner_diagnosis()})")  # fmt: skip
     with tempfile.TemporaryDirectory() as tmp:
         folder = Path(tmp)
         for src, outputs in ((_word(folder / "prova.docx"), (".docx", ".md")),

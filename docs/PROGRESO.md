@@ -1,7 +1,7 @@
 # Progreso
 
 ## ▶ DÓNDE NOS QUEDAMOS (2026-10-12) — empezar por aquí
-Todo hecho, probado (**340 tests** + 2 lentos con `pytest -m slow`) y publicado. No hay código a medias.
+Todo hecho, probado (**342 tests** + 2 lentos con `pytest -m slow`) y publicado. No hay código a medias.
 
 ### ⏳ PENDIENTE — lo que falta para entregar el USB (en este orden)
 **A. GitHub** — hecho el 2026-10-12. `gh` instalado y con sesión (`C:\Program Files\GitHub CLI\gh.exe`).
@@ -53,7 +53,19 @@ Todo hecho, probado (**340 tests** + 2 lentos con `pytest -m slow`) y publicado.
   ninguna persona; el anterior pasó con el mismo código, modelo y versiones. En este PC el
   margen del modelo es enorme (logit 4,9 vs −0,1), así que parece que el detector int8 no
   funciona en algún procesador. La autoprueba muestra ahora el procesador y qué etiquetas
-  ve el detector. **Pendiente: averiguar en qué CPU falla** (importa para los PCs del bufete).
+  ve el detector. **Causa encontrada** con 3 builds: falla en **AMD EPYC 7763** (sin
+  VNNI; etiquetas solo «O»), funciona en EPYC 9V45, Apple M1 e Intel i7-1065G7 (con VNNI).
+  El int8 con signo (QInt8) de onnxruntime se desborda en CPU x86 sin VNNI → afecta a
+  muchos PCs de oficina.
+- **Arreglado**: modelo con pesos **uint8** (`preparar_models.py`; la caché del build se
+  regenera sola porque la clave es el hash del script). Comparado con el modelo sin
+  cuantizar: no pierde ningún nombre real (el int8 anterior perdía alguno), análisis de
+  nombres ~1,7× más lento (estimación ajustada). Entorno de conversión en `.venv-models/`.
+- **Comprobación del detector** al cargarlo (`ner.is_working()`): si no reconoce un nombre
+  evidente → aviso grave «El detector de noms no funciona en aquest ordinador» y la
+  autoprueba da ERROR.
+- Filtro: «Demandat
+» (con salto de línea) ya no se sugiere como empresa.
 
 ### Hecho el 2026-10-11 (noche): empaquetado (paso 10)
 - **Licencia AGPL-3.0** para el código propio (`LICENSE`; decisión del usuario).

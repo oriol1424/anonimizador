@@ -9,6 +9,9 @@ sin conexión. Necesita un entorno aparte con las herramientas de conversión:
 
 Modelos (licencias en docs/LICENCIAS.md):
 - ner-ca: projecte-aina/roberta-base-ca-v2-cased-ner (Apache-2.0) -> ONNX int8 (~125 MB).
+  Pesos en uint8 (QUInt8), no int8 con signo: con QInt8 el modelo no detecta NADA en CPU
+  x86 sin VNNI (AVX2: Intel hasta 10ª gen. de sobremesa, AMD Zen 3...) por desbordamiento
+  en la multiplicación u8×s8. Ver docs/DECISIONES.md.
 """
 
 import shutil
@@ -40,7 +43,7 @@ def prepare_ner() -> None:
             check=True,
         )  # fmt: skip
         quantize_dynamic(
-            str(Path(tmp) / "model.onnx"), str(target / "model.onnx"), weight_type=QuantType.QInt8
+            str(Path(tmp) / "model.onnx"), str(target / "model.onnx"), weight_type=QuantType.QUInt8
         )
         for name in ("tokenizer.json", "config.json"):
             shutil.copy(Path(tmp) / name, target / name)

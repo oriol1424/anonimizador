@@ -161,6 +161,12 @@ STRINGS: dict[str, dict[str, str]] = {
         "es": "{count} páginas escaneadas se han leído con reconocimiento de texto (OCR). "
         "Revísalas: con letra manuscrita, sellos o mala calidad de imagen puede fallar.",
     },
+    "notice_ner_broken": {
+        "ca": "El detector de noms i empreses no funciona en aquest ordinador: no s'han "
+        "suggerit noms ni empreses. Afegeix-los a la teva llista i revisa el resultat.",
+        "es": "El detector de nombres y empresas no funciona en este ordenador: no se han "
+        "sugerido nombres ni empresas. Añádelos a tu lista y revisa el resultado.",
+    },
     "notice_ner_unavailable": {
         "ca": "El detector de noms i empreses no està instal·lat: només s'han buscat dades "
         "com DNI, telèfons o adreces. Revisa els noms manualment.",

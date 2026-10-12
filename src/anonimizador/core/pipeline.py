@@ -105,7 +105,7 @@ class Notice:
     @property
     def is_serious(self) -> bool:
         """El aviso debe destacarse: datos sin borrar o páginas que no se han procesado."""
-        return self.is_leak or self.kind in ("failed_pages", "unreadable_pages")
+        return self.is_leak or self.kind in ("failed_pages", "unreadable_pages", "ner_broken")
 
     def message(self, language: Language) -> str:
         return tr(
@@ -291,6 +291,8 @@ def analyze(
         notices.append(_doubts_notice(doubts))
     if not ner.is_available():
         notices.append(Notice("ner_unavailable"))
+    elif not ner.is_working():
+        notices.append(Notice("ner_broken"))
     return Analysis(suggestions, notices)
 
 
