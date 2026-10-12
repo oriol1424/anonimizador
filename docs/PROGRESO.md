@@ -1,22 +1,18 @@
 # Progreso
 
-## ▶ DÓNDE NOS QUEDAMOS (2026-10-11) — empezar por aquí
+## ▶ DÓNDE NOS QUEDAMOS (2026-10-12) — empezar por aquí
 Todo hecho, probado (**337 tests** + 2 lentos con `pytest -m slow`) y publicado. No hay código a medias.
 
 ### ⏳ PENDIENTE — lo que falta para entregar el USB (en este orden)
-**A. GitHub (lo hace el usuario; aquí no está la herramienta `gh`)**
-- [ ] Ver que el flujo **tests** sale en verde (Actions > tests). Es su primera ejecución en
-      Mac: si falla, pasar el error a Claude.
-- [ ] Lanzar el **build**: Actions > build > *Run workflow* (rama `main`). La 1ª vez tarda
-      ~15-20 min (convierte el modelo de nombres). Debe salir en verde en Windows y Mac,
-      con «RESULTAT: OK» en `prova.txt`. Si falla, pasar el error a Claude.
-- [ ] Descargar el artifact **Anonimitzador-Mac** y dejar `Anonimitzador-Mac.zip` en `dist/`.
-- [ ] (Opcional) Descargar también **Anonimitzador-Windows** para usar el build limpio de
-      GitHub en lugar del construido en este PC (`--windows dist/Anonimitzador-Windows.zip`).
+**A. GitHub** — hecho el 2026-10-12. `gh` instalado y con sesión (`C:\Program Files\GitHub CLI\gh.exe`).
+- [x] Flujo **tests** en verde en Windows y Mac (fallaba un test en Windows por `relpath`
+      entre unidades C:/D: del runner; arreglado).
+- [x] **Build** en verde (run 38229421358, ~5 min con el modelo en caché): «RESULTAT: OK»
+      en Windows y Mac. Zips en `dist/`.
 
 **B. Montar el USB (en este PC)**
-- [ ] `.venv/Scripts/python packaging/fer_usb.py` → `dist/USB/` con Windows + Mac + código
-      fuente + licencias + LLEGEIX-ME.txt.
+- [x] `fer_usb.py --windows dist/Anonimitzador-Windows.zip --mac dist/Anonimitzador-Mac.zip`
+      → `dist/USB/` (702 MB). Autoprueba del .exe del USB en este PC: OK.
 - [ ] Copiar el contenido de `dist/USB/` al USB (formato exFAT para que vaya en Windows y Mac).
 
 **C. Probar desde el USB**
