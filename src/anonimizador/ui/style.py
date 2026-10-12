@@ -103,9 +103,9 @@ QComboBox QAbstractItemView {{ background: {SURFACE}; selection-background-color
     selection-color: {TEXT}; border: 1px solid {BORDER_STRONG}; }}
 QTableWidget QComboBox {{
     border: 1px solid {BORDER_STRONG}; border-radius: 6px; background: {SURFACE};
-    padding: 2px 8px; min-height: 22px; margin: 4px 6px; color: {ACCENT};
-    font-family: Consolas, Menlo, monospace;
+    padding: 2px 8px; min-height: 22px; margin: 4px 6px; color: {TEXT};
 }}
+QTableWidget QComboBox:editable {{ color: {ACCENT}; font-family: Consolas, Menlo, monospace; }}
 QTableWidget QComboBox:hover {{ border-color: {ACCENT}; }}
 QTableWidget QComboBox:focus {{ border: 1px solid {ACCENT}; }}
 QComboBox::drop-down {{ border: none; width: 26px; }}

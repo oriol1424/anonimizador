@@ -1,7 +1,7 @@
 # Progreso
 
 ## ▶ DÓNDE NOS QUEDAMOS (2026-10-12) — empezar por aquí
-Todo hecho, probado (**338 tests** + 2 lentos con `pytest -m slow`) y publicado. No hay código a medias.
+Todo hecho, probado (**339 tests** + 2 lentos con `pytest -m slow`) y publicado. No hay código a medias.
 
 ### ⏳ PENDIENTE — lo que falta para entregar el USB (en este orden)
 **A. GitHub** — hecho el 2026-10-12. `gh` instalado y con sesión (`C:\Program Files\GitHub CLI\gh.exe`).
@@ -43,6 +43,10 @@ Todo hecho, probado (**338 tests** + 2 lentos con `pytest -m slow`) y publicado.
   dibujada en `ReplacementCombo.paintEvent` (igual en Windows y Mac).
 - En sugerencias, la lista ofrece primero el tipo de la fila (`[DNI_n]`, `[TELEFON_n]`...)
   y luego las opciones habituales; al elegir se pone el primer número libre.
+- **El tipo de cada sugerencia se puede corregir** (desplegable en «Tipus»): p. ej. una
+  dirección detectada como empresa. El sustituto automático cambia al del tipo nuevo
+  (`[EMPRESA_3]` → `[ADRECA_1]`); uno escrito a mano se respeta. Solo personas y empresas
+  sustituyen variantes («Sr. Puig»). Los filtros y la guía usan el tipo corregido.
 
 ### Hecho el 2026-10-11 (noche): empaquetado (paso 10)
 - **Licencia AGPL-3.0** para el código propio (`LICENSE`; decisión del usuario).

@@ -230,6 +230,29 @@ def test_suggestions_dropdown_offers_own_type_first(window):
     assert [person.itemText(i) for i in range(person.count())].count("[PERSONA_n]") == 1
 
 
+def test_suggestions_change_type(window):
+    page = window.suggestions_page
+    page.show_analysis(_analysis(), CATALAN, {"[ADRECA_1]"})
+    person = page.type_combos[0]
+    assert person.currentText() == "Persona"
+    # una adreça detectada como persona: el sustituto automático pasa a [ADRECA_n]
+    person.setCurrentIndex(person.findData("DIRECCION"))
+    assert page.combos[0].value() == "[ADRECA_2]"  # [ADRECA_1] ya se usa
+    assert page.combos[0].itemText(0) == "[ADRECA_n]"
+    terms = page.selected_terms()
+    moved = [t for t in terms if t.original == "Núria Serra"]
+    assert moved[0].replacement == "[ADRECA_2]"
+    assert moved[0].source == "DIRECCION" and not moved[0].expand
+    page._choose_group("group_addresses")
+    assert [r for r in range(4) if not page.table.isRowHidden(r)] == [0, 3]
+    # un sustituto escrito a mano no se toca
+    page._choose_group(None)
+    page.combos[1].setEditText("[TESTIMONI]")
+    dni = page.type_combos[1]
+    dni.setCurrentIndex(dni.findData("NIE"))
+    assert page.combos[1].value() == "[TESTIMONI]"
+
+
 def test_suggestions_serious_notices_first(window):
     page = window.suggestions_page
     page.show_analysis(_analysis(), CATALAN, set())

@@ -1,7 +1,11 @@
 """Paso 3: lo que la app ha encontrado y el usuario no había puesto en su lista.
 
-Con documentos largos salen cientos de sugerencias: buscador y filtros por tipo.
+Con documentos largos salen cientos de sugerencias: buscador y filtros por tipo. El tipo
+se puede corregir (una adreça detectada como empresa).
 """
+
+import re
+from dataclasses import replace
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
@@ -13,14 +17,21 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from anonimizador.core.lang import Language
+from anonimizador.core.lang import LANGUAGES, Language
 from anonimizador.core.matcher import Term
-from anonimizador.core.pipeline import Analysis, Suggestion
+from anonimizador.core.pipeline import LABEL_ORDER, NAMED_LABELS, Analysis, Suggestion
 from anonimizador.core.text import fold
 from anonimizador.i18n import tr
 from anonimizador.ui import style
 from anonimizador.ui.pages import Page
-from anonimizador.ui.widgets import FlowLayout, NoticeList, ReplacementCombo, button, label
+from anonimizador.ui.widgets import (
+    ArrowCombo,
+    FlowLayout,
+    NoticeList,
+    ReplacementCombo,
+    button,
+    label,
+)
 
 # Filtros: grupo -> tipos de dato.
 GROUPS = {
@@ -48,6 +59,7 @@ class SuggestionsPage(Page):
         self._language: Language | None = None
         self._group: str | None = None  # None = todos
         self.combos: list[ReplacementCombo] = []
+        self.type_combos: list[ArrowCombo] = []
 
         self.notices = NoticeList()
         self.body.addWidget(self.notices)
@@ -82,6 +94,7 @@ class SuggestionsPage(Page):
         header = self.table.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(COL_FOUND, QHeaderView.ResizeMode.Stretch)
+        header.setSectionResizeMode(COL_TYPE, QHeaderView.ResizeMode.Interactive)
         header.setSectionResizeMode(COL_ALIAS, QHeaderView.ResizeMode.Interactive)
         header.setDefaultAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         self.table.itemChanged.connect(lambda _: self._update_count())
@@ -109,7 +122,7 @@ class SuggestionsPage(Page):
     # --- Contenido -----------------------------------------------------------------------
 
     def show_analysis(self, analysis: Analysis, language: Language, used: set[str]) -> None:
-        self._suggestions = analysis.suggestions
+        self._suggestions = list(analysis.suggestions)  # el tipo se puede corregir
         self._used = used
         self._language = language
         self._group = None
@@ -120,6 +133,7 @@ class SuggestionsPage(Page):
         self.table.blockSignals(True)
         self.table.setRowCount(len(self._suggestions))
         self.combos = []
+        self.type_combos = []
         for row, s in enumerate(self._suggestions):
             check = QTableWidgetItem()
             check.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled)
@@ -130,10 +144,18 @@ class SuggestionsPage(Page):
                 item = QTableWidgetItem(text)
                 item.setFlags(Qt.ItemFlag.ItemIsEnabled)
                 self.table.setItem(row, col, item)
+            type_combo = ArrowCombo()
+            for code in LABEL_ORDER:
+                type_combo.addItem("", code)
+            type_combo.setCurrentIndex(LABEL_ORDER.index(s.label))
+            type_combo.currentIndexChanged.connect(lambda _, r=row: self._change_type(r))
+            self.table.setCellWidget(row, COL_TYPE, type_combo)
+            self.type_combos.append(type_combo)
             combo = ReplacementCombo(language, self._aliases_except, s.replacement)
             combo.setEditText(s.replacement)
             self.table.setCellWidget(row, COL_ALIAS, combo)
             self.combos.append(combo)
+        self.table.setColumnWidth(COL_TYPE, 210)
         self.table.setColumnWidth(COL_ALIAS, 270)
         self.table.blockSignals(False)
         self.retranslate(language)
@@ -151,10 +173,9 @@ class SuggestionsPage(Page):
             [tr(lang, k) for k in ("col_apply", "col_type", "col_found", "col_count")]
             + [tr(lang, "col_replacement")]
         )
-        self.table.blockSignals(True)
-        for row, s in enumerate(self._suggestions):
-            self.table.item(row, COL_TYPE).setText(tr(lang, f"label_{s.label}"))
-        self.table.blockSignals(False)
+        for type_combo in self.type_combos:
+            for i, code in enumerate(LABEL_ORDER):
+                type_combo.setItemText(i, tr(lang, f"label_{code}"))
         for combo in self.combos:
             combo.set_language(language)
         self.keep_button.setText(tr(lang, "never_anonymize"))
@@ -197,7 +218,7 @@ class SuggestionsPage(Page):
             visible = visible and (self._group is None or _group_of(s.label) == self._group)
             if visible and query:
                 haystack = " ".join(
-                    (*s.forms, self.table.item(row, COL_TYPE).text(), self.combos[row].value())
+                    (*s.forms, self.type_combos[row].currentText(), self.combos[row].value())
                 )
                 visible = query in fold(haystack)
             self.table.setRowHidden(row, not visible)
@@ -208,6 +229,27 @@ class SuggestionsPage(Page):
         for w in (self.all_button, self.none_button, self.count_label, self.keep_button):
             w.setVisible(has_rows)
         self._update_count()
+
+    def _change_type(self, row: int) -> None:
+        """El usuario corrige el tipo: el sustituto automático pasa al del tipo nuevo
+        ([EMPRESA_3] -> [ADRECA_1]); uno escrito a mano se respeta."""
+        new = self.type_combos[row].currentData()
+        old = self._suggestions[row]
+        if new == old.label or self._language is None:
+            return
+        combo = self.combos[row]
+        template = f"[{self._language.labels[new]}_{{n}}]"
+        prefixes = {lang.labels[old.label] for lang in LANGUAGES.values()}
+        automatic = any(re.fullmatch(rf"\[{re.escape(p)}_\d+\]", combo.value()) for p in prefixes)
+        if automatic or not combo.value():
+            combo.choose(template)
+        combo.set_own(template)
+        # Solo nombres de personas y empresas sustituyen también variantes ("Sr. Puig").
+        self._suggestions[row] = replace(
+            old, label=new, replacement=combo.value(), expand=new in NAMED_LABELS
+        )
+        self._build_chips(self._language.code)
+        self._apply_filter()
 
     # --- Selección -------------------------------------------------------------------------
 

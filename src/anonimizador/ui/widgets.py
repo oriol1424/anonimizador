@@ -22,7 +22,22 @@ from anonimizador.core.pipeline import Notice
 from anonimizador.ui import style
 
 
-class ReplacementCombo(QComboBox):
+class ArrowCombo(QComboBox):
+    """Desplegable con la flecha siempre visible.
+
+    La hoja de estilo quita la flecha nativa (cada sistema la dibuja distinta): se dibuja
+    aquí para que se vea que es un desplegable.
+    """
+
+    def paintEvent(self, event) -> None:  # noqa: N802 (API de Qt)
+        super().paintEvent(event)
+        size = 16
+        rect = self.rect().adjusted(0, 0, -12, 0)
+        point = QPoint(rect.right() - size, rect.center().y() - size // 2 + 1)
+        QPainter(self).drawPixmap(point, style.icon_pixmap("chevron", style.ACCENT, size))
+
+
+class ReplacementCombo(ArrowCombo):
     """Desplegable editable de "Substituir per".
 
     Ofrece las opciones del idioma ("[CLIENT_n]"...) y, al elegir una, pone el primer
@@ -41,16 +56,23 @@ class ReplacementCombo(QComboBox):
         self._used_aliases = used_aliases
         # Sugerencias: el tipo propio de la fila ("[DNI_{n}]") va el primero de la lista.
         self._own = re.sub(r"_\d+\]$", "_{n}]", own) if own else None
+        self._language = language
         self.set_language(language)
         self.activated.connect(self._on_activated)
 
+    def set_own(self, template: str) -> None:
+        """Cambia el tipo propio de la fila ("[ADRECA_{n}]") que va primero en la lista."""
+        self._own = template
+        self.set_language(self._language)
+
     def set_language(self, language: Language) -> None:
+        self._language = language
         current = self.currentText()
         self.blockSignals(True)
         self.clear()
         templates = list(language.presets)
-        if self._own and "{n}" in self._own and self._own not in templates:
-            templates.insert(0, self._own)
+        if self._own and "{n}" in self._own:
+            templates = [self._own, *(t for t in templates if t != self._own)]
         for template in templates:
             self.addItem(template.replace("{n}", "n"), template)
         self.setCurrentIndex(-1)
@@ -67,15 +89,6 @@ class ReplacementCombo(QComboBox):
 
     def value(self) -> str:
         return self.currentText().strip()
-
-    def paintEvent(self, event) -> None:  # noqa: N802 (API de Qt)
-        # La hoja de estilo quita la flecha nativa (cada sistema la dibuja distinta):
-        # se dibuja aquí para que se vea que es un desplegable.
-        super().paintEvent(event)
-        size = 16
-        rect = self.rect().adjusted(0, 0, -12, 0)
-        point = QPoint(rect.right() - size, rect.center().y() - size // 2 + 1)
-        QPainter(self).drawPixmap(point, style.icon_pixmap("chevron", style.ACCENT, size))
 
 
 class FlowLayout(QLayout):
