@@ -1,7 +1,7 @@
 # Progreso
 
 ## ▶ DÓNDE NOS QUEDAMOS (2026-10-12) — empezar por aquí
-Todo hecho, probado (**337 tests** + 2 lentos con `pytest -m slow`) y publicado. No hay código a medias.
+Todo hecho, probado (**338 tests** + 2 lentos con `pytest -m slow`) y publicado. No hay código a medias.
 
 ### ⏳ PENDIENTE — lo que falta para entregar el USB (en este orden)
 **A. GitHub** — hecho el 2026-10-12. `gh` instalado y con sesión (`C:\Program Files\GitHub CLI\gh.exe`).
@@ -36,6 +36,13 @@ Todo hecho, probado (**337 tests** + 2 lentos con `pytest -m slow`) y publicado.
 - [ ] Tema oscuro; exportar/importar la lista «No anonimitzar»; historial de nombres (9b).
 - [ ] Publicar una versión con etiqueta (`git tag v0.2.0 && git push --tags`) para que el
       build quede asociado a la versión.
+
+### Hecho el 2026-10-12: desplegable «Substituir per» visible (petición del usuario)
+- Probado en el Mac: va bien. El usuario no veía que «Substituir per» era un desplegable:
+  la hoja de estilo quitaba la flecha y el borde. Ahora cada fila tiene borde y una flecha
+  dibujada en `ReplacementCombo.paintEvent` (igual en Windows y Mac).
+- En sugerencias, la lista ofrece primero el tipo de la fila (`[DNI_n]`, `[TELEFON_n]`...)
+  y luego las opciones habituales; al elegir se pone el primer número libre.
 
 ### Hecho el 2026-10-11 (noche): empaquetado (paso 10)
 - **Licencia AGPL-3.0** para el código propio (`LICENSE`; decisión del usuario).

@@ -1,8 +1,10 @@
 """Componentes compartidos por las pantallas de la ventana."""
 
+import re
 from collections.abc import Callable
 
 from PySide6.QtCore import QPoint, QRect, QSize, Qt
+from PySide6.QtGui import QPainter
 from PySide6.QtWidgets import (
     QButtonGroup,
     QComboBox,
@@ -27,11 +29,18 @@ class ReplacementCombo(QComboBox):
     número libre ("[CLIENT_2]" si ya existe "[CLIENT_1]"). También se puede escribir.
     """
 
-    def __init__(self, language: Language, used_aliases: Callable[["ReplacementCombo"], set[str]]):
+    def __init__(
+        self,
+        language: Language,
+        used_aliases: Callable[["ReplacementCombo"], set[str]],
+        own: str | None = None,
+    ):
         super().__init__()
         self.setEditable(True)
         self.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
         self._used_aliases = used_aliases
+        # Sugerencias: el tipo propio de la fila ("[DNI_{n}]") va el primero de la lista.
+        self._own = re.sub(r"_\d+\]$", "_{n}]", own) if own else None
         self.set_language(language)
         self.activated.connect(self._on_activated)
 
@@ -39,7 +48,10 @@ class ReplacementCombo(QComboBox):
         current = self.currentText()
         self.blockSignals(True)
         self.clear()
-        for template in language.presets:
+        templates = list(language.presets)
+        if self._own and "{n}" in self._own and self._own not in templates:
+            templates.insert(0, self._own)
+        for template in templates:
             self.addItem(template.replace("{n}", "n"), template)
         self.setCurrentIndex(-1)
         self.setEditText(current)
@@ -55,6 +67,15 @@ class ReplacementCombo(QComboBox):
 
     def value(self) -> str:
         return self.currentText().strip()
+
+    def paintEvent(self, event) -> None:  # noqa: N802 (API de Qt)
+        # La hoja de estilo quita la flecha nativa (cada sistema la dibuja distinta):
+        # se dibuja aquí para que se vea que es un desplegable.
+        super().paintEvent(event)
+        size = 16
+        rect = self.rect().adjusted(0, 0, -12, 0)
+        point = QPoint(rect.right() - size, rect.center().y() - size // 2 + 1)
+        QPainter(self).drawPixmap(point, style.icon_pixmap("chevron", style.ACCENT, size))
 
 
 class FlowLayout(QLayout):

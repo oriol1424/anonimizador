@@ -130,7 +130,7 @@ class SuggestionsPage(Page):
                 item = QTableWidgetItem(text)
                 item.setFlags(Qt.ItemFlag.ItemIsEnabled)
                 self.table.setItem(row, col, item)
-            combo = ReplacementCombo(language, self._aliases_except)
+            combo = ReplacementCombo(language, self._aliases_except, s.replacement)
             combo.setEditText(s.replacement)
             self.table.setCellWidget(row, COL_ALIAS, combo)
             self.combos.append(combo)

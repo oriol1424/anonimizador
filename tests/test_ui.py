@@ -217,6 +217,19 @@ def test_suggestions_search_and_filters(window):
     assert page.count_label.text() == "4 de 4 marcades"
 
 
+def test_suggestions_dropdown_offers_own_type_first(window):
+    page = window.suggestions_page
+    page.show_analysis(_analysis(), CATALAN, {"[DNI_1]"})
+    dni = page.combos[1]
+    options = [dni.itemText(i) for i in range(dni.count())]
+    assert options[0] == "[DNI_n]"
+    assert "[CLIENT_n]" in options
+    dni.choose(dni.itemData(0))
+    assert dni.value() == "[DNI_2]"  # primer número libre
+    person = page.combos[0]
+    assert [person.itemText(i) for i in range(person.count())].count("[PERSONA_n]") == 1
+
+
 def test_suggestions_serious_notices_first(window):
     page = window.suggestions_page
     page.show_analysis(_analysis(), CATALAN, set())

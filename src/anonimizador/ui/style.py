@@ -102,13 +102,14 @@ QLineEdit:focus, QComboBox:focus {{ border: 2px solid {ACCENT}; padding: 5px 9px
 QComboBox QAbstractItemView {{ background: {SURFACE}; selection-background-color: {ACCENT_SOFT};
     selection-color: {TEXT}; border: 1px solid {BORDER_STRONG}; }}
 QTableWidget QComboBox {{
-    border: 1px solid transparent; border-radius: 6px; background: transparent;
+    border: 1px solid {BORDER_STRONG}; border-radius: 6px; background: {SURFACE};
     padding: 2px 8px; min-height: 22px; margin: 4px 6px; color: {ACCENT};
     font-family: Consolas, Menlo, monospace;
 }}
-QTableWidget QComboBox:hover {{ border-color: {BORDER_STRONG}; background: {SURFACE}; }}
-QTableWidget QComboBox:focus {{ border: 1px solid {ACCENT}; background: {SURFACE}; }}
-QTableWidget QComboBox::drop-down {{ border: none; width: 20px; }}
+QTableWidget QComboBox:hover {{ border-color: {ACCENT}; }}
+QTableWidget QComboBox:focus {{ border: 1px solid {ACCENT}; }}
+QComboBox::drop-down {{ border: none; width: 26px; }}
+QComboBox::down-arrow {{ image: none; }}
 
 QTableWidget {{
     background: {SURFACE}; border: 1px solid {BORDER}; border-radius: 10px;
@@ -190,6 +191,7 @@ _SVG = {
     "upload": '<path d="M12 16V4"/><path d="M7 9l5-5 5 5"/><path d="M5 20h14"/>',
     "logo": '<path d="M4 7h16M4 12h10M4 17h7"/><rect x="15" y="14" width="6" height="6" rx="1"/>',
     "check": '<path d="M5 12l5 5 9-10"/>',
+    "chevron": '<path d="M7 10l5 5 5-5"/>',
     "shield": '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
     "alert": '<path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17h.01"/>',
     "info": '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5h.01"/>',
