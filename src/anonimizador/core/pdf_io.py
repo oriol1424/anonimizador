@@ -69,6 +69,27 @@ class _Replacement:
 # línea de 46 letras = 233 curvas). Las tablas son rectas (0 curvas) y un logotipo, pocas.
 OUTLINED_MIN_CURVES = 150
 
+# Texto ilegible: fuentes sin tabla Unicode. Lo que se extrae no es lo que se ve
+# («Demandant» -> «%FNBOEBOU»): ni la lista ni el detector encuentran los nombres, y una
+# IA podría descifrarlo. Esas páginas se leen con OCR, como las escaneadas.
+_CID_IDENTITY = ("Identity-H", "Identity-V")
+BROKEN_TEXT_MAX_CONTROLS = 0.03  # más de un 3% de caracteres de control -> ilegible
+
+
+def has_broken_text(page: pymupdf.Page) -> bool:
+    """Página cuyo texto extraído no corresponde a lo que se ve."""
+    doc = page.parent
+    for xref, _ext, kind, _name, _ref, encoding, *_ in page.get_fonts():
+        # Fuente CID con codificación Identity y sin ToUnicode: MuPDF da el nº de glifo.
+        if kind == "Type0" and encoding in _CID_IDENTITY and xref > 0:
+            if doc.xref_get_key(xref, "ToUnicode")[0] == "null":
+                return True
+    text = "".join(page.get_text("text").split())  # sin espacios ni saltos normales
+    if not text:
+        return False
+    controls = sum(1 for c in text if ord(c) < 32 or c == "�")
+    return controls / len(text) > BROKEN_TEXT_MAX_CONTROLS
+
 
 def _open(path: Path) -> pymupdf.Document:
     doc = pymupdf.open(str(path))
@@ -107,9 +128,9 @@ def _remove_attachments(doc: pymupdf.Document) -> int:
 
 
 def is_image_page(page: pymupdf.Page) -> bool:
-    """Página que hay que leer con OCR: escaneada (una imagen la cubre casi entera) o con
+    """Página que hay que leer con OCR: escaneada (una imagen la cubre casi entera), con
     el texto convertido en trazos (muchos dibujos y ningún texto), que de otro modo no se
-    vería."""
+    vería, o con texto ilegible (`has_broken_text`)."""
     page_area = abs(page.rect)
     if page_area == 0:
         return False
@@ -117,7 +138,7 @@ def is_image_page(page: pymupdf.Page) -> bool:
     if covered / page_area >= MIN_IMAGE_COVERAGE:
         return True
     if page.get_text("text").strip():
-        return False
+        return has_broken_text(page)
     curves = sum(1 for d in page.get_drawings() for item in d["items"] if item[0] == "c")
     return curves >= OUTLINED_MIN_CURVES
 

@@ -171,10 +171,12 @@ STRINGS: dict[str, dict[str, str]] = {
         "revisar. Si los necesitas, anonimízalos aparte.",
     },
     "notice_ocr": {
-        "ca": "{count} pàgines escanejades s'han llegit amb reconeixement de text (OCR). "
-        "Revisa-les: amb lletra manuscrita, segells o mala qualitat d'imatge pot fallar.",
-        "es": "{count} páginas escaneadas se han leído con reconocimiento de texto (OCR). "
-        "Revísalas: con letra manuscrita, sellos o mala calidad de imagen puede fallar.",
+        "ca": "{count} pàgines escanejades (o amb el text intern il·legible) s'han llegit amb "
+        "reconeixement de text (OCR). Revisa-les: amb lletra manuscrita, segells o mala "
+        "qualitat d'imatge pot fallar.",
+        "es": "{count} páginas escaneadas (o con el texto interno ilegible) se han leído con "
+        "reconocimiento de texto (OCR). Revísalas: con letra manuscrita, sellos o mala "
+        "calidad de imagen puede fallar.",
     },
     "notice_ner_broken": {
         "ca": "El detector de noms i empreses no funciona en aquest ordinador: no s'han "

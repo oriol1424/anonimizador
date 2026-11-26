@@ -91,3 +91,74 @@ def test_analysis_suggests_clean_forms(control_pdf: Path):
     forms = [f for s in analysis.suggestions for f in s.forms]
     assert any("12345678Z" in f for f in forms)
     assert not any(any(ord(c) < 32 for c in f) for f in forms)
+
+
+# --- Texto ilegible: fuente sin tabla Unicode («Demandant» se extrae como «%FNBOEBOU») ---
+
+LINES = [
+    "Demandant: Joan Puig i Ferrer, amb passaport O1234567.",
+    "Demandat: el Sr. Pere Mas, veí d'Andorra la Vella.",
+    "Els fets es van produir el mes de febrer.",
+]
+
+
+def _identity_pdf(path: Path, to_unicode: bool) -> Path:
+    """Fuente CID (Identity-H) incrustada; sin ToUnicode el texto extraído es basura."""
+    doc = pymupdf.open()
+    page = doc.new_page()
+    page.insert_font(fontname="T0", fontbuffer=pymupdf.Font("tiro").buffer)
+    for n, line in enumerate(LINES):
+        page.insert_text((72, 100 + 20 * n), line, fontname="T0", fontsize=12)
+    if not to_unicode:
+        for xref in range(1, doc.xref_length()):
+            if doc.xref_get_key(xref, "ToUnicode")[0] != "null":
+                doc.xref_set_key(xref, "ToUnicode", "null")
+    doc.save(str(path))
+    doc.close()
+    return path
+
+
+def test_the_broken_pdf_really_hides_the_names(tmp_path: Path):
+    doc = pymupdf.open(str(_identity_pdf(tmp_path / "b.pdf", to_unicode=False)))
+    text = doc[0].get_text()
+    doc.close()
+    assert "Joan" not in text and "Demandant" not in text  # si MuPDF cambia, revisar
+
+
+def test_broken_text_page_is_read_with_ocr(tmp_path: Path):
+    broken = pymupdf.open(str(_identity_pdf(tmp_path / "b.pdf", to_unicode=False)))
+    good = pymupdf.open(str(_identity_pdf(tmp_path / "g.pdf", to_unicode=True)))
+    assert pdf_io.has_broken_text(broken[0]) and pdf_io.is_image_page(broken[0])
+    assert not pdf_io.has_broken_text(good[0]) and not pdf_io.is_image_page(good[0])
+    broken.close()
+    good.close()
+
+
+def test_normal_pdf_is_not_flagged(demanda_pdf: Path):
+    doc = pymupdf.open(str(demanda_pdf))
+    assert not any(pdf_io.has_broken_text(page) for page in doc)
+    doc.close()
+
+
+def test_broken_text_pdf_is_anonymized_and_garbage_removed(tmp_path: Path):
+    """Antes: la lista no encontraba nada y el texto desordenado (descifrable por una IA)
+    se quedaba en el PDF de salida."""
+    src = _identity_pdf(tmp_path / "b.pdf", to_unicode=False)
+    out = tmp_path / "sortida.pdf"
+    report = anonymize(src, out, TERMS)
+    assert report.replaced["[CLIENT_1]"] >= 1 and report.replaced["[PART_1]"] >= 1
+    assert any(n.kind == "ocr" for n in report.notices)
+    doc = pymupdf.open(str(out))
+    text = doc[0].get_text()
+    fonts = doc[0].get_fonts()
+    doc.close()
+    assert "Joan" not in text and "Mas" not in text
+    assert "%FNBOEBOU" not in text  # la capa de texto antigua ha desaparecido
+    assert "Demandant" in text  # la nueva es legible (OCR)
+    assert not any(f[2] == "Type0" for f in fonts)
+
+
+def test_broken_text_pdf_analysis_finds_the_names(tmp_path: Path):
+    src = _identity_pdf(tmp_path / "b.pdf", to_unicode=False)
+    forms = [f for s in analyze(src, []).suggestions for f in s.forms]
+    assert any("O1234567" in f for f in forms)  # el pasaporte, leído con OCR
