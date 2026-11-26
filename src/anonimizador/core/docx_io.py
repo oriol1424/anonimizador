@@ -18,7 +18,7 @@ from lxml import etree
 from anonimizador.core import images
 from anonimizador.core.matcher import Match, Matcher
 from anonimizador.core.progress import PageProgress, Steps
-from anonimizador.core.result import ProcessResult
+from anonimizador.core.result import OutputWriteError, ProcessResult
 
 W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 P, R = f"{{{W}}}p", f"{{{W}}}r"
@@ -326,7 +326,10 @@ def anonymize(
 
     _anonymize_metadata(doc, matcher)
     _anonymize_links(doc, matcher)
-    doc.save(str(dst))
+    try:
+        doc.save(str(dst))
+    except OSError as exc:  # carpeta que ya no existe, fichero abierto en Word...
+        raise OutputWriteError.from_os(exc) from exc
     return ProcessResult(
         all_matches, unreadable + count_embedded(doc), images_ocr=read,
         image_leftovers=image_leftovers,

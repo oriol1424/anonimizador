@@ -26,13 +26,28 @@ a = Analysis(
     datas=datas,
     hiddenimports=collect_submodules("rapidocr") + ["anonimizador.core.selftest"],
     excludes=[
-        "tkinter", "pytest", "IPython", "matplotlib",
+        "tkinter",
+        "pytest",
+        "IPython",
+        "matplotlib",
         # Solo PySide6-Essentials: ni WebEngine (Chromium) ni Qml/Quick/Pdf/3D/Multimedia.
-        "PySide6.QtWebEngineCore", "PySide6.QtWebEngineWidgets", "PySide6.QtWebChannel",
-        "PySide6.QtQml", "PySide6.QtQuick", "PySide6.QtPdf", "PySide6.QtPdfWidgets",
-        "PySide6.Qt3DCore", "PySide6.QtMultimedia", "PySide6.QtCharts", "PySide6.QtNetwork",
+        "PySide6.QtWebEngineCore",
+        "PySide6.QtWebEngineWidgets",
+        "PySide6.QtWebChannel",
+        "PySide6.QtQml",
+        "PySide6.QtQuick",
+        "PySide6.QtPdf",
+        "PySide6.QtPdfWidgets",
+        "PySide6.Qt3DCore",
+        "PySide6.QtMultimedia",
+        "PySide6.QtCharts",
+        "PySide6.QtNetwork",
         # Red: la app no la usa (los modelos van dentro).
-        "huggingface_hub", "hf_xet", "httpx", "httpx2", "httpcore2",
+        "huggingface_hub",
+        "hf_xet",
+        "httpx",
+        "httpx2",
+        "httpcore2",
     ],
     noarchive=False,
 )
@@ -50,15 +65,22 @@ a.datas = [
 
 pyz = PYZ(a.pure)
 exe = EXE(
-    pyz, a.scripts, [], exclude_binaries=True, name="Anonimitzador",
-    console=False, icon=str(ICON) if ICON.exists() else None,
+    pyz,
+    a.scripts,
+    [],
+    exclude_binaries=True,
+    name="Anonimitzador",
+    console=False,
+    icon=str(ICON) if ICON.exists() else None,
     argv_emulation=False,
 )
 coll = COLLECT(exe, a.binaries, a.datas, name="Anonimitzador")
 
 if MAC:
     app = BUNDLE(
-        coll, name="Anonimitzador.app", icon=str(ICON) if ICON.exists() else None,
+        coll,
+        name="Anonimitzador.app",
+        icon=str(ICON) if ICON.exists() else None,
         bundle_identifier="cat.anonimitzador.app",
         info_plist={
             "CFBundleName": "Anonimitzador",
@@ -67,5 +89,20 @@ if MAC:
             "NSHighResolutionCapable": True,
             "LSMinimumSystemVersion": "12.0",
             "NSHumanReadableCopyright": "Llicència AGPL-3.0. Codi font a la carpeta codi_font.",
+            # Textos del aviso de permisos de macOS (sin ellos sale un aviso genérico y el
+            # usuario puede denegarlo: después no se puede guardar en esas carpetas).
+            **{
+                f"NS{place}UsageDescription": "L'Anonimitzador necessita llegir el document "
+                "i desar el document anonimitzat a la carpeta que heu triat. Tot es queda "
+                "en aquest ordinador."
+                for place in (
+                    "DocumentsFolder",
+                    "DesktopFolder",
+                    "DownloadsFolder",
+                    "RemovableVolumes",
+                    "NetworkVolumes",
+                    "FileProviderDomain",
+                )
+            },  # fmt: skip
         },
     )

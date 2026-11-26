@@ -9,6 +9,19 @@ _APOSTROPHES = {"’": "'", "‘": "'", "ʼ": "'", "´": "'"}
 _MIDDLE_DOTS = {"‧": "·", "⋅": "·", "∙": "·"}
 
 
+# Caracteres que algunos PDF dan al extraer el texto (fuentes sin tabla Unicode: el
+# espacio sale como ""). Rompen Word/XML y el .txt, y separan las palabras sin ser
+# espacios: «JoanPuig» no coincidía con la lista y el nombre se filtraba. Se cambian
+# uno por uno (misma longitud: las cajas de cada letra siguen alineadas).
+_UNSAFE = {c: " " for c in (*range(0x00, 0x09), 0x0B, 0x0C, *range(0x0E, 0x20), 0x7F)}
+_UNSAFE |= {c: "�" for c in (*range(0xD800, 0xE000), 0xFFFE, 0xFFFF)}
+
+
+def clean_text(text: str) -> str:
+    """Controles -> espacio; suplentes sueltos y no-caracteres -> «�». Misma longitud."""
+    return text.translate(_UNSAFE)
+
+
 @lru_cache(maxsize=4096)
 def _fold_char(char: str) -> str:
     if char in _APOSTROPHES:

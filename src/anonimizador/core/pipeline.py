@@ -5,7 +5,7 @@ import re
 import tempfile
 import threading
 from collections import Counter
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import ModuleType
@@ -16,6 +16,7 @@ from anonimizador.core.guide import GuideEntry, build_entries, write_guide
 from anonimizador.core.lang import DEFAULT_LANGUAGE, Language
 from anonimizador.core.matcher import Matcher, Term
 from anonimizador.core.progress import Progress, phase
+from anonimizador.core.result import OutputWriteError
 from anonimizador.core.text import fold
 from anonimizador.i18n import tr
 
@@ -179,12 +180,18 @@ def _friendly_errors(output_folder: Path | None = None):
         yield
     except pdf_io.EncryptedPdfError:
         raise AnonymizerError("encrypted") from None
-    except pdf_io.OutputWriteError as exc:
-        # «cannot open file '...': Operation not permitted» -> el motivo va al final.
-        reason = str(exc.__cause__).rsplit(": ", 1)[-1]
+    except OutputWriteError as exc:
+        # `from exc`: el registro anota el tipo de la causa (nunca su mensaje).
         raise AnonymizerError(
-            "cannot_write", folder=str(output_folder or ""), reason=reason
-        ) from None
+            "cannot_write", folder=str(output_folder or ""), reason=exc.reason
+        ) from exc
+
+
+def _remove(path: Path) -> None:
+    """Borra un fichero a medias. Si no se puede (abierto en otro programa, carpeta
+    protegida), se deja: un error aquí taparía el error de verdad."""
+    with suppress(OSError):
+        path.unlink(missing_ok=True)
 
 
 def _check_writable(folder: Path) -> None:
@@ -195,8 +202,8 @@ def _check_writable(folder: Path) -> None:
         with tempfile.NamedTemporaryFile(dir=folder, prefix=".anonimitzador-", suffix=".tmp"):
             pass
     except OSError as exc:
-        reason = exc.strerror or type(exc).__name__
-        raise AnonymizerError("cannot_write", folder=str(folder), reason=reason) from None
+        reason = OutputWriteError.from_os(exc).reason
+        raise AnonymizerError("cannot_write", folder=str(folder), reason=reason) from exc
 
 
 def _normalize_value(text: str) -> str:
@@ -405,14 +412,17 @@ def anonymize(
                     text = docx_io.markdown(work) if markdown else docx_io.body_text(work)
                 # Segunda red: el texto final también se revisa.
                 leftovers += matcher.find(text)
-                dst.write_text(text, encoding="utf-8")
+                try:
+                    dst.write_text(text, encoding="utf-8")
+                except OSError as exc:
+                    raise OutputWriteError.from_os(exc) from exc
     except BaseException:
         # Sin salida a medias o sin verificar: o se termina entero, o no queda nada.
-        dst.unlink(missing_ok=True)
+        _remove(dst)
         raise
     finally:
         if work != dst:
-            work.unlink(missing_ok=True)
+            _remove(work)
 
     notices: list[Notice] = []
     if failed:
@@ -446,5 +456,15 @@ def anonymize(
     replaced = Counter(m.replacement for m in result.matches)
     entries = build_entries([t for t in terms if not t.keep], result.matches)
     if guide is not None:
-        write_guide(guide, entries, src, dst, language)
+        try:
+            with _friendly_errors(guide.parent):
+                try:
+                    write_guide(guide, entries, src, dst, language)
+                except OSError as exc:  # p. ej. la guía anterior está abierta en Word
+                    raise OutputWriteError.from_os(exc) from exc
+        except BaseException:
+            # Sin guía no se da por terminado: tampoco se deja el documento.
+            _remove(dst)
+            _remove(guide)
+            raise
     return Report(dst, dict(replaced), notices, entries, guide)

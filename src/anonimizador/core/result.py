@@ -5,6 +5,20 @@ from dataclasses import dataclass, field
 from anonimizador.core.matcher import Match
 
 
+class OutputWriteError(Exception):
+    """El sistema no deja escribir un fichero de salida (carpeta protegida o que ya no
+    existe, fichero abierto en otro programa, disco lleno...). `reason` es el motivo que da
+    el sistema («Permission denied»): se muestra en pantalla, nunca va al registro."""
+
+    def __init__(self, reason: str):
+        super().__init__(reason)
+        self.reason = reason
+
+    @classmethod
+    def from_os(cls, exc: OSError) -> "OutputWriteError":
+        return cls(exc.strerror or type(exc).__name__)
+
+
 @dataclass
 class ProcessResult:
     matches: list[Match]

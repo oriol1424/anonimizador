@@ -25,7 +25,8 @@ import pymupdf
 from anonimizador.core import images, ocr
 from anonimizador.core.matcher import Match, Matcher
 from anonimizador.core.progress import PageProgress, Steps
-from anonimizador.core.result import ProcessResult
+from anonimizador.core.result import OutputWriteError, ProcessResult
+from anonimizador.core.text import clean_text
 
 MIN_IMAGE_COVERAGE = 0.5  # imagen que cubre ≥50% de la página -> se trata con OCR
 MIN_HORIZONTAL_SCALE = 0.55  # por debajo, además de estrechar se reduce el tamaño de letra
@@ -40,10 +41,6 @@ Progress = PageProgress  # (páginas hechas, total de páginas) dentro de una fa
 
 class EncryptedPdfError(Exception):
     pass
-
-
-class OutputWriteError(Exception):
-    """El sistema no deja escribir el PDF de salida (permisos, carpeta protegida, disco)."""
 
 
 # Ligaduras tipográficas ("ﬁ", "ﬂ") separadas en letras: si no, "Oﬁcial" o "Griﬀ" no
@@ -143,7 +140,7 @@ def _page_chars(page: pymupdf.Page) -> tuple[str, list[_Char | None]]:
         for line in block["lines"]:
             for span in line["spans"]:
                 for ch in span["chars"]:
-                    pieces.append(ch["c"])
+                    pieces.append(clean_text(ch["c"]))
                     chars.append(
                         _Char(pymupdf.Rect(ch["bbox"]), ch["origin"], span["size"], line_id)
                     )
@@ -469,18 +466,18 @@ def _anonymize_page_extras(page: pymupdf.Page, matcher: Matcher) -> None:
     """Comentarios, campos de formulario y enlaces de la página."""
     for annot in page.annots():
         info = annot.info
-        content = matcher.replace(info.get("content", ""))
+        content = matcher.replace(clean_text(info.get("content", "")))
         annot.set_info(content=content, title="Autor" if info.get("title") else "")
         annot.update()
     for widget in page.widgets():
         if isinstance(widget.field_value, str) and widget.field_value:
-            new_value = matcher.replace(widget.field_value)
+            new_value = matcher.replace(clean_text(widget.field_value))
             if new_value != widget.field_value:
                 widget.field_value = new_value
                 widget.update()
     for link in page.get_links():
         if link.get("uri"):
-            new_uri = matcher.replace(link["uri"])
+            new_uri = matcher.replace(clean_text(link["uri"]))
             if new_uri != link["uri"]:
                 link["uri"] = new_uri
                 page.update_link(link)
@@ -489,9 +486,9 @@ def _anonymize_page_extras(page: pymupdf.Page, matcher: Matcher) -> None:
 def _anonymize_document_extras(doc: pymupdf.Document, matcher: Matcher) -> None:
     meta = doc.metadata or {}
     doc.set_metadata({
-        "title": matcher.replace(meta.get("title") or ""),
-        "subject": matcher.replace(meta.get("subject") or ""),
-        "keywords": matcher.replace(meta.get("keywords") or ""),
+        "title": matcher.replace(clean_text(meta.get("title") or "")),
+        "subject": matcher.replace(clean_text(meta.get("subject") or "")),
+        "keywords": matcher.replace(clean_text(meta.get("keywords") or "")),
         "author": "",
         "creator": "",
         "producer": "",
@@ -499,7 +496,12 @@ def _anonymize_document_extras(doc: pymupdf.Document, matcher: Matcher) -> None:
     doc.del_xml_metadata()
     toc = doc.get_toc(simple=False)
     if toc:
-        doc.set_toc([[lvl, matcher.replace(title), page, *rest] for lvl, title, page, *rest in toc])
+        doc.set_toc(
+            [
+                [lvl, matcher.replace(clean_text(title)), page, *rest]
+                for lvl, title, page, *rest in toc
+            ]
+        )
 
 
 # --- Páginas que fallan ----------------------------------------------------------------
@@ -591,8 +593,12 @@ def anonymize(
         # garbage=4 + clean: no deja copias del contenido antiguo dentro del fichero.
         try:
             doc.save(str(dst), garbage=4, deflate=True, clean=True)
-        except pymupdf.mupdf.FzErrorSystem as exc:  # «cannot open file ...»
-            raise OutputWriteError from exc
+        except pymupdf.mupdf.FzErrorSystem as exc:
+            # «code=2: cannot open file '<ruta>': Permission denied»: solo el motivo final
+            # (la ruta puede llevar el nombre del cliente).
+            message = str(exc)
+            reason = message.rsplit("': ", 1)[-1] if "': " in message else "?"
+            raise OutputWriteError(reason) from exc
     finally:
         doc.close()
     return ProcessResult(

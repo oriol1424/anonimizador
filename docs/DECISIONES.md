@@ -84,3 +84,6 @@
 | 2026-10-12 | Comprobación del detector al cargarlo (frase con un nombre evidente) + aviso grave «ner_broken» | Si el modelo falla en un equipo, el usuario lo sabe en vez de recibir cero sugerencias de nombres sin aviso (regla 7) |
 | 2026-11-26 | Comprobar que se puede escribir en la carpeta de salida antes de anonimizar y mostrar el motivo del sistema en pantalla (no en el log) | En el Mac del bufete el guardado fallaba al final del proceso con un error técnico; el motivo puede llevar la ruta, así que no va al registro (regla 3) |
 | 2026-11-26 | La guía sustituye por «�» los caracteres que Word no admite | Algunos PDF traen caracteres de control en el texto y la guía entera fallaba |
+| 2026-11-26 | El texto de los PDF se limpia al leerlo: controles → espacio, suplentes sueltos → «�» (misma longitud) | Fuentes sin tabla Unicode dan el espacio como `\x03`: nombres sin anonimizar (fuga) y caídas en Word, .txt y el detector |
+| 2026-11-26 | Los fallos `cannot_write` se anotan en el registro con el código del sistema y el tipo de carpeta, nunca la ruta | Diagnosticar a distancia los permisos del Mac sin incumplir la regla 3 |
+| 2026-11-26 | Si la guía no se puede guardar, se borra también el documento anonimizado | «O se termina entero, o no queda nada»: un documento sin su guía no se puede revertir |

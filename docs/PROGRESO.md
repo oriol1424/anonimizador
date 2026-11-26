@@ -13,6 +13,25 @@
    validaba la carpeta sin recortar espacios y guardaba recortándola: ahora usa la misma.
    **Causa exacta pendiente**: preguntar en qué carpeta estaba el fichero / se guardaba
    (¿abierto desde WhatsApp/Mail, iCloud, USB?) y el «motiu del sistema» del mensaje nuevo.
+- **Revisión (crítico + expertos macOS y PDF)**, aplicada el mismo día:
+  - **FUGA encontrada y arreglada**: en PDF con fuentes sin tabla Unicode los espacios se
+    leen como `\x03`; «Joan\x03Puig» no coincidía con la lista y el nombre quedaba sin
+    anonimizar, sin aviso. `text.clean_text` limpia el texto al leer el PDF (misma
+    longitud) + test de extremo a extremo que falla sin el arreglo.
+  - Cualquier fallo al guardar (PDF, Word, .md/.txt, guía) → mensaje claro; la limpieza
+    tras un error ya no lo tapa; si falla la guía no queda el documento suelto.
+  - El registro anota `codi: cannot_write`, el código del sistema (ENOENT, EPERM...) y el
+    tipo de carpeta (Escriptori, iCloud, contenidor de Mail...), nunca la ruta.
+  - Textos de permisos de carpetas de macOS en el `.spec` (Info.plist).
+  - Tests que solo corren en Mac/Linux (`tests/test_carpeta_sortida.py`): carpeta que
+    acaba en espacio, carpeta de solo lectura. Se ejecutan en el Mac de GitHub.
+- **Pendiente de decidir** (propuestas de los expertos):
+  - PDF con texto «cifrado» (fuente Identity-H sin ToUnicode): el texto sale desplazado
+    (ilegible para el detector, pero una IA lo podría descifrar) y la página no pasa por
+    OCR. Propuesta: tratar esas páginas como escaneadas.
+  - Elegir la salida con el diálogo nativo «Desa com» (en el Mac da permiso a la carpeta).
+  - Firmar el .app con un certificado propio estable: con la firma ad-hoc, macOS olvida los
+    permisos de carpetas en cada versión nueva.
 - **Siguiente**: build nuevo en GitHub (Mac) y reenviarlo al bufete.
 
 ## ▶ DÓNDE NOS QUEDAMOS (2026-10-12, tarde) — empezar por aquí

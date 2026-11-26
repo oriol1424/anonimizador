@@ -507,6 +507,8 @@ class MainWindow(QMainWindow):
         lang = self.language.code
         if isinstance(error, AnonymizerError):
             message = error.message(self.language)
+            if error.kind == "cannot_write":  # fallos del Mac: se anotan para diagnosticar
+                errlog.write(self.log_path, error, self._step)
         else:
             message = tr(lang, "error_unexpected", detail=str(error))
             logged = errlog.write(self.log_path, error, self._step)
