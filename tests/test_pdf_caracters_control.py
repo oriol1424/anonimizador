@@ -162,3 +162,112 @@ def test_broken_text_pdf_analysis_finds_the_names(tmp_path: Path):
     src = _identity_pdf(tmp_path / "b.pdf", to_unicode=False)
     forms = [f for s in analyze(src, []).suggestions for f in s.forms]
     assert any("O1234567" in f for f in forms)  # el pasaporte, leído con OCR
+
+
+# --- Casos de la revisión del crítico (2026-11-26) ---------------------------------------
+
+
+def _two_font_pdf(path: Path, content: bytes, font2: bytes) -> Path:
+    """Como `_raw_pdf`, con una segunda fuente /F2."""
+    objs = [
+        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] "
+        b"/Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> /Contents 4 0 R >>",
+        b"<< /Length %d >>\nstream\n" % len(content) + content + b"\nendstream",
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
+        font2,
+    ]
+    out = bytearray(b"%PDF-1.7\n")
+    offsets = []
+    for n, body in enumerate(objs, 1):
+        offsets.append(len(out))
+        out += b"%d 0 obj\n" % n + body + b"\nendobj\n"
+    xref = len(out)
+    out += b"xref\n0 %d\n0000000000 65535 f \n" % (len(objs) + 1)
+    out += b"".join(b"%010d 00000 n \n" % o for o in offsets)
+    out += b"trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n" % (len(objs) + 1, xref)
+    path.write_bytes(bytes(out))
+    return path
+
+
+NAME = "Joan Puig i Ferrer"
+# Fuente simple con nombres de glifo inventados (/g12...), como en los subconjuntos.
+CUSTOM = (
+    b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding << /Type /Encoding "
+    b"/Differences [33 " + b" ".join(b"/g%d" % n for n in range(40)) + b"] >> >>"
+)
+
+
+def _coded(text: str) -> bytes:
+    """Cada letra distinta con un código desde 33 (las de /g0, /g1...), como cadena
+    hexadecimal del PDF (algún código sería «(» o «)»)."""
+    letters = sorted(set(text))
+    return b"<" + bytes(33 + letters.index(c) for c in text).hex().encode() + b">"
+
+
+def _page(path: Path) -> pymupdf.Page:
+    return pymupdf.open(str(path))[0]
+
+
+def test_one_broken_line_in_a_full_page_is_detected(tmp_path: Path):
+    """Antes se medía el % de toda la página: un bloque roto se perdía entre el resto."""
+    normal = b"".join(b"(Linia normal numero %d del document.) Tj 0 -14 Td " % n for n in range(40))
+    content = b"BT /F1 10 Tf 72 800 Td " + normal + b"/F2 10 Tf " + _coded(NAME) + b" Tj ET"
+    assert pdf_io.has_broken_text(_page(_two_font_pdf(tmp_path / "m.pdf", content, CUSTOM)))
+
+
+def test_custom_glyph_names_are_detected(tmp_path: Path):
+    content = b"BT /F2 12 Tf 72 760 Td " + _coded(NAME) + b" Tj ET"
+    assert pdf_io.has_broken_text(_page(_two_font_pdf(tmp_path / "c.pdf", content, CUSTOM)))
+
+
+@pytest.mark.parametrize("code", [0x1C, 0x1D, 0x1E, 0x1F])
+def test_controls_that_python_treats_as_spaces_count(tmp_path: Path, code: int):
+    sep = bytes([code])
+    content = b"BT /F1 12 Tf 72 760 Td (Joan" + sep + b"Puig" + sep + b"i" + sep + b"Ferrer) Tj ET"
+    assert pdf_io.has_broken_text(_page(_raw_pdf(tmp_path / "x.pdf", content)))
+
+
+def test_unused_broken_font_does_not_send_page_to_ocr(tmp_path: Path):
+    """Una fuente rota declarada en la página pero sin usar: antes todo iba al OCR."""
+    doc = pymupdf.open()
+    page = doc.new_page()
+    page.insert_font(fontname="T0", fontbuffer=pymupdf.Font("tiro").buffer)
+    page.insert_text((72, 100), "Demandant: Joan Puig i Ferrer.", fontname="helv")
+    for xref in range(1, doc.xref_length()):
+        if doc.xref_get_key(xref, "ToUnicode")[0] != "null":
+            doc.xref_set_key(xref, "ToUnicode", "null")
+    doc.save(str(tmp_path / "u.pdf"))
+    assert not pdf_io.is_image_page(_page(tmp_path / "u.pdf"))
+
+
+def test_single_odd_symbol_is_not_broken_text(tmp_path: Path):
+    content = (
+        b"BT /F1 12 Tf 72 760 Td (Demandant: Joan Puig i Ferrer, vei d'Andorra.) Tj "
+        b"0 -20 Td (Pagina 3 \x01) Tj ET"
+    )
+    assert not pdf_io.has_broken_text(_page(_raw_pdf(tmp_path / "s.pdf", content)))
+
+
+def test_corpus_pdfs_are_not_flagged():
+    corpus = Path(__file__).parent / "corpus"
+    for pdf in corpus.glob("*.pdf"):
+        doc = pymupdf.open(str(pdf))
+        assert not any(pdf_io.has_broken_text(p) for p in doc), pdf.name
+        doc.close()
+
+
+def test_custom_glyph_names_pdf_is_anonymized(tmp_path: Path):
+    """De extremo a extremo: el nombre (en el texto se ve) desaparece de la salida, leída
+    también con OCR."""
+    from anonimizador.core import ocr
+
+    content = b"BT /F2 14 Tf 72 760 Td " + _coded(NAME) + b" Tj ET"
+    src = _two_font_pdf(tmp_path / "c.pdf", content, CUSTOM)
+    out = tmp_path / "sortida.pdf"
+    anonymize(src, out, TERMS)
+    doc = pymupdf.open(str(out))
+    seen = " ".join(w.text for ws in ocr.recognize(ocr.render(doc[0])).lines for w in ws)
+    doc.close()
+    assert "Puig" not in seen and "Joan" not in seen

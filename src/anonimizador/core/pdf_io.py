@@ -72,23 +72,29 @@ OUTLINED_MIN_CURVES = 150
 # Texto ilegible: fuentes sin tabla Unicode. Lo que se extrae no es lo que se ve
 # («Demandant» -> «%FNBOEBOU»): ni la lista ni el detector encuentran los nombres, y una
 # IA podría descifrarlo. Esas páginas se leen con OCR, como las escaneadas.
-_CID_IDENTITY = ("Identity-H", "Identity-V")
-BROKEN_TEXT_MAX_CONTROLS = 0.03  # más de un 3% de caracteres de control -> ilegible
+# Se decide por cada trozo de texto (span) de la traza de MuPDF, donde un carácter que la
+# fuente no sabe pasar a Unicode sale como U+FFFD (fuente CID Identity sin ToUnicode,
+# nombres de glifo inventados «/g12») o como un código de control (el espacio = "\x03").
+# Por trozo y no por página: un bloque roto (las partes, el membrete) en una página
+# normal no llegaría a ningún porcentaje de la página entera. Y solo cuentan las fuentes
+# que pintan texto: una fuente rota declarada pero sin usar no envía la página al OCR.
+BROKEN_SPAN_MIN_CHARS = 3  # una casilla o un símbolo suelto no cuentan
+BROKEN_SPAN_MIN_SHARE = 0.1  # el espacio roto es ~15% de una línea
+_NORMAL_CONTROLS = {9, 10, 13}  # tabulador y saltos de línea
+
+
+def _unreadable(code: int) -> bool:
+    return code == 0xFFFD or (code < 32 and code not in _NORMAL_CONTROLS)
 
 
 def has_broken_text(page: pymupdf.Page) -> bool:
-    """Página cuyo texto extraído no corresponde a lo que se ve."""
-    doc = page.parent
-    for xref, _ext, kind, _name, _ref, encoding, *_ in page.get_fonts():
-        # Fuente CID con codificación Identity y sin ToUnicode: MuPDF da el nº de glifo.
-        if kind == "Type0" and encoding in _CID_IDENTITY and xref > 0:
-            if doc.xref_get_key(xref, "ToUnicode")[0] == "null":
-                return True
-    text = "".join(page.get_text("text").split())  # sin espacios ni saltos normales
-    if not text:
-        return False
-    controls = sum(1 for c in text if ord(c) < 32 or c == "�")
-    return controls / len(text) > BROKEN_TEXT_MAX_CONTROLS
+    """Página con algún trozo de texto cuyo contenido extraído no es lo que se ve."""
+    for span in page.get_texttrace():
+        codes = [c[0] for c in span["chars"] if c[0] != 32]
+        bad = sum(1 for code in codes if _unreadable(code))
+        if bad >= BROKEN_SPAN_MIN_CHARS and bad >= BROKEN_SPAN_MIN_SHARE * len(codes):
+            return True
+    return False
 
 
 def _open(path: Path) -> pymupdf.Document:

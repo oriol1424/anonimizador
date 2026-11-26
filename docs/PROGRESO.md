@@ -38,9 +38,13 @@
   - Tests que solo corren en Mac/Linux (`tests/test_carpeta_sortida.py`): carpeta que
     acaba en espacio, carpeta de solo lectura. Se ejecutan en el Mac de GitHub.
 - **Pendiente de decidir** (propuestas de los expertos):
-  - PDF con texto «cifrado» (fuente Identity-H sin ToUnicode): el texto sale desplazado
-    (ilegible para el detector, pero una IA lo podría descifrar) y la página no pasa por
-    OCR. Propuesta: tratar esas páginas como escaneadas.
+  - [x] **Hecho en 0.2.2**: PDF con texto ilegible (fuente CID Identity sin ToUnicode,
+    nombres de glifo inventados, espacios como controles): el texto salía desplazado
+    («Demandant» → «%FNBOEBOU», descifrable por una IA) y no pasaba por OCR. Ahora
+    `pdf_io.has_broken_text` (por trozo de texto, traza de MuPDF) lo envía al OCR.
+    Revisado por el crítico; límites conocidos en `docs/AUDITORIA.md`.
+  - Causa confirmada por Eli: el documento estaba en una carpeta de la app Claude; en una
+    carpeta normal funciona.
   - Elegir la salida con el diálogo nativo «Desa com» (en el Mac da permiso a la carpeta).
   - Firmar el .app con un certificado propio estable: con la firma ad-hoc, macOS olvida los
     permisos de carpetas en cada versión nueva.

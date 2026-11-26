@@ -77,3 +77,18 @@ salida se sincroniza con la nube.
     WebEngine/Chromium): el paquete debe llevar solo PySide6-Essentials.
 18. [x] Si la carpeta de salida está sincronizada (OneDrive...), la guía sube a la nube.
     Avisar o proponer otra carpeta por defecto para la guía.
+
+## Revisión del 2026-11-26 (errores del Mac del bufete, v0.2.1 → 0.2.2)
+Resuelto con tests (`tests/test_carpeta_sortida.py`, `tests/test_pdf_caracters_control.py`):
+- [x] Guía: caracteres que Word no admite → «�».
+- [x] PDF con caracteres de control en el texto (espacio = `\x03`): nombres sin anonimizar
+      (fuga). El texto se limpia al leerlo.
+- [x] PDF con texto ilegible (fuente CID Identity sin ToUnicode, nombres de glifo
+      inventados): la página se lee con OCR. Se decide por cada trozo de texto (traza de
+      MuPDF: U+FFFD o controles), solo con fuentes que pintan texto.
+- [x] Fallos al guardar (carpeta protegida o que ya no existe): se comprueba antes de
+      empezar y se explica; la limpieza tras un error no lo tapa.
+Límites conocidos (sin solución automática):
+- Fuente Type3 con nombres de glifo inventados y sin ToUnicode: MuPDF no marca nada raro
+  y el texto extraído puede no ser lo que se ve. Poco habitual en escritos jurídicos.
+- ToUnicode presente pero equivocado (una letra por otra): no se puede detectar.
