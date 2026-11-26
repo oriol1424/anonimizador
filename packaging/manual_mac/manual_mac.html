@@ -90,14 +90,18 @@
           padding: 2px 10px; font-weight: 500; }
   .sico { width: 16px; height: 16px; border-radius: 4px; display: inline-block; flex: none; }
 
+  .menubar { width: 430px; background: rgba(240,240,242,.97); border: 1px solid #ccc; border-radius: 8px 8px 0 0;
+             padding: 4px 12px; display: flex; gap: 16px; font-size: 10pt; align-items: center;
+             font-family: -apple-system, "Segoe UI", Arial, sans-serif; }
+  .menu .k { float: right; opacity: .8; }
   /* Portada */
   .cover { display: flex; flex-direction: column; }
   .cover .hero { background: linear-gradient(135deg, #0a66c2, #2f7cf6); color: #fff; border-radius: 16px;
                  padding: 24px 26px 20px; margin-bottom: 10px; }
   .cover .hero h1 { color: #fff; }
   .cover .hero p { font-size: 14pt; opacity: .95; margin: 0; }
-  .map { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0 16px; }
-  .map div { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: flex; gap: 10px;
+  .map { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 6px 0 10px; }
+  .map div { border: 1px solid var(--line); border-radius: 10px; padding: 6px 12px; display: flex; gap: 10px;
              align-items: center; }
   .map .n { width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: #fff; font-weight: 700;
             display: inline-flex; align-items: center; justify-content: center; flex: none; }
@@ -157,12 +161,17 @@
 
   <h3>Qué vamos a hacer</h3>
   <div class="map">
-    <div><span class="n">1</span> Copiar el archivo del USB al Mac <span class="pg">pág. 2</span></div>
+    <div><span class="n">1</span> Copiar el archivo del USB <span class="pg">pág. 2</span></div>
     <div><span class="n">2</span> Descomprimirlo <span class="pg">pág. 2</span></div>
     <div><span class="n">3</span> Ponerlo en «Aplicaciones» <span class="pg">pág. 3</span></div>
     <div><span class="n">4</span> Abrirlo la primera vez <span class="pg">pág. 4–5</span></div>
-    <div><span class="n">5</span> Darle permiso para las carpetas <span class="pg">pág. 6</span></div>
-    <div><span class="n">?</span> Si algo no sale como aquí <span class="pg">pág. 7</span></div>
+    <div><span class="n">5</span> Permisos para las carpetas <span class="pg">pág. 6</span></div>
+    <div><span class="n">?</span> Si algo no sale como aquí <span class="pg">pág. 9</span></div>
+  </div>
+
+  <div class="box good">
+    <b class="t">¿Ya tenías una versión antigua del Anonimitzador?</b>
+    Empieza por la <b>página 7</b>: explica cómo cambiarla por la nueva sin perder nada.
   </div>
 
   <div class="box info">
@@ -185,10 +194,8 @@
   <div class="box good">
     <b class="t">Cómo leer esta guía</b>
     Los <span style="outline:3px solid var(--hl);outline-offset:2px;border-radius:4px;padding:0 4px">recuadros rojos</span>
-    en las imágenes marcan dónde hay que hacer clic. Los nombres de los botones van en
-    <span class="btn">negrita</span>. Si tu Mac está en catalán, el nombre en catalán va al lado en
-    <span class="ca">gris</span>. Las imágenes son ilustraciones: tu pantalla puede verse un
-    poco distinta, pero los textos y botones son los mismos.
+    marcan dónde hacer clic. Si tu Mac está en catalán, el nombre del botón va al lado en
+    <span class="ca">gris</span>. Las imágenes son ilustraciones: tu pantalla puede verse un poco distinta.
   </div>
 
 </section>
@@ -273,8 +280,9 @@
       </div>
     </div>
     <p class="cap">Arrastra el icono azul hasta «Aplicaciones».</p>
-    <div class="box info">Si pregunta si quieres <b>sustituir</b> una versión anterior, di que sí
-      (<span class="btn">Sustituir</span> <span class="ca">«Substitueix»</span>).</div>
+    <div class="box info">Si el Mac dice que <b>ya existe</b> un «Anonimitzador», es que tenías una
+      versión antigua: pulsa <span class="btn">Reemplazar</span> <span class="ca">«Substitueix»</span>
+      (más detalles en la página 7).</div>
     <div class="box good"><b class="t">Truco: tenerlo siempre a mano</b>
       Entra en <b>Aplicaciones</b> y arrastra el icono azul del Anonimitzador hasta la barra de
       iconos de la parte de abajo de la pantalla (el «Dock»). Así lo abrirás con un solo clic.</div>
@@ -433,6 +441,97 @@
   </div>
 </section>
 
+<!-- ============================ ACTUALIZAR ============================ -->
+<section class="page">
+  <h2><span class="num">↻</span> Cambiar una versión antigua por la nueva</h2>
+  <p>Si el Anonimitzador ya estaba instalado y te llega una versión nueva (por USB o por correo),
+     sigue estos pasos.</p>
+  <div class="box good"><b class="t">No se pierde nada</b>
+    Tu lista «No anonimitzar» y tus ajustes se guardan aparte y se conservan. Los documentos
+    que ya anonimizaste tampoco se tocan.</div>
+
+  <div class="step">
+    <h3>A. Mira qué versión tienes (opcional)</h3>
+    <p>Abre el Anonimitzador y pulsa el botón <span class="btn">Quant a</span>
+       <span class="ca">«Acerca de»</span>. Pone, por ejemplo, «Versió 0.2.0». La versión nueva
+       viene escrita en la primera línea del archivo «LLEGEIX-ME.txt» del USB. Si no estás
+       seguro, actualiza igualmente: no pasa nada.</p>
+  </div>
+
+  <div class="step">
+    <h3>B. Cierra del todo la versión antigua</h3>
+    <ol class="do">
+      <li>Con el Anonimitzador abierto, pulsa a la vez <b>⌘ comando</b> y <b>Q</b>.
+          O bien: arriba a la izquierda, menú <b>Anonimitzador</b> → <b>Salir de Anonimitzador</b>
+          <span class="ca">«Surt de l’Anonimitzador»</span>.</li>
+      <li>Comprueba que en el Dock (la barra de abajo) ya <b>no hay un puntito</b> debajo de su icono.</li>
+    </ol>
+    <div class="fig" style="flex-direction:column;gap:0;align-items:center">
+      <div class="menubar"><svg width="12" height="14" viewBox="0 -1 17 22"><path d="M14.1 10.6c0-2.6 2.1-3.8 2.2-3.9-1.2-1.8-3.1-2-3.7-2-1.6-.2-3.1.9-3.9.9-.8 0-2-.9-3.4-.9C3.6 4.8 1.9 5.8 1 7.4c-1.9 3.2-.5 8 1.3 10.6.9 1.3 1.9 2.7 3.3 2.6 1.3-.1 1.8-.9 3.4-.9s2 .9 3.4.8c1.4 0 2.3-1.3 3.2-2.6 1-1.5 1.4-2.9 1.4-3-.1 0-2.9-1.1-2.9-4.3zM11.5 3c.7-.9 1.2-2.1 1.1-3.3-1 0-2.3.7-3 1.6-.7.8-1.2 2-1.1 3.2 1.2.1 2.3-.6 3-1.5z" fill="#1d1d1f"/></svg><b>Anonimitzador</b><span>Edición</span><span>Ventana</span><span>Ayuda</span></div>
+      <div class="menu" style="width:430px;border-radius:0 0 8px 8px;margin-top:-1px">
+        <div>Acerca de Anonimitzador</div><hr>
+        <div>Ocultar Anonimitzador <span class="k">⌘H</span></div><hr>
+        <div class="on ring">Salir de Anonimitzador <span class="k">⌘Q</span></div>
+      </div>
+    </div>
+    <p class="cap">Menú «Anonimitzador» → «Salir de Anonimitzador» (o ⌘ comando + Q).</p>
+  </div>
+
+  <div class="step">
+    <h3>C. Limpia la carpeta Descargas</h3>
+    <p>Si en <b>Descargas</b> quedó un «Anonimitzador (Mac).zip» o un «Anonimitzador» de la vez
+       anterior, <b>arrástralos a la papelera</b> antes de seguir. Si no, el Mac llamaría al nuevo
+       «Anonimitzador 2» y es fácil confundirse.</p>
+  </div>
+</section>
+
+<section class="page">
+  <div class="step">
+    <h3>D. Copia y descomprime la versión nueva</h3>
+    <p>Igual que la primera vez: <b>pasos 1 y 2</b> (página 2).</p>
+  </div>
+
+  <div class="step">
+    <h3>E. Ponla en Aplicaciones encima de la antigua</h3>
+    <ol class="do">
+      <li>Arrastra el icono azul nuevo a <b>Aplicaciones</b> (paso 3, página 3).</li>
+      <li>El Mac avisará de que ya existe uno con ese nombre. Pulsa
+          <span class="btn">Reemplazar</span> <span class="ca">«Substitueix»</span>.</li>
+      <li>Si pide la <b>contraseña del Mac</b>, escríbela.</li>
+    </ol>
+    <div class="fig">
+      <div class="alert" style="width:370px">
+        <svg width="46" height="46"><use href="#app"/></svg>
+        <div class="big">Ya existe un ítem llamado «Anonimitzador» en esta ubicación. ¿Quieres reemplazarlo por el que estás moviendo?</div>
+        <div class="row" style="margin-top:12px"><span class="b">Conservar ambos</span><span class="b">Detener</span><span class="b blue ring">Reemplazar</span></div>
+      </div>
+    </div>
+    <p class="cap">Pulsa «Reemplazar».</p>
+    <div class="box bad"><b class="t">No pulses «Conservar ambos».</b>
+      Tendrías dos Anonimitzador y podrías abrir el viejo sin darte cuenta. Si ya lo hiciste:
+      en Aplicaciones, arrastra a la papelera el que se llama solo «Anonimitzador» y cambia el
+      nombre de «Anonimitzador 2» a «Anonimitzador».</div>
+    <div class="box info">Si dice que no se puede reemplazar porque <b>está abierto</b>, vuelve al
+      punto B y ciérralo del todo.</div>
+  </div>
+
+  <div class="step">
+    <h3>F. Ábrela como la primera vez y vuelve a dar los permisos</h3>
+    <p>Para el Mac es una aplicación nueva, así que vuelve a preguntar. Es normal:</p>
+    <ul>
+      <li>Ábrela con <b>clic derecho → Abrir → Abrir</b> (paso 4, página 4), o con
+          «Abrir igualmente» en Ajustes (página 5).</li>
+      <li>Cuando pregunte por las carpetas, pulsa <span class="btn">Permitir</span> (paso 5, página 6).</li>
+    </ul>
+  </div>
+
+  <div class="step">
+    <h3>G. Comprueba que tienes la nueva</h3>
+    <p>Pulsa <span class="btn">Quant a</span>: debe poner la versión nueva. Ya puedes borrar el .zip
+       de Descargas.</p>
+  </div>
+</section>
+
 <!-- ============================ PROBLEMAS ============================ -->
 <section class="page">
   <h2><span class="num">?</span> Si algo no sale como en la guía</h2>
@@ -444,8 +543,7 @@
     <tr><td>El Anonimitzador no puede guardar en una carpeta.</td>
         <td>Mira la página 6 (Archivos y carpetas). Si sigue sin ir, guarda en <b>Documentos</b>. Evita guardar en carpetas de iCloud, del correo o del USB.</td></tr>
     <tr><td>Ha llegado una <b>versión nueva</b>.</td>
-        <td>Repite toda la guía (pasos 1 a 5). En el paso 3, elige «Sustituir». El Mac volverá a preguntar
-            por los permisos: es normal.</td></tr>
+        <td>Sigue la página 7 («Cambiar una versión antigua por la nueva»).</td></tr>
     <tr><td>No sé si funciona bien.</td>
         <td>Abre la aplicación y prueba con un documento inventado. Si sale un error, la aplicación
             guarda un informe técnico (sin datos de los documentos) que se puede enviar a quien te dio el USB.</td></tr>

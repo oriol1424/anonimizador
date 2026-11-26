@@ -1,12 +1,14 @@
 # Progreso
 
 ## 2026-11-26 — Manual de instalación en Mac (PDF con imágenes)
-- `docs/Manual_instalacion_Mac.pdf` (7 págs., castellano con los botones también en catalán),
+- `docs/Manual_instalacion_Mac.pdf` (9 págs., castellano con los botones también en catalán),
   generado desde `packaging/manual_mac/manual_mac.html` con Edge en modo headless:
   `msedge --headless=new --no-pdf-header-footer --print-to-pdf=docs/Manual_instalacion_Mac.pdf <html>`.
   Cubre: copiar el .zip, descomprimir, Aplicaciones, primera apertura (clic derecho > Abrir
   en macOS 14; «Abrir igualmente» en Ajustes en macOS 15+), permisos de carpetas, `xattr -cr`
-  como último recurso. Las imágenes son ilustraciones dibujadas en HTML, no capturas reales:
+  como último recurso, y cómo cambiar una versión antigua por la nueva (cerrar con ⌘Q,
+  limpiar Descargas, «Reemplazar», volver a abrir y dar permisos; la lista «No anonimitzar»
+  se conserva porque está en Application Support). Las imágenes son ilustraciones dibujadas en HTML, no capturas reales:
   si el bufete envía capturas de su Mac se pueden sustituir.
 - `fer_usb.py` lo copia al USB como «Manual instalación Mac.pdf»; el LLEGEIX-ME lo menciona.
 
