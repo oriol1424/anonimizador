@@ -29,4 +29,4 @@ jobs:
           ruff check src tests
           ruff format --check src tests
       - name: Tests
-        run: python -m pytest -q
+        run: python -m pytest -q -rs  # -rs: lista los tests saltados y por qué
