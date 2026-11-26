@@ -54,7 +54,8 @@
 - CI: GitHub retiró `macos-14` → `macos-15`. El build de Mac se hace ahora en macOS 15 y
   el Mac del bufete tiene 14.6: **comprobar que la 0.2.1 abre allí** (si no, revisar).
 - Mensaje enviado a Eli (prueba guardando en Documents, 2026-11-26).
-- **Siguiente**: enviar `dist/Anonimitzador-Mac.zip` (0.2.1) a Eli; esperar su resultado
+- **0.2.2** construida (run 45844537841), autoprueba OK en Mac y Windows; `dist/USB/` rehecho con ella (incluye el manual del Mac); 0.2.1 guardada en `dist/anterior_0.2.1/`.
+- **Siguiente**: enviar `dist/Anonimitzador-Mac.zip` (0.2.2) a Eli; esperar su resultado
   (y el «motiu del sistema» si falla); decidir las 3 propuestas pendientes de arriba.
 
 ## ▶ DÓNDE NOS QUEDAMOS (2026-10-12, tarde) — empezar por aquí
