@@ -32,7 +32,14 @@
   - Elegir la salida con el diálogo nativo «Desa com» (en el Mac da permiso a la carpeta).
   - Firmar el .app con un certificado propio estable: con la firma ad-hoc, macOS olvida los
     permisos de carpetas en cada versión nueva.
-- **Siguiente**: build nuevo en GitHub (Mac) y reenviarlo al bufete.
+- **Versión 0.2.1** construida en GitHub (run 45836686711): autoprueba OK en Mac (M1,
+  macOS 15) y Windows (AMD EPYC 7763); `dist/USB/` rehecho (804 MB) y autoprueba del .exe
+  OK en este PC. La versión anterior está en `dist/anterior_2026-10-12/`.
+- CI: GitHub retiró `macos-14` → `macos-15`. El build de Mac se hace ahora en macOS 15 y
+  el Mac del bufete tiene 14.6: **comprobar que la 0.2.1 abre allí** (si no, revisar).
+- Mensaje enviado a Eli (prueba guardando en Documents, 2026-11-26).
+- **Siguiente**: enviar `dist/Anonimitzador-Mac.zip` (0.2.1) a Eli; esperar su resultado
+  (y el «motiu del sistema» si falla); decidir las 3 propuestas pendientes de arriba.
 
 ## ▶ DÓNDE NOS QUEDAMOS (2026-10-12, tarde) — empezar por aquí
 Código probado (**342 tests** + 2 lentos con `pytest -m slow`) y publicado. No hay código a
