@@ -19,7 +19,7 @@ jobs:
         include:
           - os: windows-latest
             name: Windows
-          - os: macos-14
+          - os: macos-15  # Apple Silicon; macos-14 retirado por GitHub (2026-11)
             name: Mac
     runs-on: ${{ matrix.os }}
     env:
