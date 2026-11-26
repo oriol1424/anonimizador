@@ -42,6 +42,10 @@ class EncryptedPdfError(Exception):
     pass
 
 
+class OutputWriteError(Exception):
+    """El sistema no deja escribir el PDF de salida (permisos, carpeta protegida, disco)."""
+
+
 # Ligaduras tipográficas ("ﬁ", "ﬂ") separadas en letras: si no, "Oﬁcial" o "Griﬀ" no
 # coinciden con lo que escribe el usuario. La 1ª letra se queda la caja de la ligadura.
 _TEXT_FLAGS = pymupdf.TEXTFLAGS_RAWDICT & ~pymupdf.TEXT_PRESERVE_LIGATURES
@@ -585,7 +589,10 @@ def anonymize(
             finish_oldest()
         _anonymize_document_extras(doc, matcher)
         # garbage=4 + clean: no deja copias del contenido antiguo dentro del fichero.
-        doc.save(str(dst), garbage=4, deflate=True, clean=True)
+        try:
+            doc.save(str(dst), garbage=4, deflate=True, clean=True)
+        except pymupdf.mupdf.FzErrorSystem as exc:  # «cannot open file ...»
+            raise OutputWriteError from exc
     finally:
         doc.close()
     return ProcessResult(

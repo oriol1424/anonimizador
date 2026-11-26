@@ -372,12 +372,19 @@ class MainWindow(QMainWindow):
         suffix = self.save_page.formats.value()
         if Path(name).suffix.lower() in (".docx", ".pdf", ".txt"):
             name = Path(name).stem
-        return Path(self.folder_edit.text().strip()) / f"{name}{suffix}"
+        return self._output_folder() / f"{name}{suffix}"
+
+    def _output_folder(self) -> Path:
+        """La carpeta tal cual si existe (en el Mac un nombre puede acabar en espacio); si
+        no, sin los espacios de los extremos (escritos sin querer). La validación y el
+        guardado usan la misma: antes una validaba sin recortar y el otro recortaba."""
+        raw = self.folder_edit.text()
+        return Path(raw) if raw.strip() and Path(raw).is_dir() else Path(raw.strip())
 
     def _validate_output(self) -> bool:
         lang = self.language.code
         problem = None
-        if not self.folder_edit.text().strip() or not Path(self.folder_edit.text()).is_dir():
+        if not self.folder_edit.text().strip() or not self._output_folder().is_dir():
             problem = tr(lang, "err_no_folder")
         elif not self.name_edit.text().strip():
             problem = tr(lang, "err_no_name")

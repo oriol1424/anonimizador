@@ -77,3 +77,17 @@ def test_merge_does_not_mix_different_people():
         Suggestion("PERSONA", "[PERSONA_2]", ("Pere Puig",), 1, expand=True),
     ]
     assert len(merge_variants(suggestions)) == 2
+
+
+def test_guide_accepts_control_characters_from_pdf_text(tmp_path: Path):
+    """Error del Mac (2026-11-18): el texto de algunos PDF trae caracteres de control
+    ("Joan\x03Puig") y Word no los admite: la guía entera fallaba."""
+    from collections import Counter
+
+    from anonimizador.core.guide import GuideEntry, write_guide
+
+    entry = GuideEntry("[PERSONA_1]", "PERSONA", ["Joan\x03Puig"], Counter({"Joan\x00Puig": 2}))
+    path = write_guide(tmp_path / "guia.docx", [entry], Path("a\x01.pdf"), Path("b.pdf"), CATALAN)
+    row = _rows(path)["[PERSONA_1]"]
+    assert row[1] == "Joan\ufffdPuig"
+    assert row[2] == "Joan\ufffdPuig (2)"

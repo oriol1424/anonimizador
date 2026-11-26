@@ -84,6 +84,19 @@ STRINGS: dict[str, dict[str, str]] = {
         "es": "El PDF está protegido con contraseña. Guarda una copia sin protección y "
         "vuelve a intentarlo.",
     },
+    "error_cannot_write": {
+        "ca": "No es pot desar a la carpeta:\n{folder}\n(motiu del sistema: {reason})\n\n"
+        "L'ordinador no hi deixa escriure "
+        "(carpeta protegida, sense permisos o disc ple). Tria una altra carpeta al pas «Desa», "
+        "per exemple Documents.\n\nAl Mac, si passa a totes les carpetes: Configuració del "
+        "Sistema > Privacitat i seguretat > Fitxers i carpetes, i activa-hi Anonimitzador.",
+        "es": "No se puede guardar en la carpeta:\n{folder}\n(motivo del sistema: {reason})\n\n"
+        "El ordenador no deja escribir "
+        "en ella (carpeta protegida, sin permisos o disco lleno). Elige otra carpeta en el paso "
+        "«Guardar», por ejemplo Documentos.\n\nEn el Mac, si pasa en todas las carpetas: "
+        "Ajustes del Sistema > Privacidad y seguridad > Archivos y carpetas, y activa "
+        "Anonimitzador.",
+    },
     "error_same_file": {
         "ca": "El fitxer de sortida no pot ser el mateix que l'original.",
         "es": "El fichero de salida no puede ser el mismo que el original.",

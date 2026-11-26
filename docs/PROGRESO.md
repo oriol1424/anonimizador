@@ -1,5 +1,20 @@
 # Progreso
 
+## 2026-11-26 — Errores del bufete en el Mac (macOS 14.6, v0.2.0) y arreglos
+`errors.log` del Mac del bufete (PDF pasado a PDF/A con OCR y, después, a Word):
+1. **18/11 · `ValueError` en `guide.write_guide`**: el texto de ese PDF traía caracteres de
+   control y Word (XML) no los admite → la guía entera fallaba tras guardar la salida.
+   Arreglado: `guide.xml_safe` los cambia por «�» (+ test).
+2. **26/11 · `FzErrorSystem` al guardar el PDF y `FileNotFoundError` al guardar el Word**:
+   el sistema no dejaba crear el fichero de salida en la carpeta elegida (se sabía al
+   final del proceso). Ahora `pipeline._check_writable` prueba la carpeta **antes** de
+   empezar y el error sale como mensaje claro `error_cannot_write` (carpeta + motivo del
+   sistema + qué hacer, incluido Privacitat > Fitxers i carpetes en el Mac). La interfaz
+   validaba la carpeta sin recortar espacios y guardaba recortándola: ahora usa la misma.
+   **Causa exacta pendiente**: preguntar en qué carpeta estaba el fichero / se guardaba
+   (¿abierto desde WhatsApp/Mail, iCloud, USB?) y el «motiu del sistema» del mensaje nuevo.
+- **Siguiente**: build nuevo en GitHub (Mac) y reenviarlo al bufete.
+
 ## ▶ DÓNDE NOS QUEDAMOS (2026-10-12, tarde) — empezar por aquí
 Código probado (**342 tests** + 2 lentos con `pytest -m slow`) y publicado. No hay código a
 medias. Detector arreglado y comprobado; `dist/USB/` montado con los builds nuevos.

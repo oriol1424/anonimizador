@@ -142,3 +142,37 @@ def test_same_file_through_other_path(demanda_ca):
     other = demanda_ca.parent / ".." / demanda_ca.parent.name / demanda_ca.name
     with pytest.raises(AnonymizerError):
         anonymize(demanda_ca, other, TERMS)
+
+
+def test_output_folder_not_writable_fails_before_processing(tmp_path: Path, monkeypatch):
+    """Error del Mac (2026-11-26): el PDF no se podía guardar en la carpeta elegida y se
+    sabía al final, tras todo el proceso. Ahora se comprueba antes de empezar."""
+    src = _two_pages(tmp_path / "entrada.pdf")
+    started = []
+    monkeypatch.setattr(pdf_io, "anonymize", lambda *a, **k: started.append(1))
+    with pytest.raises(AnonymizerError) as error:
+        anonymize(src, tmp_path / "no_existeix" / "sortida.pdf", TERMS)
+    assert error.value.kind == "cannot_write"
+    assert not started
+
+
+def test_pdf_save_system_error_gives_clear_message(tmp_path: Path, monkeypatch):
+    src = _two_pages(tmp_path / "entrada.pdf")
+
+    def refuse(self, *args, **kwargs):
+        raise pymupdf.mupdf.FzErrorSystem("cannot open file: Operation not permitted")
+
+    monkeypatch.setattr(pymupdf.Document, "save", refuse)
+    with pytest.raises(AnonymizerError) as error:
+        anonymize(src, tmp_path / "sortida.pdf", TERMS)
+    assert error.value.kind == "cannot_write"
+    assert error.value.message(CATALAN).startswith("No es pot desar")
+    assert not (tmp_path / "sortida.pdf").exists()
+
+
+def test_docx_output_folder_missing_gives_clear_message(demanda_ca: Path, tmp_path: Path):
+    """Error del Mac (2026-11-26, Word): FileNotFoundError al crear el .docx de salida."""
+    with pytest.raises(AnonymizerError) as error:
+        anonymize(demanda_ca, tmp_path / "no_existeix" / "sortida.docx", TERMS)
+    assert error.value.kind == "cannot_write"
+    assert error.value.params["reason"]

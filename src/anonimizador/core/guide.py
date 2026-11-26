@@ -4,6 +4,7 @@ Es un registro para el bufete. CONTIENE LOS DATOS REALES: se guarda solo en loca
 al documento anonimizado, con un nombre y un aviso que dejan claro que no se comparte.
 """
 
+import re
 from collections import Counter
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -18,6 +19,15 @@ from anonimizador.core.matcher import Match, Term
 from anonimizador.i18n import tr
 
 USER_SOURCE = "usuario"
+
+# Caracteres que XML (y por tanto Word) no admite. Salen en el texto de algunos PDF
+# (fuentes sin tabla Unicode, PDF/A pasados por OCR) y hacían fallar la guía entera.
+_XML_INVALID = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\ud800-\udfff￾￿]")
+
+
+def xml_safe(text: str) -> str:
+    """Sustituye lo que Word no puede guardar por «�» (así se ve que ahí había algo)."""
+    return _XML_INVALID.sub("�", text)
 
 
 @dataclass
@@ -68,7 +78,7 @@ def write_guide(
     ):
         p = doc.add_paragraph()
         p.add_run(f"{tr(lang, key)}: ").bold = True
-        p.add_run(value)
+        p.add_run(xml_safe(value))
 
     headers = ["guide_col_alias", "guide_col_original", "guide_col_found", "guide_col_type",
                "guide_col_count"]  # fmt: skip
@@ -80,10 +90,10 @@ def write_guide(
 
     for entry in entries:
         row = table.add_row().cells
-        row[0].text = entry.replacement
-        row[1].text = "\n".join(entry.originals)
+        row[0].text = xml_safe(entry.replacement)
+        row[1].text = xml_safe("\n".join(entry.originals))
         row[2].text = (
-            "\n".join(f"{form} ({n})" for form, n in entry.found.most_common())
+            xml_safe("\n".join(f"{form} ({n})" for form, n in entry.found.most_common()))
             if entry.found
             else tr(lang, "guide_not_found")
         )

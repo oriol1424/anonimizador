@@ -2,6 +2,7 @@
 
 import os
 import re
+import tempfile
 import threading
 from collections import Counter
 from contextlib import contextmanager
@@ -172,12 +173,30 @@ def _backend(path: Path) -> ModuleType:
 
 
 @contextmanager
-def _friendly_errors():
+def _friendly_errors(output_folder: Path | None = None):
     """Traduce errores conocidos de los formatos a mensajes para el usuario."""
     try:
         yield
     except pdf_io.EncryptedPdfError:
         raise AnonymizerError("encrypted") from None
+    except pdf_io.OutputWriteError as exc:
+        # «cannot open file '...': Operation not permitted» -> el motivo va al final.
+        reason = str(exc.__cause__).rsplit(": ", 1)[-1]
+        raise AnonymizerError(
+            "cannot_write", folder=str(output_folder or ""), reason=reason
+        ) from None
+
+
+def _check_writable(folder: Path) -> None:
+    """Prueba a crear un fichero en la carpeta de salida ANTES de empezar: si el sistema
+    no deja (permisos, carpeta protegida de macOS, disco de solo lectura), mejor saberlo
+    ahora que al guardar tras minutos de OCR."""
+    try:
+        with tempfile.NamedTemporaryFile(dir=folder, prefix=".anonimitzador-", suffix=".tmp"):
+            pass
+    except OSError as exc:
+        reason = exc.strerror or type(exc).__name__
+        raise AnonymizerError("cannot_write", folder=str(folder), reason=reason) from None
 
 
 def _normalize_value(text: str) -> str:
@@ -352,11 +371,13 @@ def anonymize(
         raise AnonymizerError("unsupported_output", suffix=dst.suffix)
     if any(_same_file(path, src) for path in (dst, guide) if path is not None):
         raise AnonymizerError("same_file")
+    for folder in {dst.parent, *([guide.parent] if guide is not None else [])}:
+        _check_writable(folder)
 
     matcher = Matcher(terms)
     work = dst if dst.suffix.lower() == native else dst.with_suffix(".tmp" + native)
     try:
-        with _friendly_errors():
+        with _friendly_errors(dst.parent):
             failed: set[int] = set()
             if backend is pdf_io:
                 result = pdf_io.anonymize(
