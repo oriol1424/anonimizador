@@ -1,5 +1,15 @@
 # Progreso
 
+## 2026-11-26 — Manual de instalación en Mac (PDF con imágenes)
+- `docs/Manual_instalacion_Mac.pdf` (7 págs., castellano con los botones también en catalán),
+  generado desde `packaging/manual_mac/manual_mac.html` con Edge en modo headless:
+  `msedge --headless=new --no-pdf-header-footer --print-to-pdf=docs/Manual_instalacion_Mac.pdf <html>`.
+  Cubre: copiar el .zip, descomprimir, Aplicaciones, primera apertura (clic derecho > Abrir
+  en macOS 14; «Abrir igualmente» en Ajustes en macOS 15+), permisos de carpetas, `xattr -cr`
+  como último recurso. Las imágenes son ilustraciones dibujadas en HTML, no capturas reales:
+  si el bufete envía capturas de su Mac se pueden sustituir.
+- `fer_usb.py` lo copia al USB como «Manual instalación Mac.pdf»; el LLEGEIX-ME lo menciona.
+
 ## 2026-11-26 — Errores del bufete en el Mac (macOS 14.6, v0.2.0) y arreglos
 `errors.log` del Mac del bufete (PDF pasado a PDF/A con OCR y, después, a Word):
 1. **18/11 · `ValueError` en `guide.write_guide`**: el texto de ese PDF traía caracteres de

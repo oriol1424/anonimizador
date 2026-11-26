@@ -1,0 +1,477 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Instalar el Anonimitzador en el Mac</title>
+<style>
+  @page { size: A4; margin: 16mm 16mm 18mm 16mm; }
+  :root {
+    --ink: #1d1d1f; --muted: #5f6368; --accent: #0a66c2; --accent-soft: #e8f1fb;
+    --ok: #1e7d34; --ok-soft: #e6f4ea; --warn: #b3261e; --warn-soft: #fdecea;
+    --hl: #e5322d; --line: #d9dce1; --mac-bg: #ececec; --mac-blue: #2f7cf6;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif; color: var(--ink);
+         font-size: 12.5pt; line-height: 1.45; margin: 0; background: #fff; }
+  h1 { font-size: 25pt; margin: 0 0 6px; letter-spacing: -0.5px; }
+  h2 { font-size: 19pt; margin: 0 0 10px; display: flex; align-items: center; gap: 12px; }
+  h3 { font-size: 13.5pt; margin: 18px 0 6px; }
+  p { margin: 6px 0; }
+  .page { page-break-after: always; }
+  .page:last-child { page-break-after: auto; }
+  .num { flex: none; min-width: 40px; padding: 0 6px; height: 40px; border-radius: 50%; background: var(--accent);
+         color: #fff; display: inline-flex; align-items: center; justify-content: center;
+         font-size: 19pt; font-weight: 700; }
+  .step { margin-bottom: 22px; break-inside: avoid; }
+  ol.do { margin: 6px 0 10px; padding-left: 26px; }
+  ol.do li { margin: 5px 0; }
+  .btn { display: inline-block; border: 1px solid #b9bdc3; border-radius: 6px; padding: 0 8px;
+         background: #f6f6f6; font-weight: 600; white-space: nowrap; }
+  .ca { color: var(--muted); font-size: 10.5pt; }
+  .box { border-radius: 10px; padding: 10px 14px; margin: 10px 0; break-inside: avoid; }
+  .info { background: var(--accent-soft); border-left: 5px solid var(--accent); }
+  .good { background: var(--ok-soft); border-left: 5px solid var(--ok); }
+  .bad  { background: var(--warn-soft); border-left: 5px solid var(--warn); }
+  .box b.t { display: block; margin-bottom: 2px; }
+  .fig { margin: 12px auto 4px; display: flex; justify-content: center; gap: 18px;
+         align-items: center; break-inside: avoid; }
+  .cap { text-align: center; color: var(--muted); font-size: 9.5pt; margin-bottom: 8px; }
+  .arrow { font-size: 30pt; color: var(--hl); font-weight: 700; }
+
+  /* ---- Ilustraciones estilo macOS ---- */
+  .win { background: #fff; border: 1px solid #c8c8c8; border-radius: 11px;
+         box-shadow: 0 8px 24px rgba(0,0,0,.18); overflow: hidden; font-size: 10.5pt;
+         font-family: -apple-system, "Segoe UI", Arial, sans-serif; }
+  .bar { height: 30px; background: var(--mac-bg); border-bottom: 1px solid #d4d4d4;
+         display: flex; align-items: center; padding: 0 10px; gap: 7px; position: relative; }
+  .dot { width: 11px; height: 11px; border-radius: 50%; }
+  .r { background: #ff5f57; } .y { background: #febc2e; } .g { background: #28c840; }
+  .bar .ttl { position: absolute; left: 0; right: 0; text-align: center; font-weight: 600;
+              color: #444; pointer-events: none; }
+  .finder { display: flex; height: 190px; }
+  .side { width: 150px; background: #f2f2f4; border-right: 1px solid #ddd; padding: 8px 6px; }
+  .side .h { font-size: 8.5pt; color: #8a8a8e; font-weight: 600; margin: 6px 6px 2px; }
+  .side .it { padding: 3px 8px; border-radius: 5px; display: flex; gap: 7px; align-items: center; }
+  .side .it.sel { background: #dcdce0; }
+  .main { flex: 1; padding: 16px; display: flex; gap: 26px; align-items: flex-start; flex-wrap: wrap; }
+  .icon { width: 86px; text-align: center; font-size: 9.5pt; padding: 4px; border-radius: 7px;
+          position: relative; }
+  .icon.sel { background: #dbe7fb; }
+  .icon svg { display: block; margin: 0 auto 4px; }
+  .ring { outline: 3px solid var(--hl); outline-offset: 3px; border-radius: 8px; }
+  .menu { width: 230px; background: #f6f6f6; border: 1px solid #c8c8c8; border-radius: 8px;
+          box-shadow: 0 8px 22px rgba(0,0,0,.2); padding: 5px; font-size: 10.5pt;
+          font-family: -apple-system, "Segoe UI", Arial, sans-serif; }
+  .menu div { padding: 3px 10px; border-radius: 4px; }
+  .menu .on { background: var(--mac-blue); color: #fff; }
+  .menu hr { border: 0; border-top: 1px solid #d6d6d6; margin: 4px 6px; }
+  .alert { width: 290px; background: #f4f4f4; border: 1px solid #c8c8c8; border-radius: 13px;
+           box-shadow: 0 10px 30px rgba(0,0,0,.22); padding: 18px 18px 14px; text-align: center;
+           font-size: 10pt; font-family: -apple-system, "Segoe UI", Arial, sans-serif; }
+  .alert .big { font-weight: 700; font-size: 10.5pt; margin: 8px 0 6px; }
+  .alert .small { color: #555; font-size: 9pt; margin-bottom: 12px; }
+  .alert .b { display: block; border-radius: 7px; padding: 5px; margin-top: 7px; background: #e3e3e3;
+              font-weight: 500; }
+  .alert .b.blue { background: var(--mac-blue); color: #fff; }
+  .alert .row { display: flex; gap: 8px; } .alert .row .b { flex: 1; }
+  .settings { width: 560px; }
+  .settings .body { display: flex; height: 250px; }
+  .settings .side { width: 175px; }
+  .settings .pane { flex: 1; padding: 12px 16px; font-size: 10pt; }
+  .settings .pane .head { font-weight: 700; font-size: 12pt; margin-bottom: 10px; }
+  .grp { background: #f6f6f8; border: 1px solid #e0e0e3; border-radius: 8px; padding: 8px 10px;
+         margin-bottom: 8px; }
+  .sw { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; }
+  .toggle { width: 34px; height: 19px; border-radius: 10px; background: #34c759; position: relative; flex: none; }
+  .toggle::after { content: ""; position: absolute; right: 2px; top: 2px; width: 15px; height: 15px;
+                   border-radius: 50%; background: #fff; }
+  .toggle.off { background: #d1d1d6; } .toggle.off::after { right: auto; left: 2px; }
+  .mbtn { display: inline-block; border: 1px solid #c4c4c4; background: #fff; border-radius: 6px;
+          padding: 2px 10px; font-weight: 500; }
+  .sico { width: 16px; height: 16px; border-radius: 4px; display: inline-block; flex: none; }
+
+  /* Portada */
+  .cover { display: flex; flex-direction: column; }
+  .cover .hero { background: linear-gradient(135deg, #0a66c2, #2f7cf6); color: #fff; border-radius: 16px;
+                 padding: 24px 26px 20px; margin-bottom: 10px; }
+  .cover .hero h1 { color: #fff; }
+  .cover .hero p { font-size: 14pt; opacity: .95; margin: 0; }
+  .map { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0 16px; }
+  .map div { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: flex; gap: 10px;
+             align-items: center; }
+  .map .n { width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: #fff; font-weight: 700;
+            display: inline-flex; align-items: center; justify-content: center; flex: none; }
+  .map .pg { white-space: nowrap; margin-left: auto; color: var(--muted); font-size: 10pt; }
+  .need li { margin: 4px 0; }
+  code, .term { font-family: Menlo, Consolas, monospace; }
+  .term { display: block; background: #1e1e1e; color: #e8e8e8; border-radius: 8px; padding: 10px 12px;
+          font-size: 10.5pt; margin: 8px 0; }
+  table.prob { width: 100%; border-collapse: collapse; font-size: 10.5pt; }
+  table.prob td { border-top: 1px solid var(--line); padding: 5px 6px; vertical-align: top; }
+  table.prob td:first-child { width: 38%; font-weight: 600; }
+  .check li { list-style: none; margin: 6px 0; }
+  .check li::before { content: "☐  "; font-size: 13pt; }
+  .foot { margin-top: 14px; color: var(--muted); font-size: 9.5pt; }
+</style>
+</head>
+<body>
+
+<!-- ======================= ICONOS (reutilizados) ======================= -->
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <symbol id="zip" viewBox="0 0 48 56">
+      <path d="M4 2h28l12 12v40H4z" fill="#f3f3f3" stroke="#9a9a9a"/>
+      <path d="M32 2v12h12" fill="#e2e2e2" stroke="#9a9a9a"/>
+      <rect x="20" y="6" width="6" height="30" fill="#8a8a8a"/>
+      <g fill="#fff"><rect x="20" y="9" width="3" height="3"/><rect x="23" y="14" width="3" height="3"/>
+      <rect x="20" y="19" width="3" height="3"/><rect x="23" y="24" width="3" height="3"/></g>
+      <rect x="18" y="34" width="10" height="9" rx="2" fill="#6d6d6d"/>
+      <text x="24" y="52" font-size="7" text-anchor="middle" fill="#555" font-family="Arial">ZIP</text>
+    </symbol>
+    <symbol id="app" viewBox="0 0 56 56">
+      <rect x="2" y="2" width="52" height="52" rx="12" fill="#0a66c2"/>
+      <rect x="14" y="12" width="28" height="34" rx="3" fill="#fff"/>
+      <rect x="18" y="18" width="20" height="3" fill="#1d1d1f"/>
+      <rect x="18" y="25" width="9" height="3" fill="#1d1d1f"/><rect x="29" y="25" width="9" height="3" fill="#1d1d1f"/>
+      <rect x="18" y="32" width="14" height="3" fill="#1d1d1f"/>
+      <rect x="18" y="39" width="20" height="3" fill="#1d1d1f"/>
+    </symbol>
+    <symbol id="folder" viewBox="0 0 56 46">
+      <path d="M2 8a4 4 0 0 1 4-4h14l5 5h25a4 4 0 0 1 4 4v29a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4z" fill="#5aa9f5"/>
+      <path d="M2 15h52v27a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4z" fill="#79bcf9"/>
+    </symbol>
+    <symbol id="usb" viewBox="0 0 16 16"><rect x="3" y="5" width="10" height="9" rx="1.5" fill="#777"/><rect x="5" y="1" width="6" height="4" fill="#aaa"/></symbol>
+    <symbol id="fold" viewBox="0 0 16 16"><path d="M1 4a1 1 0 0 1 1-1h4l1.5 1.5H14a1 1 0 0 1 1 1V13a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1z" fill="#3b8ff0"/></symbol>
+    <symbol id="apps" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" fill="none" stroke="#3b8ff0" stroke-width="1.6"/><path d="M5 11l3-7 3 7M6 8.8h4" stroke="#3b8ff0" stroke-width="1.4" fill="none"/></symbol>
+    <symbol id="lock" viewBox="0 0 16 16"><rect x="3" y="7" width="10" height="7" rx="1.5" fill="#fff"/><path d="M5 7V5a3 3 0 0 1 6 0v2" stroke="#fff" stroke-width="1.6" fill="none"/></symbol>
+  </defs>
+</svg>
+
+<!-- ============================ PORTADA ============================ -->
+<section class="page cover">
+  <div class="hero">
+    <h1>Instalar el Anonimitzador en el Mac</h1>
+    <p>Guía paso a paso, con imágenes. Se tarda unos 10 minutos y solo hay que hacerlo una vez
+       (y otra vez cada vez que llegue una versión nueva).</p>
+  </div>
+
+  <h3>Qué vamos a hacer</h3>
+  <div class="map">
+    <div><span class="n">1</span> Copiar el archivo del USB al Mac <span class="pg">pág. 2</span></div>
+    <div><span class="n">2</span> Descomprimirlo <span class="pg">pág. 2</span></div>
+    <div><span class="n">3</span> Ponerlo en «Aplicaciones» <span class="pg">pág. 3</span></div>
+    <div><span class="n">4</span> Abrirlo la primera vez <span class="pg">pág. 4–5</span></div>
+    <div><span class="n">5</span> Darle permiso para las carpetas <span class="pg">pág. 6</span></div>
+    <div><span class="n">?</span> Si algo no sale como aquí <span class="pg">pág. 7</span></div>
+  </div>
+
+  <div class="box info">
+    <b class="t">¿Por qué el Mac pondrá pegas?</b>
+    Apple solo deja abrir sin preguntar las aplicaciones de quien le paga una cuota anual. El
+    Anonimitzador no la paga, así que la primera vez el Mac dirá que «no puede verificar» la
+    aplicación. <b>No es un virus ni un fallo</b>: solo hay que decirle al Mac, una vez, que
+    confiamos en ella. Esta guía explica exactamente dónde hacer clic.
+  </div>
+
+  <h3>Qué necesitas</h3>
+  <ul class="need">
+    <li>El <b>USB</b> del Anonimitzador (o el archivo <b>«Anonimitzador (Mac).zip»</b>).</li>
+    <li>La <b>contraseña del Mac</b> (la que se pone al encenderlo). Puede pedirla un par de veces.</li>
+    <li>Un Mac con <b>chip de Apple</b> (M1, M2, M3…). Para comprobarlo: arriba a la izquierda,
+        haz clic en la manzana <svg width="13" height="15" viewBox="0 -1 17 22" style="vertical-align:-2px"><path d="M14.1 10.6c0-2.6 2.1-3.8 2.2-3.9-1.2-1.8-3.1-2-3.7-2-1.6-.2-3.1.9-3.9.9-.8 0-2-.9-3.4-.9C3.6 4.8 1.9 5.8 1 7.4c-1.9 3.2-.5 8 1.3 10.6.9 1.3 1.9 2.7 3.3 2.6 1.3-.1 1.8-.9 3.4-.9s2 .9 3.4.8c1.4 0 2.3-1.3 3.2-2.6 1-1.5 1.4-2.9 1.4-3-.1 0-2.9-1.1-2.9-4.3zM11.5 3c.7-.9 1.2-2.1 1.1-3.3-1 0-2.3.7-3 1.6-.7.8-1.2 2-1.1 3.2 1.2.1 2.3-.6 3-1.5z" fill="#1d1d1f"/></svg> → <b>Acerca de este Mac</b>. Debe poner «Chip&nbsp;Apple&nbsp;M…».
+        Si pone «Procesador Intel», avisa: hace falta otra versión.</li>
+  </ul>
+
+  <div class="box good">
+    <b class="t">Cómo leer esta guía</b>
+    Los <span style="outline:3px solid var(--hl);outline-offset:2px;border-radius:4px;padding:0 4px">recuadros rojos</span>
+    en las imágenes marcan dónde hay que hacer clic. Los nombres de los botones van en
+    <span class="btn">negrita</span>. Si tu Mac está en catalán, el nombre en catalán va al lado en
+    <span class="ca">gris</span>. Las imágenes son ilustraciones: tu pantalla puede verse un
+    poco distinta, pero los textos y botones son los mismos.
+  </div>
+
+</section>
+
+<!-- ============================ PASOS 1 y 2 ============================ -->
+<section class="page">
+  <div class="step">
+    <h2><span class="num">1</span> Copiar el archivo del USB al Mac</h2>
+    <ol class="do">
+      <li>Conecta el USB al Mac.</li>
+      <li>Abre el <b>Finder</b> (la carita azul y blanca de la barra de abajo).</li>
+      <li>En la columna de la izquierda, haz clic en el USB (sale debajo de «Ubicaciones»).</li>
+      <li><b>Arrastra</b> el archivo <b>«Anonimitzador (Mac).zip»</b> hasta <b>Descargas</b>, en la misma columna de la izquierda, y suéltalo ahí.</li>
+    </ol>
+    <div class="fig">
+      <div class="win" style="width:560px">
+        <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="ttl">ANONIMITZADOR (USB)</span></div>
+        <div class="finder">
+          <div class="side">
+            <div class="h">Favoritos</div>
+            <div class="it"><svg width="15" height="15"><use href="#apps"/></svg>Aplicaciones</div>
+            <div class="it"><svg width="15" height="15"><use href="#fold"/></svg>Escritorio</div>
+            <div class="it"><svg width="15" height="15"><use href="#fold"/></svg>Documentos</div>
+            <div class="it ring"><svg width="15" height="15"><use href="#fold"/></svg>Descargas</div>
+            <div class="h">Ubicaciones</div>
+            <div class="it sel"><svg width="15" height="15"><use href="#usb"/></svg>ANONIMITZADOR</div>
+          </div>
+          <div class="main">
+            <div class="icon"><svg width="46" height="38"><use href="#folder"/></svg>Anonimitzador (Windows)</div>
+            <div class="icon sel ring"><svg width="40" height="48"><use href="#zip"/></svg>Anonimitzador (Mac).zip</div>
+            <div class="icon"><svg width="46" height="38"><use href="#folder"/></svg>codi_font</div>
+            <div class="icon"><svg width="46" height="38"><use href="#folder"/></svg>llicencies</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="cap">Arrastra el .zip (recuadro de la derecha) hasta «Descargas» (recuadro de la izquierda).</p>
+    <div class="box info"><b class="t">¿Por qué no abrirlo directamente desde el USB?</b>
+      Desde el USB la aplicación se estropea al copiarla. Hay que pasar el .zip al Mac y descomprimirlo allí.</div>
+  </div>
+
+  <div class="step">
+    <h2><span class="num">2</span> Descomprimirlo</h2>
+    <ol class="do">
+      <li>Haz clic en <b>Descargas</b> (columna de la izquierda del Finder).</li>
+      <li>Haz <b>doble clic</b> en <b>«Anonimitzador (Mac).zip»</b>.</li>
+      <li>Espera unos segundos: aparecerá al lado la aplicación <b>«Anonimitzador»</b> (un icono azul).</li>
+    </ol>
+    <div class="fig">
+      <div class="icon"><svg width="40" height="48"><use href="#zip"/></svg>Anonimitzador (Mac).zip</div>
+      <span class="arrow">→</span>
+      <div class="icon"><svg width="54" height="54"><use href="#app"/></svg>Anonimitzador</div>
+    </div>
+    <p class="cap">Tras el doble clic aparece la aplicación. Ya se puede borrar el .zip si quieres.</p>
+  </div>
+</section>
+
+<!-- ============================ PASOS 3 y 4 ============================ -->
+<section class="page">
+  <div class="step">
+    <h2><span class="num">3</span> Ponerla en «Aplicaciones»</h2>
+    <ol class="do">
+      <li>Sin cerrar la ventana de Descargas, <b>arrastra</b> el icono azul <b>«Anonimitzador»</b>
+          hasta <b>Aplicaciones</b> (arriba en la columna de la izquierda) y suéltalo.</li>
+    </ol>
+    <div class="fig">
+      <div class="win" style="width:520px">
+        <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="ttl">Descargas</span></div>
+        <div class="finder" style="height:150px">
+          <div class="side">
+            <div class="h">Favoritos</div>
+            <div class="it ring"><svg width="15" height="15"><use href="#apps"/></svg>Aplicaciones</div>
+            <div class="it"><svg width="15" height="15"><use href="#fold"/></svg>Escritorio</div>
+            <div class="it"><svg width="15" height="15"><use href="#fold"/></svg>Documentos</div>
+            <div class="it sel"><svg width="15" height="15"><use href="#fold"/></svg>Descargas</div>
+          </div>
+          <div class="main">
+            <div class="icon"><svg width="40" height="48"><use href="#zip"/></svg>Anonimitzador (Mac).zip</div>
+            <div class="icon sel ring"><svg width="54" height="54"><use href="#app"/></svg>Anonimitzador</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="cap">Arrastra el icono azul hasta «Aplicaciones».</p>
+    <div class="box info">Si pregunta si quieres <b>sustituir</b> una versión anterior, di que sí
+      (<span class="btn">Sustituir</span> <span class="ca">«Substitueix»</span>).</div>
+    <div class="box good"><b class="t">Truco: tenerlo siempre a mano</b>
+      Entra en <b>Aplicaciones</b> y arrastra el icono azul del Anonimitzador hasta la barra de
+      iconos de la parte de abajo de la pantalla (el «Dock»). Así lo abrirás con un solo clic.</div>
+    <div class="fig">
+      <div style="background:rgba(235,235,240,.95);border:1px solid #ccc;border-radius:16px;padding:8px 14px;display:flex;gap:12px;align-items:center;box-shadow:0 6px 18px rgba(0,0,0,.15)">
+        <span class="sico" style="width:40px;height:40px;border-radius:10px;background:#3b8ff0"></span>
+        <span class="sico" style="width:40px;height:40px;border-radius:10px;background:#34c759"></span>
+        <span class="sico" style="width:40px;height:40px;border-radius:10px;background:#ff9f0a"></span>
+        <span class="ring" style="display:inline-flex"><svg width="42" height="42"><use href="#app"/></svg></span>
+        <span class="sico" style="width:40px;height:40px;border-radius:10px;background:#8e8e93"></span>
+      </div>
+    </div>
+    <p class="cap">El Anonimitzador en el Dock.</p>
+  </div>
+</section>
+
+<section class="page">
+  <div class="step">
+    <h2><span class="num">4</span> Abrirla la primera vez</h2>
+    <div class="box bad"><b class="t">Importante: la primera vez NO hagas doble clic.</b>
+      Con doble clic el Mac solo ofrece «Trasladar a la papelera» o «OK». Si ya te ha pasado, no
+      pasa nada: pulsa <span class="btn">OK</span> (<b>nunca</b> «Trasladar a la papelera») y sigue aquí.</div>
+    <ol class="do">
+      <li>Entra en <b>Aplicaciones</b> (columna de la izquierda del Finder).</li>
+      <li>Haz <b>clic derecho</b> sobre <b>Anonimitzador</b>.
+          <span class="ca">(Si no tienes ratón: mantén pulsada la tecla <b>control</b> y haz clic, o toca el trackpad con dos dedos.)</span></li>
+      <li>En el menú, elige <span class="btn">Abrir</span> <span class="ca">«Obre»</span>.</li>
+      <li>Saldrá un aviso. Pulsa otra vez <span class="btn">Abrir</span> <span class="ca">«Obre»</span>.</li>
+    </ol>
+    <div class="fig" style="align-items:flex-start">
+      <div>
+        <div class="icon sel" style="margin:0 0 6px 10px"><svg width="54" height="54"><use href="#app"/></svg>Anonimitzador</div>
+        <div class="menu">
+          <div class="on ring">Abrir</div>
+          <div>Abrir con</div>
+          <hr>
+          <div>Trasladar a la papelera</div>
+          <hr>
+          <div>Obtener información</div>
+          <div>Renombrar</div>
+          <div>Comprimir «Anonimitzador»</div>
+        </div>
+      </div>
+      <span class="arrow" style="margin-top:110px">→</span>
+      <div class="alert">
+        <svg width="46" height="46"><use href="#app"/></svg>
+        <div class="big">macOS no puede verificar el desarrollador de «Anonimitzador». ¿Seguro que quieres abrirla?</div>
+        <div class="small">Al abrir esta app, se ignorará la seguridad del sistema…</div>
+        <div class="row"><span class="b ring">Abrir</span><span class="b blue">Cancelar</span></div>
+      </div>
+    </div>
+    <p class="cap">Izquierda: clic derecho → «Abrir». Derecha: en el aviso, «Abrir» (no «Cancelar»).</p>
+    <div class="box good"><b class="t">¡Listo!</b> Se abre el Anonimitzador. A partir de ahora ya se abre
+      con doble clic normal. Si en el menú no aparece «Abrir» en el aviso, o el aviso solo tiene
+      «OK» y «Trasladar a la papelera», ve a la página siguiente.</div>
+  </div>
+</section>
+
+<!-- ============================ PASO 4 (plan B) ============================ -->
+<section class="page">
+  <div class="step">
+    <h2><span class="num">4b</span> Si el aviso no tiene el botón «Abrir»</h2>
+    <p>Pasa en los Mac más nuevos (macOS 15 «Sequoia» o posterior). Se arregla desde los Ajustes:</p>
+    <ol class="do">
+      <li>Intenta abrir el Anonimitzador (doble clic). Cuando salga el aviso, pulsa
+          <span class="btn">OK</span> o <span class="btn">Hecho</span> <span class="ca">«D'acord» / «Fet»</span>.
+          <b>Nunca</b> «Trasladar a la papelera».</li>
+      <li>Haz clic en la manzana <svg width="13" height="15" viewBox="0 -1 17 22" style="vertical-align:-2px"><path d="M14.1 10.6c0-2.6 2.1-3.8 2.2-3.9-1.2-1.8-3.1-2-3.7-2-1.6-.2-3.1.9-3.9.9-.8 0-2-.9-3.4-.9C3.6 4.8 1.9 5.8 1 7.4c-1.9 3.2-.5 8 1.3 10.6.9 1.3 1.9 2.7 3.3 2.6 1.3-.1 1.8-.9 3.4-.9s2 .9 3.4.8c1.4 0 2.3-1.3 3.2-2.6 1-1.5 1.4-2.9 1.4-3-.1 0-2.9-1.1-2.9-4.3zM11.5 3c.7-.9 1.2-2.1 1.1-3.3-1 0-2.3.7-3 1.6-.7.8-1.2 2-1.1 3.2 1.2.1 2.3-.6 3-1.5z" fill="#1d1d1f"/></svg> (arriba a la izquierda) → <b>Ajustes del Sistema…</b>
+          <span class="ca">«Configuració del Sistema…»</span></li>
+      <li>En la columna de la izquierda, elige <b>Privacidad y seguridad</b>
+          <span class="ca">«Privacitat i seguretat»</span>.</li>
+      <li><b>Baja hasta el final</b> de la parte derecha, hasta el apartado <b>Seguridad</b>.
+          Verás: «Se ha bloqueado el uso de "Anonimitzador"…».</li>
+      <li>Pulsa <span class="btn">Abrir igualmente</span> <span class="ca">«Obre igualment»</span>.</li>
+      <li>Escribe la <b>contraseña del Mac</b> y acepta.</li>
+      <li>Saldrá un último aviso: pulsa <span class="btn">Abrir igualmente</span> <span class="ca">«Obre igualment»</span>.</li>
+    </ol>
+    <div class="fig">
+      <div class="win settings">
+        <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="ttl">Privacidad y seguridad</span></div>
+        <div class="body">
+          <div class="side">
+            <div class="it"><span class="sico" style="background:#8e8e93"></span>General</div>
+            <div class="it"><span class="sico" style="background:#0a84ff"></span>Pantalla</div>
+            <div class="it"><span class="sico" style="background:#ff9f0a"></span>Notificaciones</div>
+            <div class="it sel ring"><span class="sico" style="background:#0a84ff"><svg width="16" height="16"><use href="#lock"/></svg></span>Privacidad y seguridad</div>
+            <div class="it"><span class="sico" style="background:#8e8e93"></span>Usuarios y grupos</div>
+          </div>
+          <div class="pane">
+            <div class="head">Privacidad y seguridad</div>
+            <div style="color:#8a8a8e;font-size:9pt;margin-bottom:4px">(baja hasta el final ↓)</div>
+            <div style="font-weight:700;margin:4px 0 6px">Seguridad</div>
+            <div class="grp">Permitir aplicaciones descargadas de:<br>
+              <span style="color:#555">◉ App Store y desarrolladores identificados</span></div>
+            <div class="grp" style="display:flex;align-items:center;gap:10px">
+              <span style="flex:1">Se ha bloqueado el uso de «Anonimitzador» porque no es de un desarrollador identificado.</span>
+              <span class="mbtn ring">Abrir igualmente</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="cap">En «Privacidad y seguridad», al final, botón «Abrir igualmente».</p>
+    <div class="box info">El botón «Abrir igualmente» solo aparece durante <b>una hora</b> después de
+      intentar abrir la aplicación. Si no lo ves, vuelve a intentar abrirla (paso 1 de esta página)
+      y regresa aquí.</div>
+  </div>
+</section>
+
+<!-- ============================ PASO 5 ============================ -->
+<section class="page">
+  <div class="step">
+    <h2><span class="num">5</span> Darle permiso para las carpetas</h2>
+    <p>La primera vez que el Anonimitzador abra o guarde un documento en el <b>Escritorio</b>,
+       <b>Documentos</b> o <b>Descargas</b>, el Mac preguntará si le dejas. Pulsa
+       <span class="btn">Permitir</span> <span class="ca">«Permet»</span>.</p>
+    <div class="fig">
+      <div class="alert" style="width:320px">
+        <svg width="46" height="46"><use href="#app"/></svg>
+        <div class="big">«Anonimitzador» quiere acceder a archivos de tu carpeta Escritorio.</div>
+        <div class="small">L'Anonimitzador necessita llegir el document i desar el document
+          anonimitzat a la carpeta que heu triat. Tot es queda en aquest ordinador.</div>
+        <div class="row"><span class="b">No permitir</span><span class="b blue ring">Permitir</span></div>
+      </div>
+    </div>
+    <p class="cap">Pulsa «Permitir». Puede salir una vez para cada carpeta (Escritorio, Documentos, Descargas).</p>
+    <div class="box info">Tranquilidad: este permiso solo deja a la aplicación leer y guardar en
+      esas carpetas <b>dentro de tu Mac</b>. El Anonimitzador no se conecta a internet.</div>
+  </div>
+
+  <div class="step">
+    <h3>¿Pulsaste «No permitir» sin querer, o sale el mensaje «No es pot desar a la carpeta»?</h3>
+    <ol class="do">
+      <li>Cierra el Anonimitzador.</li>
+      <li>Manzana <svg width="13" height="15" viewBox="0 -1 17 22" style="vertical-align:-2px"><path d="M14.1 10.6c0-2.6 2.1-3.8 2.2-3.9-1.2-1.8-3.1-2-3.7-2-1.6-.2-3.1.9-3.9.9-.8 0-2-.9-3.4-.9C3.6 4.8 1.9 5.8 1 7.4c-1.9 3.2-.5 8 1.3 10.6.9 1.3 1.9 2.7 3.3 2.6 1.3-.1 1.8-.9 3.4-.9s2 .9 3.4.8c1.4 0 2.3-1.3 3.2-2.6 1-1.5 1.4-2.9 1.4-3-.1 0-2.9-1.1-2.9-4.3zM11.5 3c.7-.9 1.2-2.1 1.1-3.3-1 0-2.3.7-3 1.6-.7.8-1.2 2-1.1 3.2 1.2.1 2.3-.6 3-1.5z" fill="#1d1d1f"/></svg> → <b>Ajustes del Sistema…</b> → <b>Privacidad y seguridad</b>.</li>
+      <li>En la parte derecha, entra en <b>Archivos y carpetas</b> <span class="ca">«Fitxers i carpetes»</span>.</li>
+      <li>Busca <b>Anonimitzador</b> y <b>activa todos sus interruptores</b> (que queden en verde).</li>
+      <li>Vuelve a abrir el Anonimitzador.</li>
+    </ol>
+    <div class="fig">
+      <div class="win settings" style="width:500px">
+        <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="ttl">Archivos y carpetas</span></div>
+        <div class="pane" style="padding:12px 16px">
+          <div class="head" style="font-weight:700;font-size:12pt;margin-bottom:8px">‹ Archivos y carpetas</div>
+          <div class="grp ring">
+            <div style="display:flex;gap:8px;align-items:center;font-weight:600;margin-bottom:4px"><svg width="20" height="20"><use href="#app"/></svg>Anonimitzador</div>
+            <div class="sw">Carpeta Escritorio <span class="toggle"></span></div>
+            <div class="sw">Carpeta Documentos <span class="toggle"></span></div>
+            <div class="sw">Carpeta Descargas <span class="toggle"></span></div>
+          </div>
+          <div class="grp" style="color:#888"><div class="sw">Otra aplicación <span class="toggle off"></span></div></div>
+        </div>
+      </div>
+    </div>
+    <p class="cap">Los tres interruptores del Anonimitzador, en verde.</p>
+  </div>
+</section>
+
+<!-- ============================ PROBLEMAS ============================ -->
+<section class="page">
+  <h2><span class="num">?</span> Si algo no sale como en la guía</h2>
+  <table class="prob">
+    <tr><td>Dice que la aplicación «está dañada» y que hay que trasladarla a la papelera.</td>
+        <td>No la tires. Es el mismo bloqueo de Apple, más insistente. Sigue el <b>Plan C</b> de abajo.</td></tr>
+    <tr><td>No sale el botón «Abrir igualmente» en Ajustes.</td>
+        <td>Intenta abrir la aplicación otra vez con doble clic, pulsa «OK» y vuelve a Ajustes → Privacidad y seguridad (al final).</td></tr>
+    <tr><td>El Anonimitzador no puede guardar en una carpeta.</td>
+        <td>Mira la página 6 (Archivos y carpetas). Si sigue sin ir, guarda en <b>Documentos</b>. Evita guardar en carpetas de iCloud, del correo o del USB.</td></tr>
+    <tr><td>Ha llegado una <b>versión nueva</b>.</td>
+        <td>Repite toda la guía (pasos 1 a 5). En el paso 3, elige «Sustituir». El Mac volverá a preguntar
+            por los permisos: es normal.</td></tr>
+    <tr><td>No sé si funciona bien.</td>
+        <td>Abre la aplicación y prueba con un documento inventado. Si sale un error, la aplicación
+            guarda un informe técnico (sin datos de los documentos) que se puede enviar a quien te dio el USB.</td></tr>
+  </table>
+
+  <h3 style="margin-top:14px">Plan C — solo si nada de lo anterior funciona</h3>
+  <p>Se escribe una orden en el <b>Terminal</b>. Parece técnico, pero es copiar y pegar:</p>
+  <ol class="do">
+    <li>Comprueba que <b>Anonimitzador</b> ya está en <b>Aplicaciones</b> (paso 3).</li>
+    <li>Pulsa a la vez las teclas <b>⌘ comando</b> y <b>espacio</b>, escribe <b>Terminal</b> y pulsa <b>Intro</b> ⏎.</li>
+    <li>Escribe exactamente esto (o cópialo) y pulsa <b>Intro</b> ⏎:
+      <span class="term">xattr -cr /Applications/Anonimitzador.app</span></li>
+    <li>No sale ningún mensaje: es normal. Cierra el Terminal y abre el Anonimitzador con doble clic.</li>
+  </ol>
+  <div class="box info">Esta orden solo le quita al Anonimitzador la marca de «descargado de fuera»;
+    no cambia nada más del Mac.</div>
+
+  <h3 style="margin-top:14px">Resumen para marcar</h3>
+  <ul class="check">
+    <li>Copié «Anonimitzador (Mac).zip» del USB a Descargas.</li>
+    <li>Le hice doble clic y salió el icono azul «Anonimitzador».</li>
+    <li>Arrastré el icono azul a Aplicaciones.</li>
+    <li>La primera vez lo abrí con clic derecho → Abrir → Abrir (o con «Abrir igualmente» en Ajustes).</li>
+    <li>Pulsé «Permitir» cuando el Mac preguntó por las carpetas.</li>
+  </ul>
+</section>
+
+</body>
+</html>

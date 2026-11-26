@@ -58,6 +58,9 @@ def main() -> None:
     if args.mac.exists():
         shutil.copy(args.mac, usb / "Anonimitzador (Mac).zip")
         print("Mac: OK")
+    manual = ROOT / "docs" / "Manual_instalacion_Mac.pdf"
+    if manual.exists():
+        shutil.copy(manual, usb / "Manual instalación Mac.pdf")
     else:
         print(f"Mac: no trobat ({args.mac}) - descarrega'l de GitHub Actions")
 

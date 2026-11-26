@@ -15,6 +15,7 @@ WINDOWS
 
 MAC
 ---
+Guia pas a pas amb imatges: «Manual instalación Mac.pdf».
 1. Copia «Anonimitzador (Mac).zip» a l'ordinador i fes-hi doble clic per descomprimir-lo.
 2. Arrossega «Anonimitzador.app» a la carpeta Aplicacions.
 3. La primera vegada: clic dret (o Control + clic) sobre l'aplicació > «Obre» > «Obre».
